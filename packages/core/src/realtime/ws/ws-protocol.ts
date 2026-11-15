@@ -15,7 +15,9 @@ export const PROTOCOL_VERSION = 2;
  * The server's first frame is always one of those, or `disconnect`, which
  * precedes every close once the connection is admitted. `reauth_required`
  * asks the client to send its credentials again, in an `auth` that `auth_ok`
- * with the same `id` accepts. The server answers a
+ * with the same `id` accepts; the server checks a connection's `auth` frames
+ * one at a time, in the order they came, and asks again once it takes one
+ * sent before its request. The server answers a
  * `subscribe` carrying an `id` with
  * `subscribed` once the subscription is running, or `complete` with an
  * `error` when it refuses it — both with that `id`. When it subscribes the

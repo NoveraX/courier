@@ -119,6 +119,7 @@ describe("credentials sent again whose onReauth returns something other than an 
       refusals: createRefusalLog("WS"),
       session: createSession(socket),
       middlewareTimeoutMs: 30_000,
+      reauthing: Promise.resolve(),
       clientIP: "203.0.113.7",
     } as unknown as WSSocketContext;
 

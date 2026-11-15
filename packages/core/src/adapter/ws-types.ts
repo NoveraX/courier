@@ -204,11 +204,13 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
    * metadata, which replaces the old whole — a field left out is gone — or
    * throw to refuse them. Refused credentials close the
    * connection at once with 4401 — and so do any sent again when this is not
-   * set, as nothing could check them. Taken, they lift the deadline
-   * `connections.requireAuth` set, and when the metadata returned differs
-   * from the old — a field added, removed, or not `Object.is` the one it had
-   * — `authorize` runs again for each of its subscriptions, and nothing else
-   * does: one it now refuses ends with 4403.
+   * set, as nothing could check them. A connection's are checked one at a
+   * time, in the order they came. Taken, those sent after
+   * `connections.requireAuth` asked lift the deadline it set; once ones sent
+   * before are taken, the client is asked again. When the metadata returned
+   * differs from the old — a field added, removed, or not `Object.is` the one
+   * it had — `authorize` runs again for each of its subscriptions, and
+   * nothing else does: one it now refuses ends with 4403.
    */
   onReauth?:
     | ((info: {

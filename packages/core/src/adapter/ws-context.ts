@@ -100,6 +100,8 @@ export interface WSSocketContext {
   authorize: WSHandlerConfig["authorize"];
   authorizeMessage: WSHandlerConfig["authorizeMessage"];
   onReauth: WSHandlerConfig["onReauth"];
+  /** The checks of the credentials the connection sends again, one at a time: settles once the latest has */
+  reauthing: Promise<void>;
   authRequiredTimeoutMs: number;
   clientIP: string;
   /** The handler's log of refusals, which every connection of it shares */
@@ -193,6 +195,7 @@ export function buildContext(
     authorize: config.authorize,
     authorizeMessage: config.authorizeMessage,
     onReauth: config.onReauth,
+    reauthing: Promise.resolve(),
     authRequiredTimeoutMs: config.authRequiredTimeoutMs ?? 30_000,
     clientIP: "",
     refusals,

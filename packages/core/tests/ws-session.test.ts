@@ -160,9 +160,10 @@ describe("createSession", () => {
     const session = createSession(renewed);
     session.admit(OK);
     session.requireAuth(1_000);
+    const answered = session.deadline;
     const cancel = createSession(cancelled).requireAuth(1_000);
 
-    session.credentialsRenewed("r1");
+    session.credentialsRenewed("r1", answered);
     cancel();
     vi.advanceTimersByTime(2_000);
 

@@ -33,10 +33,28 @@ export interface WSSession {
    * @returns The function that lifts the deadline
    */
   requireAuth(timeoutMs: number): () => void;
-  /** The credentials sent again in the `auth` frame `id` were taken: the deadline is lifted, and `auth_ok` says so */
-  credentialsRenewed(id: string | undefined): void;
+  /** The deadline in force for the credentials asked for again: the one an `auth` frame received now answers */
+  readonly deadline: ReauthDeadline | undefined;
+  /**
+   * The credentials sent again in the `auth` frame `id` were taken, and
+   * `auth_ok` says so. They lift `answered`, the deadline in force when the
+   * frame came, unless a later request replaced it: that one stands, and the
+   * client is asked again, with the time it has left.
+   */
+  credentialsRenewed(id: string | undefined, answered: ReauthDeadline | undefined): void;
   /** The socket closed: nothing waits on it any more */
   dispose(): void;
+}
+
+/** The deadline the credentials asked for again are to be taken by. */
+export interface ReauthDeadline {
+  /** When it closes the connection, on the clock of `performance.now()` */
+  readonly endsAt: number;
+}
+
+/** A deadline set, with the timer that closes the connection at it. */
+interface Deadline extends ReauthDeadline {
+  readonly timer: ReturnType<typeof setTimeout>;
 }
 
 /** Credentials asked for again before the client was let in, and what lifts their deadline once asked. */
@@ -52,8 +70,9 @@ interface EarlyRequest {
  * `auth_error` while the client has not been let in, `disconnect` once it
  * has. The credentials asked for again have a deadline of their own, which
  * closes the connection when they are not renewed in time, and which
- * closing or renewing lifts; asked for before the client is let in, they
- * are asked for just after `auth_ok`, the latest request's deadline.
+ * closing lifts, or renewing them with credentials sent once it was set;
+ * asked for before the client is let in, they are asked for just after
+ * `auth_ok`, the latest request's deadline.
  *
  * @param ws - The connection's socket
  * @param onClose - Told the code of the close the server sends, as it sends it
@@ -68,11 +87,11 @@ export function createSession(ws: WebSocketLike, onClose?: (code: number) => voi
   let closing = false;
   let closedWith: number | undefined;
   let accepted: WSMessage | undefined;
-  let deadline: ReturnType<typeof setTimeout> | undefined;
+  let deadline: Deadline | undefined;
   let asked: EarlyRequest | undefined;
 
   function lift(): void {
-    clearTimeout(deadline);
+    clearTimeout(deadline?.timer);
     deadline = undefined;
   }
 
@@ -95,6 +114,9 @@ export function createSession(ws: WebSocketLike, onClose?: (code: number) => voi
     },
     get admitted() {
       return accepted !== undefined;
+    },
+    get deadline() {
+      return deadline;
     },
     admit(ok) {
       if (closing || accepted) return;
@@ -130,15 +152,27 @@ export function createSession(ws: WebSocketLike, onClose?: (code: number) => voi
       tell({ type: "reauth_required", timeoutMs });
       lift();
       if (timeoutMs <= 0) return () => undefined;
-      const timer = setTimeout(() => session.close({ kind: "reauth-timeout" }), timeoutMs);
-      deadline = timer;
+      const set: Deadline = {
+        endsAt: performance.now() + timeoutMs,
+        timer: setTimeout(() => session.close({ kind: "reauth-timeout" }), timeoutMs),
+      };
+      deadline = set;
       return () => {
-        if (deadline === timer) lift();
+        if (deadline === set) lift();
       };
     },
-    credentialsRenewed(id) {
-      lift();
-      if (accepted && !closing) tell({ ...accepted, id });
+    credentialsRenewed(id, answered) {
+      if (closing || accepted === undefined) return;
+      tell({ ...accepted, id });
+      if (deadline === undefined) return;
+      if (deadline === answered) {
+        lift();
+        return;
+      }
+      /* Asked for after the frame came: a client renewing them of itself took the request for one
+         the renewal it had sent answers, and is asked again. */
+      const left = Math.max(1, Math.ceil(deadline.endsAt - performance.now()));
+      tell({ type: "reauth_required", timeoutMs: left });
     },
     dispose() {
       closing = true;

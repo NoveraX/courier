@@ -161,6 +161,55 @@ describe("credentials sent again on an open connection", () => {
     expect(socket.closed).toBeUndefined();
   });
 
+  it("are checked one at a time, in the order they came: the connection is who the last says", async () => {
+    const handler = serve({
+      onConnect: asUser,
+      onReauth: async ({ auth }) => {
+        await new Promise((resolve) => setTimeout(resolve, Number(auth?.checkedInMs ?? 0)));
+        return { userId: auth?.userId };
+      },
+    });
+    const { socket, connectionId } = await admitted(handler, { userId: "u1" });
+
+    socket.receive({
+      type: "auth",
+      id: "r8",
+      payload: { auth: { userId: "u2", checkedInMs: 60 } },
+    });
+    socket.receive({ type: "auth", id: "r9", payload: { auth: { userId: "u3" } } });
+
+    await expect
+      .poll(() => socket.sent.filter((m) => m.type === "auth_ok").map((m) => m.id))
+      .toEqual(["a0", "r8", "r9"]);
+    expect(handler.connections.get(connectionId)?.meta).toEqual({ userId: "u3" });
+  });
+
+  it("lift only a deadline set before they came: one set while they were checked stands, and is asked for again", async () => {
+    const handler = serve({
+      onConnect: asUser,
+      onReauth: async ({ auth }) => {
+        await new Promise((resolve) => setTimeout(resolve, 80));
+        return { userId: auth?.userId };
+      },
+    });
+    const { socket, connectionId } = await admitted(handler, { userId: "u1" });
+
+    socket.receive({ type: "auth", id: "r10", payload: { auth: { userId: "u1" } } });
+    await handler.connections.requireAuth(connectionId, { timeoutMs: 300 });
+
+    await expect
+      .poll(() => socket.sent)
+      .toContainEqual(expect.objectContaining({ type: "auth_ok", id: "r10" }));
+    const [taken, askedAgain] = socket.sent.slice(-2);
+    expect(taken).toMatchObject({ type: "auth_ok", id: "r10" });
+    expect(askedAgain).toMatchObject({ type: "reauth_required" });
+    expect(askedAgain?.timeoutMs).toBeGreaterThan(0);
+    expect(askedAgain?.timeoutMs).toBeLessThan(300);
+    await expect
+      .poll(() => socket.closed, { timeout: 2_000 })
+      .toMatchObject({ code: 4401, reason: "Credentials not renewed in time" });
+  });
+
   it("end each subscription the renewed identity may not hold, with 4403, and keep the rest", async () => {
     const handler = serve({
       onConnect: asUser,

@@ -8,6 +8,7 @@ import { connectionFields } from "./ws-connection-fields";
 import type { WSSocketContext } from "./ws-context";
 import { frameCredentials, withFrameHeaders } from "./ws-frame-credentials";
 import { reauthorizeSubscriptions } from "./ws-reauthorize";
+import type { ReauthDeadline } from "./ws-session";
 
 const log = createLogger("WS");
 
@@ -25,14 +26,34 @@ const TIMED_OUT = Symbol("onReauth did not settle in time");
  * and so does any, on a handler with no `onReauth` to check them: the
  * connection holds on to nothing it was not shown to be.
  *
+ * A connection's frames are checked one at a time, in the order they came,
+ * so the credentials it sent last are the ones it holds. A frame answers the
+ * deadline in force when it came: one set while it waited or was checked
+ * stands, and is asked for again once its credentials are taken.
+ *
  * @param ctx - The connection
  * @param msg - The `auth` frame
+ * @returns Settles once the frame is checked, after those that came before it
  * @example
  * ```ts
  * void handleReauth(ctx, { type: "auth", payload: { headers: { authorization: "Bearer t2" } } });
  * ```
  */
-export async function handleReauth(ctx: WSSocketContext, msg: WSMessage): Promise<void> {
+export function handleReauth(ctx: WSSocketContext, msg: WSMessage): Promise<void> {
+  const answered = ctx.session.deadline;
+  const checked = ctx.reauthing.then(() => renew(ctx, msg, answered));
+  /* The next frame waits for this one whatever came of it: what it threw is its caller's to log. */
+  ctx.reauthing = checked.catch(() => undefined);
+  return checked;
+}
+
+async function renew(
+  ctx: WSSocketContext,
+  msg: WSMessage,
+  answered: ReauthDeadline | undefined,
+): Promise<void> {
+  /* A connection closing by its turn — a frame before it refused — checks no more. */
+  if (ctx.session.closing) return;
   const credentials = frameCredentials(msg.payload);
   const request = credentials && withFrameHeaders(ctx.handshake, credentials);
   if (credentials === undefined || request === undefined) {
@@ -90,7 +111,7 @@ export async function handleReauth(ctx: WSSocketContext, msg: WSMessage): Promis
   ctx.meta = next;
   ctx.request = request;
   ctx.registry.updateMeta(ctx.connectionId, ctx.meta);
-  ctx.session.credentialsRenewed(msg.id);
+  ctx.session.credentialsRenewed(msg.id, answered);
   if (changed) await reauthorizeSubscriptions(ctx);
 }
 

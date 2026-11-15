@@ -37,6 +37,7 @@ function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
     session,
     middlewareTimeoutMs: 30_000,
     subscribing: new Map(),
+    reauthing: Promise.resolve(),
     clientIP: "203.0.113.7",
     ...overrides,
   } as unknown as WSSocketContext;
@@ -221,6 +222,31 @@ describe("credentials the server asks a connected client for again", () => {
     expect(seen).toEqual([{ token: "t2" }]);
     expect(client?.status).toBe("connected");
     expect(served.handler.connections.get(connectionId)?.meta).toEqual({ user: "t2" });
+  });
+
+  it("are sent anew when the server asks while the client renews them of itself", async () => {
+    const seen: unknown[] = [];
+    served = await serveWS(
+      {},
+      {
+        onReauth: async ({ auth }) => {
+          seen.push(auth);
+          if (seen.length === 1) await settle(100);
+          return { user: auth?.token };
+        },
+      },
+    );
+    let issued = 0;
+    const connectionId = await connect(() => ({ frame: { auth: { token: `t${++issued}` } } }));
+
+    client?.authenticate();
+    await expect.poll(() => seen).toHaveLength(1);
+    void served.handler.connections.requireAuth(connectionId, { timeoutMs: 400 });
+    await settle(600);
+
+    expect(seen).toEqual([{ token: "t2" }, { token: "t3" }]);
+    expect(client?.status).toBe("connected");
+    expect(served.handler.connections.get(connectionId)?.meta).toEqual({ user: "t3" });
   });
 
   it("closes the connection when no credentials come in time", async () => {

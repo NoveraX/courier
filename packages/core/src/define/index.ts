@@ -70,6 +70,7 @@ export type {
   WireCall,
   WireKind,
 } from "./probe";
+export type { Proxied } from "./proxied";
 export type {
   CourierRoutes,
   ExposedRouteMap,

@@ -1,4 +1,4 @@
-export const metadata = { title: "createProxyCaller", description: "Factory function that creates a typed client with dot-notation access for proxy-mode HTTP calls from the browser.", mode: "proxy", updated: "2026-11-06" }
+export const metadata = { title: "createProxyCaller", description: "Factory function that creates a typed client with dot-notation access for proxy-mode HTTP calls from the browser.", mode: "proxy", updated: "2026-11-15" }
 
 ## Import
 
@@ -96,6 +96,8 @@ Returns `InferClient<RoutedApi<TApi, TEndpoints>>` — the client of the API wit
 1. **Group access** — `caller.users` — accesses the endpoint group.
 2. **Endpoint execution** — `caller.users.getById({ id: "123" })` — executes an endpoint with its variables, its only argument; an endpoint without variables takes none.
 3. **Per-call options** — `caller.users.with({ timeout: 5_000 }).getAll()` — headers, a timeout or a signal for the calls made through it; `.raw` resolves to the whole response instead of its body.
+
+Each call resolves to what reaches the page: the proxy sends what the endpoint gave on as JSON, so the call is typed `Proxied<T>` of it — the endpoint's own type where JSON keeps it whole, a `Date` as its ISO string, and so on, as [Mapping the answer](/docs/core-concepts/defining-apis#mapping-the-answer) lists. So is each event of a stream or a channel.
 
 An endpoint the routes do not name is not on the type. Called anyway — from JavaScript, or past a cast — the client throws `ConfigurationError("ENDPOINT_NOT_IN_ROUTES", ...)` before anything is sent, since the proxy would refuse it.
 

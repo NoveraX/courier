@@ -5,7 +5,8 @@
  * that wraps every answer in an envelope — `{ success, data }` — is
  * unwrapped there, and an envelope that says the call failed fails it with
  * an `HTTPError` that carries the envelope. Through the proxy the stages
- * run on the server, so a page gets what they gave.
+ * run on the server, so a page gets what they gave as JSON gives it back,
+ * and is typed so.
  */
 import { afterEach, describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod";
@@ -212,6 +213,36 @@ describe("through the proxy", () => {
     const client = await proxyClient({ success: true, data: { id: "u1" } });
 
     await expect(client.me()).resolves.toEqual({ id: "u1" });
+  });
+
+  it("types a page's call with what JSON gives back of what they gave, which is what arrives", async () => {
+    const url = await answering({ id: "u1" });
+    const visit = endpoint
+      .get("visit")
+      .response<{ id: string }>()
+      .map((user) => ({ ...user, at: new Date(0), pages: new Set(["/"]), steps: [undefined] }));
+    const api = defineApi({ expose: true, name: "api", baseURL: url, endpoints: { visit } });
+    registerSources({ api });
+    const page = createProxyCaller(routesOf(api, "api"));
+
+    expectTypeOf(createCaller(api).visit).returns.resolves.toEqualTypeOf<{
+      id: string;
+      at: Date;
+      pages: Set<string>;
+      steps: undefined[];
+    }>();
+    expectTypeOf(page.visit).returns.resolves.toEqualTypeOf<{
+      id: string;
+      at: string;
+      pages: Record<string, never>;
+      steps: null[];
+    }>();
+    await expect(page.visit()).resolves.toStrictEqual({
+      id: "u1",
+      at: "1970-01-01T00:00:00.000Z",
+      pages: {},
+      steps: [null],
+    });
   });
 
   it("answers a page an envelope that failed with 502, the envelope beside it", async () => {

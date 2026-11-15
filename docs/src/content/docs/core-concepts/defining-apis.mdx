@@ -1,4 +1,4 @@
-export const metadata = { title: "Defining APIs", description: "Define your API structure with courier, defineGroup, and defineApi — the foundation of type-safe API calls.", mode: "both", updated: "2026-11-06" }
+export const metadata = { title: "Defining APIs", description: "Define your API structure with courier, defineGroup, and defineApi — the foundation of type-safe API calls.", mode: "both", updated: "2026-11-15" }
 
 ## Overview
 
@@ -267,7 +267,7 @@ endpoint
 // caller.users.page() → Promise<{ users: { id: string }[]; total: number }>
 ```
 
-The stages run where the call is made — on the server for a browser's call through the proxy, so the page gets what they gave and nothing they left out. `.raw` keeps the answer's status and headers beside the mapped data, an `after` middleware sees the mapped data, and a kept answer is the mapped one. A streamed answer (`stream: true`) is its reader's, so no stage runs on it. OpenAPI, the mocks and Studio describe the answer as the upstream sends it, as the schema does; an agent's tool returns what the stages gave, so it names no output schema. `.response()` comes before `.map()`: named after it, the schema would check what no stage gave, and the chain refuses it.
+The stages run where the call is made — on the server for a browser's call through the proxy, so the page gets what they gave and nothing they left out, sent on as JSON. The page's call is typed with what JSON gives back of it, `Proxied<T>` from `@noverax/courier/define`: a type JSON keeps whole stays as it is, a `Date` arrives as its ISO string, a `Set` or a `Map` as an empty object, a function is left out, and `undefined` in a list or as the whole answer is `null`. Bytes, a `Blob` and a `FormData` travel as themselves. A `BigInt` fails the call, as JSON writes none, so give it as text. `.raw` keeps the answer's status and headers beside the mapped data, an `after` middleware sees the mapped data, and a kept answer is the mapped one. A streamed answer (`stream: true`) is its reader's, so no stage runs on it. OpenAPI, the mocks and Studio describe the answer as the upstream sends it, as the schema does; an agent's tool returns what the stages gave, so it names no output schema. `.response()` comes before `.map()`: named after it, the schema would check what no stage gave, and the chain refuses it.
 
 #### An envelope around every answer
 

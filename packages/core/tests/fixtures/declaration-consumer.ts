@@ -31,6 +31,12 @@ const users = defineGroup({
       .response(User)
       .expose(),
     upload: endpoint.post("avatar").variables<FormData>().response<{ size: number }>(),
+    /* What JSON does not keep whole, which a page's client is typed with as JSON gives it back. */
+    seen: endpoint
+      .get("seen")
+      .response(User)
+      .map((user) => ({ ...user, at: new Date(0), roles: new Set(["admin"]) }))
+      .expose(),
   },
 });
 
@@ -54,6 +60,7 @@ const endpoints = {
   "live.ticks": { transport: "sse" },
   "users.create": { type: "mutation" },
   "users.list": { type: "query" },
+  "users.seen": { type: "query" },
 } as const satisfies RouteMap<typeof api>;
 
 export const apiRoutes: CourierRoutes<typeof api, typeof endpoints> = { source: "api", endpoints };

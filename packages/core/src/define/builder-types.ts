@@ -244,7 +244,9 @@ export interface HttpAddressed<
    * the caller's own type. Several stages run in the order they are named,
    * each on what the one before gave, and the call is typed with what the
    * last gives. They run where the call is made: on the server for a
-   * browser's call through the proxy, so the page gets what they gave.
+   * browser's call through the proxy, which sends the page what they gave
+   * as JSON, so the page's call is typed with what JSON gives back of it —
+   * a `Date` as its string — as `Proxied` says.
    *
    * A stage may be asynchronous, and what it throws fails the call as it is
    * thrown — an `HTTPError` that carries the answer turns an envelope that

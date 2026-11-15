@@ -1,4 +1,4 @@
-export const metadata = { title: "createProxyQueryCaller", description: "Creates a proxy-mode React Query client with dot-notation hooks for every endpoint group, routed through the server adapter.", mode: "proxy", updated: "2026-11-08" }
+export const metadata = { title: "createProxyQueryCaller", description: "Creates a proxy-mode React Query client with dot-notation hooks for every endpoint group, routed through the server adapter.", mode: "proxy", updated: "2026-11-15" }
 
 ## Import
 
@@ -41,6 +41,8 @@ type QueryGroupClient<G> = {
   prefetchQuery(queryClient, method, options?): Promise<void>
 }
 ```
+
+`R` is what reaches the page through the proxy, `Proxied<T>` of what the endpoint gives, as on [`createProxyCaller`](/docs/api/create-proxy-caller#return-type).
 
 A hook's error is typed `Error`, as TanStack Query types it, because not every failure is an HTTP one: narrow it with `isHTTPError`, `isValidationError` or `isConfigurationError` from `@noverax/courier/client`. See [useQuery — Error handling](/docs/react-query/use-query#error-handling).
 

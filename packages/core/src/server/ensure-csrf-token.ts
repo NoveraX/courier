@@ -2,6 +2,7 @@ import { getSourceName } from "../define/api";
 import type { AnyDefinedApi } from "../define/types";
 import { ConfigurationError } from "../errors/configuration-error";
 import { csrfSource } from "../session/csrf-source";
+import { sessionCredentials } from "../session/session-credentials";
 import { askForToken, askOnce, tokenCall } from "../utils/csrf-prime";
 import { callInstruments } from "../utils/execute-studio";
 import { ownFields } from "../utils/own";
@@ -16,7 +17,9 @@ import { cookieJarFor } from "./session/request-state";
  * served, as a write that finds none would: once, with the user's session,
  * through the API's middleware and Studio, and the token handed to the
  * browser with the response being prepared. A request that carries the
- * token already asks nothing, and code that serves no request asks nothing.
+ * token already asks nothing — one whose cookie of that name is empty, or
+ * holds no token, carries none, as a write reads it — and code that serves
+ * no request asks nothing.
  *
  * It is what a page does that writes later, from the browser or while it
  * renders — Django's `ensure_csrf_cookie` — and what a Next.js middleware
@@ -38,8 +41,7 @@ export async function ensureCsrfToken(api: AnyDefinedApi): Promise<boolean> {
   const source = getSourceName(api) ?? "api";
   /* Read once, and what the server holds of it: the session's own, and its address. */
   const { options: sourceOptions, session } = heldOptionsOf(api, source);
-  const csrf = session?.csrf;
-  if (csrf?.from === undefined) {
+  if (session?.csrf?.from === undefined) {
     throw new ConfigurationError(
       "SESSION_OPTIONS_INVALID",
       `[courier] ensureCsrfToken asks where ${source} hands its double-submit token out, and its session.csrf names no "from"`,
@@ -47,13 +49,16 @@ export async function ensureCsrfToken(api: AnyDefinedApi): Promise<boolean> {
   }
   const incoming = await captureIncomingRequest();
   if (incoming === undefined) return false;
-  if (cookieJarFor(incoming).has(csrf.cookie)) return true;
-  const path = csrfSource(csrf.from, (sourceOptions as typeof api.options).baseURL);
+  /* Carried as a write reads it: a cookie of its name that is empty, or holds no token, is none. */
+  const carried = (): boolean =>
+    sessionCredentials(cookieJarFor(incoming), session).csrf !== undefined;
+  if (carried()) return true;
+  const path = csrfSource(session.csrf.from, (sourceOptions as typeof api.options).baseURL);
   if (path === undefined) return false;
   const call = tokenCall({ source, dataSource: api, sourceOptions }, path);
   const { studio, timing } = callInstruments(undefined);
   await askOnce(incoming.key, `${source} ${path}`, () =>
     askForToken(prepareAndRun(call, studio, timing, ownFields({ incoming })), path, "the page"),
   );
-  return cookieJarFor(incoming).has(csrf.cookie);
+  return carried();
 }

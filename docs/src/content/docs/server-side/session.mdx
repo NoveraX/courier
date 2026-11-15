@@ -201,7 +201,7 @@ export const api = defineApi({
 
 ### Up front
 
-A page whose writes come later — from the browser, or while it renders — can ask for the token as it is served, as Django's `ensure_csrf_cookie` does. `ensureCsrfToken(api)` asks once, as a write would, where the request does not carry the token, and the token reaches the browser with the response being prepared:
+A page whose writes come later — from the browser, or while it renders — can ask for the token as it is served, as Django's `ensure_csrf_cookie` does. `ensureCsrfToken(api)` asks once, as a write would, where the request does not carry the token — a cookie of its name that is empty, or holds no token, carries none, as a write reads it — and the token reaches the browser with the response being prepared:
 
 ```ts title="server.ts" side="server"
 import { ensureCsrfToken } from "@noverax/courier/server"

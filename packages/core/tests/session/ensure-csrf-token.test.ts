@@ -3,7 +3,9 @@
  * it is served — for the writes it makes later, from the browser or while
  * it renders: asked once with the user's session, through the API's
  * middleware, the token handed to the browser; nothing asked where the
- * request carries it, or where no request is served.
+ * request carries it — a cookie of its name that is empty, or holds no
+ * token, carrying none, as a write reads it — or where no request is
+ * served.
  *
  * The API is a real server, so the assertions read what crossed its wire.
  */
@@ -114,6 +116,26 @@ describe("asking for the double-submit token up front", () => {
     expect(upstream.seen.map((seen) => `${seen.method} ${seen.url}`)).toEqual(["POST /me/name"]);
     expect(upstream.seen[0]?.headers["x-csrftoken"]).toBe("t-held");
   });
+
+  it.each([
+    ["is empty", "sid=s1; csrftoken="],
+    ["holds no token", "sid=s1; csrftoken=a b"],
+  ])(
+    "asks, as a write would, where the token's cookie %s, and a later write repeats the token it got",
+    async (_, cookie) => {
+      serving = userRequest({ cookie, "sec-fetch-site": "same-origin" }).incoming;
+
+      expect(await ensureCsrfToken(api)).toBe(true);
+      expect(upstream.seen.map((seen) => `${seen.method} ${seen.url}`)).toEqual(["GET /csrf"]);
+      await createCaller(api).rename({ name: "Ada" });
+
+      expect(upstream.seen.map((seen) => `${seen.method} ${seen.url}`)).toEqual([
+        "GET /csrf",
+        "POST /me/name",
+      ]);
+      expect(upstream.seen[1]?.headers["x-csrftoken"]).toBe("t-fresh");
+    },
+  );
 
   it("asks once with a write made beside it, which then repeats the token it got", async () => {
     serving = userRequest({ cookie: "sid=s2", "sec-fetch-site": "same-origin" }).incoming;

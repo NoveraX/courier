@@ -122,10 +122,17 @@ export interface RedisConnectionLeasesConfig {
    */
   prefix?: string | undefined;
   /**
-   * How long a lease is kept unless renewed: a replica renews its own every
-   * 20 seconds, and one that stops without releasing frees them once this
-   * has passed.
+   * How long a lease is kept unless renewed, a whole number of
+   * milliseconds, 1000 or more: a replica renews its own every third of it,
+   * and one that stops without releasing frees them once this has passed.
    * @default 60000
    */
   ttlMs?: number | undefined;
+  /**
+   * How long a replica waits on Redis to decide a connection's place before
+   * it lets the connection in by its own count of the key's connections,
+   * and logs why; Redis is given the lease as the replica renews it.
+   * @default 2000
+   */
+  timeoutMs?: number | undefined;
 }

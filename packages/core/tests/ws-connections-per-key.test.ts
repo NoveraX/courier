@@ -67,6 +67,7 @@ function heldLeases() {
   const memory = createMemoryConnectionLeases();
   const asked: Array<{ readonly lease: string; decide(grant?: LeaseGrant): void }> = [];
   const store: ConnectionLeaseStore = {
+    ttlMs: undefined,
     acquire: (scope, lease, rule) =>
       new Promise((resolve, reject) => {
         asked.push({
@@ -276,6 +277,14 @@ describe("maxConnectionsPerKey", () => {
       { maxConnectionsPerKey: { ...perUser(2), onExceed: "drop" } },
     ],
     ["with an empty list of rules", { maxConnectionsPerKey: [] }],
+    [
+      "with a store that keeps a lease under a second",
+      { connectionLeases: { ...createMemoryConnectionLeases(), ttlMs: 500 } },
+    ],
+    [
+      "with a store whose timeoutMs is no whole number",
+      { connectionLeases: { ...createMemoryConnectionLeases(), timeoutMs: 0.5 } },
+    ],
   ])("is refused when the handler is made %s", (_case, extra) => {
     expect(() =>
       createWSHandler({

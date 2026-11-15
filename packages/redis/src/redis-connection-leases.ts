@@ -43,14 +43,20 @@ redis.call("PEXPIRE", KEYS[1], ttl)
 return reply
 `);
 
-/* A lease renewed if it is still held: one given up for a newer one stays given up. */
+/*
+ * A lease its replica still holds, renewed; or put back when Redis lacks it
+ * — never taken, as the replica decided by its own count while Redis did
+ * not answer; given up by a decision that came after the replica stopped
+ * waiting; or lost with its key — as having joined when its connection did,
+ * `heldMs` ago on Redis's clock, so it keeps its place among the oldest.
+ */
 const RENEW = defineScript(`
 if redis.replicate_commands then redis.replicate_commands() end
-local value = redis.call("HGET", KEYS[1], ARGV[1])
-if not value then return 0 end
 local clock = redis.call("TIME")
 local now = tonumber(clock[1]) * 1000 + math.floor(tonumber(clock[2]) / 1000)
-local joined = string.match(value, "^(%d+):")
+local value = redis.call("HGET", KEYS[1], ARGV[1])
+local joined = value and string.match(value, "^(%d+):")
+if not joined then joined = string.format("%d", now - tonumber(ARGV[3])) end
 redis.call("HSET", KEYS[1], ARGV[1], joined .. ":" .. string.format("%d", now + tonumber(ARGV[2])))
 redis.call("PEXPIRE", KEYS[1], ARGV[2])
 return 1
@@ -61,9 +67,12 @@ return 1
  * counts them on every replica: each decision is one script on one key —
  * fit for Redis Cluster as it is — made on Redis's clock. A lease lapses
  * unless renewed within `ttlMs`, so a replica that stops without releasing
- * frees its leases in time.
+ * frees its leases in time; one Redis lacks is put back as its replica
+ * renews it, so a connection let in while Redis did not answer within
+ * `timeoutMs`, or whose lease Redis lost, is counted again.
  *
- * @param config - The Redis client, the prefix its keys go under, and how long a lease is kept
+ * @param config - The Redis client, the prefix its keys go under, how long a lease is kept, and
+ *   how long a replica waits on Redis to decide
  * @returns The store, for a WebSocket handler's `connectionLeases`
  *
  * @example
@@ -82,8 +91,11 @@ export function createRedisConnectionLeases({
   redis,
   prefix = "courier:leases:",
   ttlMs = 60_000,
+  timeoutMs,
 }: RedisConnectionLeasesConfig): ConnectionLeaseStore {
   return {
+    ttlMs,
+    timeoutMs,
     async acquire(scope, lease, rule) {
       const args = [lease, String(ttlMs), String(rule.max), rule.onExceed];
       return grantOf(await runScript(redis, ACQUIRE, [`${prefix}${scope}`], args));
@@ -91,8 +103,8 @@ export function createRedisConnectionLeases({
     async renew(leases) {
       if (leases.length === 0) return;
       await Promise.all(
-        leases.map(({ scope, lease }) =>
-          runScript(redis, RENEW, [`${prefix}${scope}`], [lease, String(ttlMs)]),
+        leases.map(({ scope, lease, heldMs }) =>
+          runScript(redis, RENEW, [`${prefix}${scope}`], [lease, String(ttlMs), String(heldMs)]),
         ),
       );
     },

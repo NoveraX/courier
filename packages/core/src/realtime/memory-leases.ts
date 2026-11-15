@@ -22,6 +22,7 @@ export function createMemoryConnectionLeases(): ConnectionLeaseStore {
   const scopes = new Map<string, Set<string>>();
 
   return {
+    ttlMs: undefined,
     async acquire(scope, lease, rule) {
       const held = scopes.get(scope) ?? new Set<string>();
       scopes.set(scope, held);
@@ -37,7 +38,7 @@ export function createMemoryConnectionLeases(): ConnectionLeaseStore {
       return { admitted: true, evict };
     },
     async renew() {
-      /* Nothing lapses here: what is held stays until it is released. */
+      /* Nothing lapses here, so nothing is renewed: what is held stays until it is released. */
     },
     async release(scope, lease) {
       const held = scopes.get(scope);

@@ -512,7 +512,7 @@ const ws = createWSHandler({
 
 Over the limit, the oldest connection of the key is closed with `4409` "Replaced by a newer connection", wherever it is held, one still being let in as well, and a Courier client does not reconnect on it. A connection that has ended by the time `onConnect` returns — a tab closed meanwhile — takes no place and replaces none. With `onExceed: "reject"`, the new connection is closed with `4429` instead, and its `onDisconnect` runs. The server tells its client to try again in 10 seconds, as a place may free meanwhile, and `onConnect` and `onDisconnect` run for each try. A key that is `undefined` puts the connection under no limit.
 
-Keys reach the store hashed, with HMAC under `cluster.secret` when it is set, never as they are. If the store cannot decide within 2 seconds, the replica decides by its own count of the key's connections and logs why: a limit guards against abuse, and an outage of the store must not lock users out.
+Keys reach the store hashed, with HMAC under `cluster.secret` when it is set, never as they are. If the store cannot decide within its `timeoutMs`, 2 seconds by default, the replica decides by its own count of the key's connections and logs why: a limit guards against abuse, and an outage of the store must not lock users out. Each replica renews its leases every third of the store's `ttlMs`, and the store puts back one it lacks, as having joined when its connection did. So once the store answers again, or after it lost its keys, the limit counts every connection still open again, and the next one over the limit evicts the oldest, or is refused.
 
 Give it a list to apply several limits at once. A rule keyed by the address is `maxConnectionsPerIP` for the whole cluster:
 

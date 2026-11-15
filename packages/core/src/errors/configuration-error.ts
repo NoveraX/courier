@@ -190,7 +190,9 @@ export type ConfigurationErrorCode =
   /**
    * A WebSocket handler's `maxConnectionsPerKey` has no key function, a
    * `max` that is no whole number of 1 or more, an `onExceed` of neither
-   * kind, or sits on a handler with no `onConnect` to read keys from.
+   * kind, or sits on a handler with no `onConnect` to read keys from; or its
+   * `connectionLeases` keeps a lease under a second, or has a `timeoutMs`
+   * that is no whole number of 1 or more.
    */
   | "CONNECTION_LIMIT_INVALID"
   /** `.reads()` was named on an endpoint addressed with a verb that changes what it addresses. */

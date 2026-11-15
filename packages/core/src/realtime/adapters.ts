@@ -251,6 +251,8 @@ export interface LeaseRule {
 export interface HeldLease {
   readonly scope: string;
   readonly lease: string;
+  /** How long ago its connection was let in: a store that lacks the lease puts it back as having joined then */
+  readonly heldMs: number;
 }
 
 /** A lease granted, with the leases given up for it; or refused. */
@@ -265,12 +267,28 @@ export type LeaseGrant =
  * is the store's alone, made at once, so two connections arriving together
  * on two replicas never both take the last place, nor give up the same
  * lease twice. A shared store lets a lease lapse unless it is renewed, so a
- * replica that stops without releasing frees its leases in time.
+ * replica that stops without releasing frees its leases in time; and puts
+ * back a lease it lacks as it is renewed — one a replica took by its own
+ * count while the store did not answer, or one the store lost — so the
+ * limit counts every connection still open again.
  */
 export interface ConnectionLeaseStore {
+  /**
+   * How long the store keeps a lease unless it is renewed, a whole number
+   * of milliseconds, 1000 or more: a replica renews the leases it holds
+   * every third of it. Undefined for a store whose leases never lapse, as
+   * this replica's memory is.
+   */
+  readonly ttlMs: number | undefined;
+  /**
+   * How long a replica waits on the store to decide a connection's place
+   * before it decides by its own count: a whole number of milliseconds, 1
+   * or more (default 2000)
+   */
+  readonly timeoutMs?: number | undefined;
   /** Take a lease in a scope, under its rule: the oldest given up for it, or it refused */
   acquire(scope: string, lease: string, rule: LeaseRule): Promise<LeaseGrant>;
-  /** Keep the leases this replica holds from lapsing */
+  /** Keep the leases this replica holds from lapsing, putting back any the store lacks */
   renew(leases: readonly HeldLease[]): Promise<void>;
   /** Give a lease up */
   release(scope: string, lease: string): Promise<void>;

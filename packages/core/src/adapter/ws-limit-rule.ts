@@ -1,5 +1,6 @@
 import { ConfigurationError } from "../errors";
 import type { RefusalLog } from "../logger/refusal-log";
+import type { ConnectionLeaseStore } from "../realtime/adapters";
 import { createMemoryConnectionLeases } from "../realtime/memory-leases";
 import { clusterSecretOf } from "./ws-cluster-secret";
 import { type ConnectionLimiter, createConnectionLimiter } from "./ws-connection-limit";
@@ -19,8 +20,9 @@ type Rule = Exclude<NonNullable<WSHandlerConfig["maxConnectionsPerKey"]>, readon
  * @param refusals - The handler's log of refusals
  * @returns The limiter, or undefined for a handler with no `maxConnectionsPerKey`
  * @throws ConfigurationError for no rule or more than 8, a rule with no key function, a `max` that
- *   is no whole number of 1 or more, an `onExceed` of neither kind, or rules on a handler with no
- *   `onConnect` to admit connections by
+ *   is no whole number of 1 or more, an `onExceed` of neither kind, rules on a handler with no
+ *   `onConnect` to admit connections by, or a store whose `ttlMs` is under a second or whose
+ *   `timeoutMs` is no whole number of 1 or more
  *
  * @example
  * ```ts
@@ -41,12 +43,29 @@ export function connectionLimitOf(
       `[courier] createWSHandler({ maxConnectionsPerKey }) ${problem}.`,
     );
   }
+  const store = config.connectionLeases ?? createMemoryConnectionLeases();
+  const storeProblem = storeProblemOf(store);
+  if (storeProblem !== undefined) {
+    throw new ConfigurationError(
+      "CONNECTION_LIMIT_INVALID",
+      `[courier] createWSHandler({ connectionLeases }) ${storeProblem}.`,
+    );
+  }
   return createConnectionLimiter({
     rules,
-    store: config.connectionLeases ?? createMemoryConnectionLeases(),
+    store,
     secret: clusterSecretOf(config.cluster, "createWSHandler"),
     refusals,
   });
+}
+
+/* What the handler reads of its store: how long it keeps a lease, and how long it may take to decide. */
+function storeProblemOf({ ttlMs, timeoutMs }: ConnectionLeaseStore): string | undefined {
+  if (ttlMs !== undefined && !(Number.isSafeInteger(ttlMs) && ttlMs >= 1_000))
+    return `takes a store whose ttlMs is a whole number, 1000 or more, not ${String(ttlMs)}`;
+  if (timeoutMs !== undefined && !(Number.isSafeInteger(timeoutMs) && timeoutMs >= 1))
+    return `takes a store whose timeoutMs is a whole number, 1 or more, not ${String(timeoutMs)}`;
+  return undefined;
 }
 
 function problemOf(rules: readonly Rule[], hasOnConnect: boolean): string | undefined {

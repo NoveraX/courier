@@ -171,7 +171,7 @@ Creates a presence adapter: `track`, `heartbeat`, `untrack`, `list`, `sweep` and
 
 ### `createRedisConnectionLeases(config: RedisConnectionLeasesConfig): ConnectionLeaseStore`
 
-Creates the store a WebSocket handler's `maxConnectionsPerKey` counts connections in, so the limit holds across replicas: each decision is one Lua script on one key, on Redis's own clock, and a lease lapses unless renewed within `ttlMs` (60 s by default).
+Creates the store a WebSocket handler's `maxConnectionsPerKey` counts connections in, so the limit holds across replicas: each decision is one Lua script on one key, on Redis's own clock, and a lease lapses unless renewed within `ttlMs` (60 s by default), which its replica does every third of it. A lease Redis lacks is put back as its replica renews it: a connection let in by the replica's own count, as Redis did not decide within `timeoutMs` (2 s by default), or one whose lease Redis lost, is counted again.
 
 <br />
 

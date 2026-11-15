@@ -1,8 +1,9 @@
 /**
  * A limit on the connections of one key, as a handler applies it: keys
  * reach the store hashed, never as they are; a store that fails or does not
- * answer in time is not waited on — this replica decides by its own count,
- * and says so — and the leases held are renewed while any is held.
+ * answer within its `timeoutMs` is not waited on — this replica decides by
+ * its own count, and says so — and while any lease is held, each is renewed
+ * every third of the store's `ttlMs`, with how long it has been held.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -19,10 +20,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function limiter(
-  store: ConnectionLeaseStore,
-  extra: { secret?: string; timeoutMs?: number; renewEveryMs?: number } = {},
-) {
+function limiter(store: ConnectionLeaseStore, extra: { secret?: string } = {}) {
   const refusals = createRefusalLog("WS");
   const warn = vi.spyOn(refusals, "warn");
   return {
@@ -37,10 +35,11 @@ function limiter(
   };
 }
 
-function spiedStore(): ConnectionLeaseStore & { scopes: string[] } {
+function spiedStore(ttlMs?: number): ConnectionLeaseStore & { scopes: string[] } {
   const inner = createMemoryConnectionLeases();
   const scopes: string[] = [];
   return {
+    ttlMs,
     scopes,
     acquire: vi.fn(async (scope, lease, leaseRule) => {
       scopes.push(scope);
@@ -141,6 +140,7 @@ describe("createConnectionLimiter", () => {
 
   it("lets a connection in by this replica's own count when the store fails, and says so", async () => {
     const failing: ConnectionLeaseStore = {
+      ttlMs: undefined,
       acquire: async () => {
         throw new Error("ECONNREFUSED");
       },
@@ -164,13 +164,15 @@ describe("createConnectionLimiter", () => {
     );
   });
 
-  it("does not wait on a store that does not answer past its deadline", async () => {
+  it("does not wait on a store past the timeoutMs it gives", async () => {
     const silent: ConnectionLeaseStore = {
+      ttlMs: undefined,
+      timeoutMs: 50,
       acquire: () => new Promise(() => undefined),
       renew: async () => undefined,
       release: async () => undefined,
     };
-    const { limit } = limiter(silent, { timeoutMs: 50 });
+    const { limit } = limiter(silent);
     const started = Date.now();
 
     expect(
@@ -179,17 +181,18 @@ describe("createConnectionLimiter", () => {
     expect(Date.now() - started).toBeLessThan(1_000);
   });
 
-  it("renews the leases it holds, and stops once it holds none", async () => {
+  it("renews each lease it holds every third of the store's ttlMs, with how long it has been held", async () => {
     vi.useFakeTimers();
-    const store = spiedStore();
-    const { limit } = limiter(store, { renewEveryMs: 1_000 });
+    const store = spiedStore(3_000);
+    const { limit } = limiter(store);
     await limit.admit({ connectionId: "c1", meta: { userId: "u1" }, clientIp: "203.0.113.7" });
+    await vi.advanceTimersByTimeAsync(400);
     await limit.admit({ connectionId: "c2", meta: { userId: "u2" }, clientIp: "203.0.113.7" });
 
-    await vi.advanceTimersByTimeAsync(1_000);
+    await vi.advanceTimersByTimeAsync(600);
     expect(store.renew).toHaveBeenCalledWith([
-      { scope: store.scopes[0], lease: "c1" },
-      { scope: store.scopes[1], lease: "c2" },
+      { scope: store.scopes[0], lease: "c1", heldMs: 1_000 },
+      { scope: store.scopes[1], lease: "c2", heldMs: 600 },
     ]);
 
     limit.release("c1");
@@ -197,5 +200,16 @@ describe("createConnectionLimiter", () => {
     await vi.advanceTimersByTimeAsync(5_000);
     expect(store.renew).toHaveBeenCalledTimes(1);
     expect(store.release).toHaveBeenCalledWith(store.scopes[0], "c1");
+  });
+
+  it("never renews the leases of a store that keeps them for good", async () => {
+    vi.useFakeTimers();
+    const store = spiedStore();
+    const { limit } = limiter(store);
+    await limit.admit({ connectionId: "c1", meta: { userId: "u1" }, clientIp: "203.0.113.7" });
+
+    await vi.advanceTimersByTimeAsync(120_000);
+
+    expect(store.renew).not.toHaveBeenCalled();
   });
 });

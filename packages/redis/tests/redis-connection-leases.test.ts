@@ -2,8 +2,9 @@
  * Connection leases in Redis: granted up to a scope's limit, then the
  * oldest given up for a new one or the new one refused, one decision at a
  * time however many replicas ask together; a lease not renewed lapses, one
- * renewed stays, one released frees its place; and handlers counting their
- * users' connections in it evict across replicas.
+ * renewed stays, one released frees its place, and one Redis lacks is put
+ * back as it is renewed, as having joined when its connection did; and
+ * handlers counting their users' connections in it evict across replicas.
  *
  * Set REDIS_URL; the suite is skipped when none answers.
  */
@@ -84,27 +85,40 @@ describe.skipIf(!available)("createRedisConnectionLeases", { timeout: 20_000 }, 
     await leases.acquire("key:a", "lapsing", reject);
 
     await sleep(1_000);
-    await leases.renew([{ scope: "key:a", lease: "kept" }]);
+    await leases.renew([{ scope: "key:a", lease: "kept", heldMs: 1_000 }]);
     await sleep(1_400);
 
     expect(await leases.acquire("key:a", "new", reject)).toEqual({ admitted: true, evict: [] });
     expect(await leases.acquire("key:a", "newer", reject)).toEqual({ admitted: false });
   });
 
-  it("frees a place once a lease is released, and renews no lease given up", async () => {
+  it("frees a place once a lease is released", async () => {
     const leases = store();
-    await leases.acquire("key:a", "c1", { max: 1, onExceed: "evict-oldest" });
-    await leases.acquire("key:a", "c2", { max: 1, onExceed: "evict-oldest" });
+    await leases.acquire("key:a", "c1", reject);
+    await leases.acquire("key:a", "c2", reject);
 
-    await leases.renew([{ scope: "key:a", lease: "c1" }]);
-    expect(await leases.acquire("key:a", "c3", { max: 2, onExceed: "reject" })).toEqual({
+    await leases.release("key:a", "c1");
+
+    expect(await leases.acquire("key:a", "c3", reject)).toEqual({ admitted: true, evict: [] });
+  });
+
+  it("puts back a lease it lacks as it is renewed, as having joined when its connection did", async () => {
+    const leases = store();
+    await leases.acquire("key:a", "lost", evictOldest);
+    await redis.client().del(`${redis.prefix}key:a`);
+
+    await leases.renew([
+      { scope: "key:a", lease: "never taken", heldMs: 1_000 },
+      { scope: "key:a", lease: "lost", heldMs: 60_000 },
+    ]);
+
+    expect(await leases.acquire("key:a", "new", evictOldest)).toEqual({
       admitted: true,
-      evict: [],
+      evict: ["lost"],
     });
-    await leases.release("key:a", "c2");
-    expect(await leases.acquire("key:a", "c4", { max: 2, onExceed: "reject" })).toEqual({
+    expect(await leases.acquire("key:a", "newer", evictOldest)).toEqual({
       admitted: true,
-      evict: [],
+      evict: ["never taken"],
     });
   });
 });

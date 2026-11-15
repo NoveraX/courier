@@ -28,14 +28,11 @@ export interface ConnectionLimiter {
 
 export interface ConnectionLimiterOptions {
   readonly rules: readonly ConnectionLimitRule[];
+  /** The store, which says how long it keeps a lease and how long it may take to decide */
   readonly store: ConnectionLeaseStore;
   /** The cluster's secret: with it, a key is hashed with HMAC, so the store holds nothing a guess could be checked against */
   readonly secret: string | undefined;
   readonly refusals: RefusalLog;
-  /** How long the store has to decide before this replica decides alone (default 2 s) */
-  readonly timeoutMs?: number | undefined;
-  /** How often the leases held are renewed (default 20 s) */
-  readonly renewEveryMs?: number | undefined;
 }
 
 /**
@@ -45,10 +42,12 @@ export interface ConnectionLimiterOptions {
  * are given up for the new one, or the new one is refused. The rules that
  * refuse are applied first, so a connection refused has given nothing up.
  * Keys reach the store hashed, each rule's apart from every other's, never
- * as they are. A store that cannot decide in time is not waited on: the
- * connection is let in, by this replica's own count of the key's
- * connections, and why is logged — a limit guards against abuse, and an
- * outage of Redis must not lock users out.
+ * as they are. A store that cannot decide within its `timeoutMs` is not
+ * waited on: the connection is let in, by this replica's own count of the
+ * key's connections, and why is logged — a limit guards against abuse, and
+ * an outage of Redis must not lock users out. Every third of the store's
+ * `ttlMs`, each lease held is renewed with how long its connection has
+ * been held, so the store puts back one it lacks, and counts it again.
  *
  * @param options - The rules, the store, the secret and the log
  * @returns The limiter
@@ -61,31 +60,33 @@ export interface ConnectionLimiterOptions {
  */
 export function createConnectionLimiter(options: ConnectionLimiterOptions): ConnectionLimiter {
   const { store, refusals } = options;
-  const timeoutMs = options.timeoutMs ?? WS_SERVER_LIMITS.LEASE_TIMEOUT_MS;
-  const renewEveryMs = options.renewEveryMs ?? WS_SERVER_LIMITS.LEASE_RENEW_MS;
+  const timeoutMs = store.timeoutMs ?? WS_SERVER_LIMITS.LEASE_TIMEOUT_MS;
+  /* A store whose leases never lapse is never renewed. */
+  const renewEveryMs = store.ttlMs === undefined ? undefined : Math.floor(store.ttlMs / 3);
   const hashKey = keyHasher(options.secret);
   /* Each rule with its place in the list, which keeps its keys apart; those that refuse first. */
   const rules = options.rules
     .map((rule, place) => ({ rule, place, lease: leaseRuleOf(rule) }))
     .sort((a, b) => Number(b.lease.onExceed === "reject") - Number(a.lease.onExceed === "reject"));
-  /* This replica's leases: each connection's scopes, and each scope's connections in the order they came. */
-  const scopesOf = new Map<string, string[]>();
+  /* This replica's leases: each connection's scopes and when it was let in, and each scope's connections in the order they came. */
+  const held = new Map<string, { readonly since: number; readonly scopes: readonly string[] }>();
   const byScope = new Map<string, Set<string>>();
   let renewal: ReturnType<typeof setInterval> | undefined;
 
   function renew(): void {
-    const leases = [...scopesOf].flatMap(([lease, scopes]) =>
-      scopes.map((scope) => ({ scope, lease })),
+    const now = performance.now();
+    const leases = [...held].flatMap(([lease, { since, scopes }]) =>
+      scopes.map((scope) => ({ scope, lease, heldMs: Math.round(now - since) })),
     );
     store.renew(leases).catch((error: unknown) => {
       refusals.warn({ event: "connection leases not renewed", code: "LEASES_UNAVAILABLE" }, error);
     });
   }
 
-  function hold(lease: string, scope: string): void {
-    scopesOf.set(lease, [...(scopesOf.get(lease) ?? []), scope]);
+  function hold(lease: string, scope: string, since: number): void {
+    held.set(lease, { since, scopes: [...(held.get(lease)?.scopes ?? []), scope] });
     byScope.set(scope, (byScope.get(scope) ?? new Set()).add(lease));
-    if (renewal) return;
+    if (renewal || renewEveryMs === undefined) return;
     renewal = setInterval(renew, renewEveryMs);
     (renewal as { unref?: () => void }).unref?.();
   }
@@ -108,8 +109,8 @@ export function createConnectionLimiter(options: ConnectionLimiterOptions): Conn
   }
 
   function release(connectionId: string): void {
-    const scopes = scopesOf.get(connectionId) ?? [];
-    scopesOf.delete(connectionId);
+    const scopes = held.get(connectionId)?.scopes ?? [];
+    held.delete(connectionId);
     for (const scope of scopes) {
       const mine = byScope.get(scope);
       mine?.delete(connectionId);
@@ -121,13 +122,14 @@ export function createConnectionLimiter(options: ConnectionLimiterOptions): Conn
         );
       });
     }
-    if (scopesOf.size > 0) return;
+    if (held.size > 0) return;
     clearInterval(renewal);
     renewal = undefined;
   }
 
   return {
     async admit({ connectionId, meta, clientIp }) {
+      const since = performance.now();
       const evict = new Set<string>();
       for (const { rule, place, lease } of rules) {
         const key = rule.key(meta, { clientIp });
@@ -138,7 +140,7 @@ export function createConnectionLimiter(options: ConnectionLimiterOptions): Conn
           release(connectionId);
           return undefined;
         }
-        hold(connectionId, scope);
+        hold(connectionId, scope, since);
         for (const given of grant.evict) if (given !== connectionId) evict.add(given);
       }
       return [...evict];

@@ -27,8 +27,10 @@ Add Courier's block to `AGENTS.md`, at your project's root: [Docs for Your Agent
 An agent that works through tools rather than files can search and read the same docs through an MCP server the package runs over stdio, with no network:
 
 ```bash
-claude mcp add courier-docs --scope project -- npx @noverax/courier-docs mcp
+claude mcp add courier-docs --scope project -- npx --no-install @noverax/courier-docs mcp
 ```
+
+`--no-install` has npx run the project's own copy, the docs for the Courier it installs, and never fetch one from npm: until the package is installed, the server does not start. Where the project installs another version of `@noverax/courier` than the docs are for, the server tells the agent so, and its log says it too.
 
 Its tools: `docs_search` finds the parts of the docs that answer a question, `docs_read` reads a page or the part of it under one heading, and `docs_list` lists every page by section.
 

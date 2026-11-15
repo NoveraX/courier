@@ -43,8 +43,10 @@ Studio, as it starts, brings the block up to date for the Courier it runs with â
 An agent that works through tools rather than files gets the same docs from an MCP server the package runs over stdio, offline:
 
 ```bash
-claude mcp add courier-docs --scope project -- npx @noverax/courier-docs mcp
+claude mcp add courier-docs --scope project -- npx --no-install @noverax/courier-docs mcp
 ```
+
+`--no-install` has npx run the project's own copy, the docs for the Courier it installs, and never fetch one from npm: until the package is installed, the server does not start. Where the project installs another version of `@noverax/courier` than the docs are for, the server tells the agent so, and its log says it too.
 
 In Cursor or VS Code, add the same command to `.cursor/mcp.json` or `.vscode/mcp.json`, as [In Your Editor](/docs/agents/editor#add-it-to-your-editor) shows for `courier-mcp`.
 

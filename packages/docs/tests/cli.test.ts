@@ -7,8 +7,9 @@
  * says what it takes on --help.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -76,6 +77,37 @@ describe("courier-docs mcp", () => {
     expect(log).toBe("");
   });
 
+  it("tells the agent, and its log, of a project that installs another Courier than its docs are for", async () => {
+    const project = mkdtempSync(join(tmpdir(), "courier-docs-project-"));
+    const courier = join(project, "node_modules/@noverax/courier");
+    mkdirSync(courier, { recursive: true });
+    writeFileSync(
+      join(courier, "package.json"),
+      JSON.stringify({ name: "@noverax/courier", version: "0.5.9" }),
+    );
+    const transport = new StdioClientTransport({
+      command: process.execPath,
+      args: ["--import", OFFLINE, CLI, "mcp"],
+      cwd: project,
+      env: {},
+      stderr: "pipe",
+    });
+    let log = "";
+    transport.stderr?.on("data", (chunk: Buffer) => {
+      log += chunk.toString();
+    });
+    const client = new Client({ name: "editor", version: "1.0.0" });
+    await client.connect(transport);
+    const instructions = client.getInstructions();
+    await client.close();
+    rmSync(project, { recursive: true, force: true });
+
+    const other = `These docs are for Courier ${packageVersion()}, and this project installs @noverax/courier 0.5.9`;
+    expect(instructions).toContain(other);
+    expect(instructions).toContain("@noverax/courier-docs@0.5.9 holds the docs for it.");
+    await expect.poll(() => log).toContain(other);
+  });
+
   it("stops when the client closes its end, having written nothing", () => {
     const served = run([CLI, "mcp"]);
 
@@ -91,7 +123,7 @@ describe("courier-docs mcp", () => {
 
     expect(help.status).toBe(0);
     expect(help.stdout).toContain("courier-docs <command>");
-    expect(help.stdout).toContain("npx @noverax/courier-docs mcp");
+    expect(help.stdout).toContain("npx --no-install @noverax/courier-docs mcp");
     expect(unknown.status).toBe(1);
     expect(unknown.stderr).toContain('Unknown command "serve". Run courier-docs --help.');
     expect(option.status).toBe(1);

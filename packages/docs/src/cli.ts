@@ -4,8 +4,8 @@ import { createLogger } from "@noverax/courier";
 import { formatHelp, helpOptions, styleFor } from "@noverax/courier/internal";
 import { serveStdio } from "@noverax/courier-mcp/internal";
 
-import { packageVersion } from "./package-version";
-import { docsServer } from "./server";
+import { installedCourierVersion, packageVersion } from "./package-version";
+import { DOCS_DIR, docsServer, versionNote } from "./server";
 
 const log = createLogger("Docs");
 
@@ -27,17 +27,24 @@ function printHelp(): void {
       },
     ],
     examples: [
-      { command: "npx @noverax/courier-docs mcp", description: "What an editor's MCP config runs" },
+      {
+        command: "npx --no-install @noverax/courier-docs mcp",
+        description: "What an editor's MCP config runs: the project's copy, never one fetched",
+      },
     ],
   };
   console.log(formatHelp(help, styleFor(process.stdout)));
 }
 
 /* The docs over stdio until the client closes its end. The server runs none of the project's code
-   and logs only its errors, which go to stderr, so stdout carries the protocol alone. */
+   and logs only its errors, and a project that installs another Courier than its docs are for, to
+   stderr, so stdout carries the protocol alone. */
 async function serve(): Promise<void> {
+  const installed = installedCourierVersion(process.cwd());
+  const other = versionNote(installed);
+  if (other !== undefined) log.warn(other);
   try {
-    await serveStdio(docsServer(), {
+    await serveStdio(docsServer(DOCS_DIR, installed), {
       input: process.stdin,
       write: (line) => process.stdout.write(`${line}\n`),
     });

@@ -1,5 +1,5 @@
 import { defineOwn } from "../utils/define-own";
-import { type FormFieldEncoding, formBody } from "./form-body";
+import { type FormFieldEncoding, writeFields } from "./form-body";
 
 /**
  * Write fields as query values, each as its encoding asks, with OpenAPI's
@@ -9,8 +9,10 @@ import { type FormFieldEncoding, formBody } from "./form-body";
  * object's properties become names of their own, so Stripe's
  * `created: { gte }` would go out as `gte=…`. Written by `formQuery` with the
  * parameter's `deepObject` style it goes out as `created[gte]=…`, and
- * `expand: ["tax"]` as `expand[0]=tax`. A field left `undefined` or `null`
- * is not sent, as the client leaves either out of a query.
+ * `expand: ["tax"]` as `expand[0]=tax`. Each value is written as `formBody`
+ * writes it, as JSON does, and a field JSON leaves out or writes as `null` —
+ * `undefined`, `null`, a function, `NaN`, a date that is no date — is not
+ * sent, as the client leaves one out of a query.
  *
  * @param fields - The fields, by name; none when a call passes no variables
  * @param encoding - How each field is written, by name; OpenAPI's defaults for any not named
@@ -32,10 +34,8 @@ export function formQuery(
   fields: object | undefined,
   encoding: Readonly<Record<string, FormFieldEncoding>> = {},
 ): Record<string, string | string[]> {
-  const given: Array<[string, unknown]> = Object.entries(fields ?? {});
-  const present = given.filter(([, value]) => value !== undefined && value !== null);
   const values: Record<string, string | string[]> = {};
-  for (const [name, value] of formBody(Object.fromEntries(present), encoding)) {
+  for (const [name, value] of writeFields(fields ?? {}, encoding, "nothing")) {
     const earlier = Object.hasOwn(values, name) ? values[name] : undefined;
     defineOwn(
       values,

@@ -50,6 +50,27 @@ describe("formQuery", () => {
     expect(formQuery({ a: undefined, b: null, c: 0 }, { b: DEEP })).toEqual({ c: "0" });
     expect(formQuery(undefined, { b: DEEP })).toEqual({});
   });
+
+  it.each([
+    ["form", {}],
+    ["deepObject", { list: DEEP, held: DEEP }],
+  ] as const)(
+    "writes in %s style what a call through the proxy does, which carries the fields as JSON gives them back",
+    (_, encoding) => {
+      const fields = {
+        a: 1,
+        gone: () => "a function",
+        ratio: Number.NaN,
+        lost: new Date(Number.NaN),
+        list: ["x", undefined, "y"],
+        held: { gone: () => "a function", kept: "z" },
+      };
+      const proxied: Record<string, unknown> = JSON.parse(JSON.stringify(fields));
+
+      expect(formQuery(fields, encoding)).toEqual(formQuery(proxied, encoding));
+      expect(Object.keys(formQuery(fields, encoding))).not.toContain("gone");
+    },
+  );
 });
 
 describe("a read whose closure writes its query with formQuery", () => {

@@ -105,8 +105,40 @@ describe("formBody", () => {
       "meta[cost]=3",
       "lost=",
       "ratio=",
-      "callback=",
     ]);
+  });
+
+  it.each([
+    ["form", {}],
+    ["form without explode", { list: { explode: false }, held: { explode: false } }],
+    ["deepObject", { list: { style: "deepObject" }, held: { style: "deepObject" } }],
+  ] as const)(
+    "writes in %s style what a call through the proxy does, which carries the fields as JSON gives them back",
+    (_, encoding) => {
+      const fields = {
+        a: 1,
+        gone: () => "a function",
+        hidden: Symbol("hidden"),
+        list: ["x", undefined, "y", () => "a function", Number.NaN],
+        holed: Object.assign(new Array<string>(3), { 0: "x", 2: "y" }),
+        held: { gone: () => "a function", hidden: Symbol("hidden"), left: undefined, kept: "z" },
+      };
+      const proxied: Record<string, unknown> = JSON.parse(JSON.stringify(fields));
+
+      expect(decoded(formBody(fields, encoding))).toEqual(decoded(formBody(proxied, encoding)));
+    },
+  );
+
+  it("leaves out what JSON leaves out of an object, and sends empty what it writes as null in a list", () => {
+    const body = formBody({
+      a: 1,
+      gone: () => "a function",
+      hidden: Symbol("hidden"),
+      list: ["x", undefined, "y"],
+      held: { gone: () => "a function", kept: "z" },
+    });
+
+    expect(decoded(body)).toEqual(["a=1", "list=x", "list=", "list=y", "kept=z"]);
   });
 
   it.each([

@@ -163,7 +163,7 @@ endpoint
 // → POST /customers  Body: email=ada%40example.com&metadata%5Bplan%5D=pro
 ```
 
-Each value is written as JSON writes it in the fields, its own `toJSON` asked first, so a direct call and a call through the proxy send the same body: a date is its ISO string, a value JSON writes as `null` or leaves out — `NaN`, a date that is no date, a function — is sent empty, as `null` is, and a file, a `Set`, a `Map` or a `BigInt` is refused with a `ConfigurationError` whose `code` is `VARIABLE_NOT_ENCODABLE`. `formQuery` writes its values the same way.
+Each value is written as JSON writes it in the fields, its own `toJSON` asked first, so a direct call and a call through the proxy send the same body: a date is its ISO string; what JSON leaves out of an object — `undefined`, a function, a symbol — is not sent, a field of its own included, and an item of a list it writes as `null` is sent empty; a value JSON writes as `null` — `null`, `NaN`, a date that is no date — is sent empty; and a file, a `Set`, a `Map` or a `BigInt` is refused with a `ConfigurationError` whose `code` is `VARIABLE_NOT_ENCODABLE`. `formQuery` writes its values the same way, and leaves out a field JSON writes as `null`, as the client leaves one out of a query.
 
 An API that takes only `multipart/form-data` gets a body `multipartBody` writes: a form whether a file is among the fields or not, each field written as a direct call writes a record that holds a file — see [An API that takes only a form](/docs/advanced/upload#an-api-that-takes-only-a-form):
 

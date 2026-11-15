@@ -47,7 +47,13 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
   heartbeatIntervalMs?: number | undefined;
   /** Pong timeout in ms (default 10000) */
   heartbeatTimeoutMs?: number | undefined;
-  /** Max buffered bytes before dropping messages (default 1MB) */
+  /**
+   * Bytes a socket's buffer may hold before a client that reads too slowly
+   * loses a topic's events — `data` and `skip` — until it catches up
+   * (default 1MB). What it is told of its subscriptions — a confirmation, an
+   * end, a `resync`, a ping — is sent all the same, and a subscription that
+   * resumes while an event is dropped is answered `recovered: false`.
+   */
   maxBufferedAmount?: number | undefined;
   /**
    * Origins of other pages that may open a socket, as `HandlerConfig`'s
@@ -162,11 +168,15 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
   onError?:
     | ((info: { connectionId: string; meta: ConnectionMeta<TConnect>; error: Error }) => void)
     | undefined;
-  /** Called when an outbound message is dropped due to buffer overflow */
+  /** Called when a topic's event is dropped for a client that reads too slowly */
   onMessageDrop?:
     | ((info: { connectionId: string; topic: string | undefined; bufferedAmount: number }) => void)
     | undefined;
-  /** Max consecutive message drops before force-closing a slow connection (default 50, 0 = disabled) */
+  /**
+   * Events dropped in a row, its buffer never under `maxBufferedAmount`
+   * between them, before a slow connection is closed with `1013` (default
+   * 50, 0 = never)
+   */
   maxConsecutiveDrops?: number | undefined;
   /**
    * Checks the credentials a client sends again on its open connection, as

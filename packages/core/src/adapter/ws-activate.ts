@@ -79,7 +79,8 @@ export function activateConnection(
     connectedAt: Date.now(),
     sendRaw: ctx.sendMessage,
     sendEncoded: ctx.sendEncoded,
-    sendTopicEvent: (topic, position, encoded) => sendTopicFrame(ctx, topic, position, encoded),
+    sendTopicEvent: (topic, position, encoded, kind) =>
+      sendTopicFrame(ctx, topic, position, encoded, kind),
   });
   const hb = createHeartbeat(
     () => ctx.sendMessage({ type: "ping" }),

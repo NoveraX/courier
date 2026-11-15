@@ -1,6 +1,5 @@
 import type { Sources } from "../define/types";
 import { LIMITS } from "../limits";
-import { createLogger } from "../logger";
 import type { RefusalLog } from "../logger/refusal-log";
 import type { WebSocketLike } from "../realtime/adapters";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
@@ -8,6 +7,7 @@ import { encodeMessage } from "../realtime/ws/ws-protocol";
 import { generateRequestId, PLAYGROUND_RID_PARAM, playgroundRidOf, studioHooks } from "../studio";
 import { randomId } from "../utils/random-id";
 import { servedSources } from "./served-sources";
+import { createBackpressure, type FrameKind, kindOf } from "./ws-backpressure";
 import type { PubSubBridge } from "./ws-pubsub-bridge";
 import { createBucket, type RateLimitBucket } from "./ws-rate-limit";
 import type { InternalConnectionRegistry } from "./ws-registry-types";
@@ -15,8 +15,6 @@ import type { ResumeGate } from "./ws-resume";
 import type { WSSession } from "./ws-session";
 import type { createServerTopicManager } from "./ws-topics";
 import type { WSHandlerConfig } from "./ws-types";
-
-const log = createLogger("WS");
 
 /** Per-subscription Studio tracking record */
 export interface SubscriptionTracker {
@@ -64,9 +62,18 @@ export interface WSSocketContext {
   registry: InternalConnectionRegistry;
   bridge: PubSubBridge | undefined;
   topicManager: ReturnType<typeof createServerTopicManager>;
+  /** Send a frame: a topic's event is dropped while the client reads too slowly, any other never */
   sendMessage: (msg: WSMessage) => void;
-  /** Send a pre-encoded JSON string — avoids redundant JSON.stringify on broadcast */
-  sendEncoded: (encoded: string) => void;
+  /**
+   * Send a frame encoded once for every connection it goes to — an event
+   * unless `kind` says otherwise, dropped while the client reads too slowly
+   */
+  sendEncoded: (encoded: string, kind?: FrameKind) => void;
+  /**
+   * The events dropped so far for a slow reader: one dropped while a
+   * subscription opens may be one it missed, so it did not recover
+   */
+  readonly dropped: number;
   dt: typeof studioHooks;
   seq: { value: number };
   t0: number;
@@ -103,8 +110,8 @@ export interface WSSocketContext {
 
 /**
  * Build per-connection context for a WebSocket connection.
- * Creates a unique connectionId, wires sendMessage with backpressure guard,
- * initializes rate limit bucket, and emits Studio stream:open event.
+ * Creates a unique connectionId, wires its sends through the backpressure
+ * guard, initializes rate limit bucket, and emits Studio stream:open event.
  *
  * @param ws - WebSocket-like connection object
  * @param session - The socket's session, made as the socket was handed over
@@ -128,8 +135,6 @@ export function buildContext(
   refusals: RefusalLog,
 ): WSSocketContext {
   const dt = studioHooks;
-  const maxBuf = config.maxBufferedAmount ?? LIMITS.MAX_BUFFERED_AMOUNT;
-  const maxConsecutiveDrops = config.maxConsecutiveDrops ?? LIMITS.MAX_CONSECUTIVE_DROPS;
   const maxSubscriptions =
     config.maxSubscriptionsPerConnection ?? LIMITS.MAX_SUBSCRIPTIONS_PER_CONNECTION;
   const connectionId = randomId();
@@ -149,26 +154,7 @@ export function buildContext(
     playgroundRequestId = undefined;
   }
   const subscriptionIds = new Map<string, SubscriptionTracker>();
-  let consecutiveDrops = 0;
-
-  /** Shared backpressure guard — returns true if message can be sent */
-  function guardBackpressure(topic: string | undefined): boolean {
-    if (ws.readyState !== 1) return false;
-    if (ws.bufferedAmount > maxBuf) {
-      consecutiveDrops++;
-      log.warn(
-        `Buffer overflow — dropped (conn=${connectionId}, buf=${ws.bufferedAmount}, drops=${consecutiveDrops})`,
-      );
-      config.onMessageDrop?.({ connectionId, topic, bufferedAmount: ws.bufferedAmount });
-      if (maxConsecutiveDrops > 0 && consecutiveDrops >= maxConsecutiveDrops) {
-        log.warn(`Persistent overflow — closing slow connection (conn=${connectionId})`);
-        session.close({ kind: "slow-consumer" });
-      }
-      return false;
-    }
-    consecutiveDrops = 0;
-    return true;
-  }
+  const backpressure = createBackpressure(ws, session, config, connectionId);
 
   return {
     connectionId,
@@ -183,10 +169,13 @@ export function buildContext(
     bridge,
     topicManager,
     sendMessage: (msg) => {
-      if (guardBackpressure(msg.topic)) ws.send(encodeMessage(msg));
+      if (backpressure.admits(kindOf(msg.type), msg.topic)) ws.send(encodeMessage(msg));
     },
-    sendEncoded: (encoded) => {
-      if (guardBackpressure(undefined)) ws.send(encoded);
+    sendEncoded: (encoded, kind = "event") => {
+      if (backpressure.admits(kind, undefined)) ws.send(encoded);
+    },
+    get dropped() {
+      return backpressure.dropped;
     },
     dt,
     seq: { value: 0 },

@@ -1,5 +1,6 @@
 import type { LoggedEvent, TopicLog } from "../realtime/adapters";
 import { encodeMessage } from "../realtime/ws/ws-protocol";
+import type { FrameKind } from "./ws-backpressure";
 import type { WSSocketContext } from "./ws-context";
 import { askLog, wholeRange } from "./ws-log-reads";
 import { resumableFrom } from "./ws-resume-position";
@@ -15,8 +16,8 @@ import type { TopicPosition } from "./ws-topic-sequences";
 export interface ResumeGate {
   /** The position the subscription resumes to, once known */
   upTo: TopicPosition | undefined;
-  /** The frames after it, in order */
-  readonly held: string[];
+  /** The frames after it, in order, each with its kind */
+  readonly held: [encoded: string, kind: FrameKind][];
   /** More came than are held: the subscription resumes nothing, and is sent the rest live */
   overflowed: boolean;
 }
@@ -29,6 +30,7 @@ export interface ResumeGate {
  * @param topic - The qualified topic
  * @param position - The position the frame brings the count to
  * @param encoded - The frame
+ * @param kind - `control` for a `resync`, which a slow reader is sent all the same
  * @example
  * ```ts
  * sendTopicFrame(ctx, topic, { seq: 42, epoch: "k2m9x" }, frame);
@@ -39,22 +41,23 @@ export function sendTopicFrame(
   topic: string,
   position: TopicPosition,
   encoded: string,
+  kind: FrameKind = "event",
 ): void {
   const gate = ctx.resuming.size === 0 ? undefined : ctx.resuming.get(topic);
   if (!gate) {
-    ctx.sendEncoded(encoded);
+    ctx.sendEncoded(encoded, kind);
     return;
   }
   const { upTo } = gate;
   if (!upTo || (position.epoch === upTo.epoch && position.seq <= upTo.seq)) return;
   if (gate.held.length < WS_SERVER_LIMITS.RESUME_HELD_FRAMES) {
-    gate.held.push(encoded);
+    gate.held.push([encoded, kind]);
     return;
   }
   gate.overflowed = true;
   ctx.resuming.delete(topic);
-  for (const frame of gate.held.splice(0)) ctx.sendEncoded(frame);
-  ctx.sendEncoded(encoded);
+  for (const [frame, held] of gate.held.splice(0)) ctx.sendEncoded(frame, held);
+  ctx.sendEncoded(encoded, kind);
 }
 
 /**
@@ -66,7 +69,8 @@ export function sendTopicFrame(
  * @param ctx - The connection
  * @param topic - The qualified topic
  * @param since - The position the client sent, if any
- * @returns Whether all of it was sent
+ * @returns Whether all of it was kept and handed to the socket, which drops
+ *   an event for a slow reader: `ctx.dropped` counts them
  * @example
  * ```ts
  * const recovered = await resumeSubscription(ctx, topic, msg.since);
@@ -112,7 +116,7 @@ async function resumeFromLog(
   } finally {
     if (ctx.resuming.get(topic) === gate) {
       ctx.resuming.delete(topic);
-      for (const frame of gate.held) ctx.sendEncoded(frame);
+      for (const [frame, kind] of gate.held) ctx.sendEncoded(frame, kind);
     }
   }
 }

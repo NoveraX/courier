@@ -15,6 +15,8 @@ export interface SocketClosure {
 
 /** A socket that records what a handler sends it and how it closes it. */
 export interface FakeSocket extends WebSocketLike {
+  /** What it holds unsent: a client that reads too slowly leaves it over the handler's limit */
+  bufferedAmount: number;
   /** Every frame the handler sent, decoded, in order */
   readonly sent: WSMessage[];
   /** Set once the handler closed it */

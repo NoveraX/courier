@@ -130,10 +130,14 @@ async function openSubscription(
   const subRequestId = openSubscriptionEntry(ctx, subscribedTopic, resolved);
   const { source, group, method } = resolved;
   const authorized = { source, group, method, variables };
-  /* What the subscription missed since the position it sent, when all of it is kept. */
+  /* What the subscription missed since the position it sent, when all of it was kept and reached
+     it. An event a slow reader lost while the subscription opened may be one of those, or a live
+     one sent before `subscribed`, whose position counts it as heard. */
   let recovered = false;
+  const dropped = ctx.dropped;
+  const reached = () => ctx.dropped === dropped;
   const resume = async (): Promise<boolean> => {
-    recovered = await resumeSubscription(ctx, subscribedTopic, msg.since);
+    recovered = (await resumeSubscription(ctx, subscribedTopic, msg.since)) && reached();
     return recovered;
   };
 
@@ -189,7 +193,7 @@ async function openSubscription(
     topic: subscribedTopic,
     seq,
     epoch,
-    ...(msg.since !== undefined && { recovered }),
+    ...(msg.since !== undefined && { recovered: recovered && reached() }),
   });
   ctx.dt.onWSTrack?.({
     requestId: subRequestId,

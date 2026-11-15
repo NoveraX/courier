@@ -1,6 +1,7 @@
 import type { LoggedPosition } from "../realtime/adapters";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import type { Selection } from "./connection-selector";
+import type { FrameKind } from "./ws-backpressure";
 import type { TopicPosition } from "./ws-topic-sequences";
 import type { ServerTopicManager } from "./ws-topics";
 
@@ -99,15 +100,20 @@ export interface RegistryEntry {
   meta: Record<string, unknown>;
   connectedAt: number;
   sendRaw: (msg: WSMessage) => void;
-  /** Send pre-encoded JSON string — avoids redundant JSON.stringify on broadcast */
+  /** Send a notice encoded once for every connection: an event, which a slow reader loses */
   sendEncoded: (encoded: string) => void;
   /**
-   * Send a frame of a topic's sequence — an event, a `skip`, a `resync` —
-   * with the position it brings the count to: while the connection's
-   * subscription to the topic resumes from a log, one the resumption sends
-   * itself is dropped, and the others are held until it has
+   * Send a frame of a topic's sequence — an event, a `skip`, or, as
+   * `control`, a `resync` — with the position it brings the count to: while
+   * the connection's subscription to the topic resumes from a log, one the
+   * resumption sends itself is dropped, and the others are held until it has
    */
-  sendTopicEvent: (topic: string, position: TopicPosition, encoded: string) => void;
+  sendTopicEvent: (
+    topic: string,
+    position: TopicPosition,
+    encoded: string,
+    kind?: FrameKind,
+  ) => void;
   /** Close the connection as the application asked, with an application's code */
   close: (code: number, reason: string) => void;
   /**

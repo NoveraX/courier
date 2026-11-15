@@ -53,7 +53,7 @@ export function createLogFollower(
   function resync(topic: string, position: TopicPosition): void {
     const frame = encodeMessage({ type: "resync", topic, ...position });
     for (const id of targets.topicManager?.subscribers(topic) ?? [])
-      targets.entries.get(id)?.sendTopicEvent(topic, position, frame);
+      targets.entries.get(id)?.sendTopicEvent(topic, position, frame, "control");
   }
 
   function accept(topic: string, payload: unknown, logged: LoggedPosition): void {

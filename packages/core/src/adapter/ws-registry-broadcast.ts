@@ -176,6 +176,6 @@ export function resyncEvery(targets: BroadcastTargets): void {
     const position = targets.sequences.position(topic);
     const frame = encodeMessage({ type: "resync", topic, ...position });
     for (const id of targets.topicManager?.subscribers(topic) ?? [])
-      targets.entries.get(id)?.sendTopicEvent(topic, position, frame);
+      targets.entries.get(id)?.sendTopicEvent(topic, position, frame, "control");
   }
 }

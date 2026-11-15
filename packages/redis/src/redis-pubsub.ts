@@ -25,7 +25,10 @@ const log = createLogger("RedisPubSub");
  * in order as Redis answers or is back, the commands first. A publish
  * waits for Redis's answer `maxAgeMs` at most. Every subscription asked
  * for is made as soon as Redis answers, made again after each reconnect,
- * and tried again after a pause when Redis refuses it.
+ * and tried again after a pause when Redis refuses it. `subscribe()`
+ * settles once Redis has answered its SUBSCRIBE, so what another replica
+ * publishes after reaches the handler: at once while Redis is away, and
+ * after 2 seconds at most.
  * `connect()` waits until both connections are ready; `disconnect()`
  * settles within its deadline whatever Redis does, and leaves the two
  * clients, which are yours, open.
@@ -175,7 +178,7 @@ export function createRedisPubSub(config: RedisPubSubConfig): PubSubAdapter {
     },
     async subscribe(topic, handler) {
       if (state.current === "stopped") throw stoppedError();
-      return subscriptions.add(prefix + topic, handler);
+      return subscriptions.subscribe(prefix + topic, handler);
     },
     stats: () => ({
       state: state.current,

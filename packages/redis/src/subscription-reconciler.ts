@@ -1,18 +1,26 @@
 import type { LoggedPosition } from "@noverax/courier/realtime";
 import type { Redis } from "ioredis";
 
+import { SUBSCRIBE_TIMEOUT_MS, settleWithin } from "./adapter-deadlines";
+import { channelBatches } from "./channel-batches";
 import { createHeldChannels } from "./held-channels";
 import { retryDelay } from "./retry-delay";
+import { createSubscribeAnswers } from "./subscribe-answers";
 
 type Handler = (message: unknown, logged?: LoggedPosition) => void;
-
-/** Channels sent in one SUBSCRIBE or UNSUBSCRIBE, so a large set is no single huge command. */
-const BATCH = 500;
 
 /** The subscriptions a pub/sub adapter wants, and those its subscriber connection holds. */
 export interface SubscriptionReconciler {
   /** Want a channel for a handler; the returned function stops wanting it for that handler */
   add(channel: string, handler: Handler): () => void;
+  /**
+   * Want a channel as `add()` does, settling once Redis has answered its
+   * SUBSCRIBE on this connection: at once for a channel confirmed, or while
+   * the subscriber is not ready; as the connection is lost, or the
+   * reconciler stops; and after `SUBSCRIBE_TIMEOUT_MS` at the latest. It
+   * gives the function that stops wanting the channel for that handler.
+   */
+  subscribe(channel: string, handler: Handler): Promise<() => void>;
   /** The handlers of a channel the adapter wants, `undefined` for any other */
   handlersOf(channel: string): ReadonlySet<Handler> | undefined;
   /** The subscriber is ready: subscribe every channel wanted and not held, and let go of those no handler wants */
@@ -35,7 +43,8 @@ export interface SubscriptionReconciler {
  * as a connection was lost, which ioredis subscribes again on the next; one
  * whose SUBSCRIBE is answered only on the next. Only the connection a reply
  * came on counts a channel as confirmed, so a reply that arrives after a
- * reconnect does not pass for the new connection's.
+ * reconnect does not pass for the new connection's. A subscribe waits for
+ * Redis's answer on the connection, within a bound.
  *
  * @param subscriber - The connection subscriptions are made on
  * @param report - Told of each command Redis failed
@@ -62,6 +71,7 @@ export function createSubscriptionReconciler(
   let stopped = false;
   let failures = 0;
   let retry: ReturnType<typeof setTimeout> | undefined;
+  const waits = createSubscribeAnswers();
 
   function soon(): void {
     if (queued) return;
@@ -84,14 +94,20 @@ export function createSubscriptionReconciler(
     running = true;
     const sentOn = generation;
     const sent = [
-      ...batches(missing).map((batch) =>
-        subscriber.subscribe(...batch).then(() => {
-          for (const channel of batch) holding.subscribed(channel, generation === sentOn);
-          /* Let go of before Redis answered: held all the same, until it is unsubscribed. */
-          if (batch.some((channel) => !wanted.has(channel))) soon();
-        }),
+      ...channelBatches(missing).map((batch) =>
+        subscriber
+          .subscribe(...batch)
+          .then(() => {
+            for (const channel of batch) holding.subscribed(channel, generation === sentOn);
+            /* Let go of before Redis answered: held all the same, until it is unsubscribed. */
+            if (batch.some((channel) => !wanted.has(channel))) soon();
+          })
+          .finally(() => {
+            /* Taken or refused, it was answered: the refusal is tried again later. */
+            if (generation === sentOn) for (const channel of batch) waits.answered(channel);
+          }),
       ),
-      ...batches(stray).map((batch) =>
+      ...channelBatches(stray).map((batch) =>
         subscriber.unsubscribe(...batch).then(() => {
           if (generation === sentOn) for (const channel of batch) holding.unsubscribed(channel);
         }),
@@ -127,21 +143,29 @@ export function createSubscriptionReconciler(
     if (typeof retry === "object" && "unref" in retry) retry.unref();
   }
 
+  function add(channel: string, handler: Handler): () => void {
+    let handlers = wanted.get(channel);
+    if (!handlers) {
+      handlers = new Set();
+      wanted.set(channel, handlers);
+      soon();
+    }
+    const held = handlers;
+    held.add(handler);
+    return () => {
+      if (!held.delete(handler) || held.size > 0 || wanted.get(channel) !== held) return;
+      wanted.delete(channel);
+      soon();
+    };
+  }
+
   return {
-    add(channel, handler) {
-      let handlers = wanted.get(channel);
-      if (!handlers) {
-        handlers = new Set();
-        wanted.set(channel, handlers);
-        soon();
-      }
-      const held = handlers;
-      held.add(handler);
-      return () => {
-        if (!held.delete(handler) || held.size > 0 || wanted.get(channel) !== held) return;
-        wanted.delete(channel);
-        soon();
-      };
+    add,
+    async subscribe(channel, handler) {
+      const stop = add(channel, handler);
+      const answers = !stopped && subscriber.status === "ready" && !holding.confirmed.has(channel);
+      if (answers) await waits.wait(channel, SUBSCRIBE_TIMEOUT_MS);
+      return stop;
     },
     handlersOf: (channel) => wanted.get(channel),
     connected() {
@@ -151,21 +175,17 @@ export function createSubscriptionReconciler(
     disconnected() {
       generation++;
       holding.lost();
+      waits.answeredAll();
     },
     async stop(timeoutMs) {
       stopped = true;
       clearTimeout(retry);
+      waits.answeredAll();
       const held = holding.takeAll();
       wanted.clear();
       if (held.length === 0 || subscriber.status !== "ready") return;
-      let deadline: ReturnType<typeof setTimeout> | undefined;
-      await Promise.race([
-        Promise.allSettled(batches(held).map((batch) => subscriber.unsubscribe(...batch))),
-        new Promise<void>((resolve) => {
-          deadline = setTimeout(resolve, timeoutMs);
-        }),
-      ]);
-      clearTimeout(deadline);
+      const letGo = channelBatches(held).map((batch) => subscriber.unsubscribe(...batch));
+      await settleWithin(Promise.allSettled(letGo), timeoutMs);
     },
     get wanted() {
       return wanted.size;
@@ -174,12 +194,4 @@ export function createSubscriptionReconciler(
       return holding.confirmed.size;
     },
   };
-}
-
-function batches(channels: readonly string[]): string[][] {
-  const out: string[][] = [];
-  for (let start = 0; start < channels.length; start += BATCH) {
-    out.push(channels.slice(start, start + BATCH));
-  }
-  return out;
 }

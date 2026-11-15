@@ -2,12 +2,14 @@
  * The Redis pub/sub adapter against stand-ins for its two ioredis clients,
  * whose status and events a test sets: what it does before Redis is ready,
  * when Redis comes and goes, when it refuses a SUBSCRIBE, and what it says
- * of it; and that it lets go of every channel its connection may hold and
- * no handler wants, however late Redis answered. The suite against a real
- * Redis is redis-pubsub-outage.test.ts.
+ * of it; that a subscription settles once Redis has answered for it; and
+ * that it lets go of every channel its connection may hold and no handler
+ * wants, however late Redis answered. The suite against a real Redis is
+ * redis-pubsub-outage.test.ts.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { SUBSCRIBE_TIMEOUT_MS } from "../src/adapter-deadlines";
 import { createRedisPubSub } from "../src/redis-pubsub";
 import type { RedisPubSubConfig } from "../src/types";
 
@@ -80,6 +82,33 @@ describe("createRedisPubSub", () => {
     expect(heard).toEqual(["hi"]);
   });
 
+  it("settles subscribe() once Redis has answered its SUBSCRIBE, and at its deadline at the latest", async () => {
+    vi.useFakeTimers();
+    const sub = createClient();
+    const answer = Promise.withResolvers<number>();
+    sub.subscribe
+      .mockImplementationOnce(() => answer.promise)
+      .mockImplementationOnce(() => new Promise<number>(() => undefined));
+    const pubsub = adapterOn(createClient(), sub);
+    const settled: string[] = [];
+    const subscribe = (channel: string) =>
+      void pubsub.subscribe(channel, () => undefined).then(() => settled.push(channel));
+
+    subscribe("room");
+    await vi.advanceTimersByTimeAsync(SUBSCRIBE_TIMEOUT_MS - 1);
+    expect(settled).toEqual([]);
+    answer.resolve(1);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(settled).toEqual(["room"]);
+
+    subscribe("lobby");
+    await vi.advanceTimersByTimeAsync(SUBSCRIBE_TIMEOUT_MS - 1);
+    expect(settled).toEqual(["room"]);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(settled).toEqual(["room", "lobby"]);
+    expect(sub.subscribe.mock.calls).toEqual([["room"], ["lobby"]]);
+  });
+
   it("subscribes, once Redis is ready, what it was asked for while Redis was away", async () => {
     const sub = createClient("connecting");
     const pubsub = adapterOn(createClient("connecting"), sub);
@@ -150,14 +179,18 @@ describe("createRedisPubSub", () => {
   });
 
   it("lets go of a channel no handler wanted by the time Redis answered its SUBSCRIBE", async () => {
+    vi.useFakeTimers();
     const sub = createClient();
     const reply = Promise.withResolvers<number>();
     sub.subscribe.mockImplementationOnce(() => reply.promise);
     const pubsub = adapterOn(createClient(), sub);
-    const leave = await pubsub.subscribe("room", () => undefined);
-    await expect.poll(() => sub.subscribe.mock.calls).toEqual([["room"]]);
+    /* Settled at its deadline, Redis yet to answer. */
+    const subscribing = pubsub.subscribe("room", () => undefined);
+    await vi.advanceTimersByTimeAsync(SUBSCRIBE_TIMEOUT_MS);
+    vi.useRealTimers();
+    expect(sub.subscribe.mock.calls).toEqual([["room"]]);
 
-    leave();
+    (await subscribing)();
     reply.resolve(1);
 
     await expect.poll(() => sub.unsubscribe.mock.calls).toEqual([["room"]]);
@@ -182,11 +215,12 @@ describe("createRedisPubSub", () => {
     const reply = Promise.withResolvers<number>();
     sub.subscribe.mockImplementationOnce(() => reply.promise);
     const pubsub = adapterOn(createClient(), sub);
-    const leave = await pubsub.subscribe("room", () => undefined);
+    const subscribing = pubsub.subscribe("room", () => undefined);
     await expect.poll(() => sub.subscribe.mock.calls).toEqual([["room"]]);
 
+    /* The connection lost, subscribe() waits for Redis no more. */
     sub.become("close");
-    leave();
+    (await subscribing)();
     sub.become("ready");
     reply.resolve(1);
 

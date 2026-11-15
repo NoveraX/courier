@@ -82,6 +82,18 @@ describe("what the cap is worth against a caller that varies the header", () => 
     expect(tracker.acquire(victim)).toBe(true);
   });
 
+  it("counts the addresses of one IPv6 /64 as one caller, as the proxy's limit does", () => {
+    const tracker = createIPTracker(2);
+
+    expect(tracker.acquire("2001:db8:0:7::1")).toBe(true);
+    expect(tracker.acquire("2001:db8:0:7:aaaa::2")).toBe(true);
+    expect(tracker.acquire("2001:db8:0:7:ffff:ffff:ffff:fffe")).toBe(false);
+    expect(tracker.acquire("2001:db8:0:8::1")).toBe(true);
+    tracker.release("2001:db8:0:7::1");
+    expect(tracker.acquire("[2001:db8:0:7::3]:443")).toBe(true);
+    expect(tracker.acquire("a caller the resolver names")).toBe(true);
+  });
+
   it("releases the count when a connection closes", () => {
     const tracker = createIPTracker(1);
 

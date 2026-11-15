@@ -156,7 +156,7 @@ The command exits with status 1 when the server cannot start — the port is tak
 | `maxConnectionsPerKey` | `undefined` | A limit on the WebSocket connections that share a key — `{ key: (meta) => meta.userId, max: 3 }`, or the address, `{ key: (_, { clientIp }) => clientIp, max: 50 }` — or a list of them; over one, the oldest is closed with `4409`, or, with `onExceed: "reject"`, the new one with `4429` |
 | `history` | `undefined` | Keep each topic's recent events, `{}` for 100 a topic kept a minute and 8 MiB in all, so a subscription that comes back is sent what it missed |
 | `connectionLeases` | this replica's memory | Where `maxConnectionsPerKey` counts connections — `createRedisConnectionLeases()` to count them on every replica |
-| `maxConnectionsPerIP` | `50` | WebSocket connections one address may hold; raise it for clients behind a shared NAT or proxy |
+| `maxConnectionsPerIP` | `50` | WebSocket connections one address may hold, an IPv6 address's /64 counted as one; raise it for clients behind a shared NAT or proxy |
 | `clientIp` | the socket's address | Names the address a WebSocket connection is counted against |
 | `maxSubscriptionsPerConnection` | `100` | Subscriptions one WebSocket connection may hold; its subscribe, unsubscribe and auth frames are limited to twice this a second, apart from its other messages, and one past the limit is refused with a `4429` error |
 | `maxMessageSize` | `65536` | Largest WebSocket message Courier accepts, in bytes; a larger one is refused with a `4413` error and the connection stays open |

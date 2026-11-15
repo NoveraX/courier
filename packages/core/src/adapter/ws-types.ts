@@ -100,7 +100,10 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
   middlewareTimeoutMs?: number | undefined;
   /** Max inbound messages per second per connection — token bucket (default 100) */
   maxMessagesPerSecond?: number | undefined;
-  /** Max concurrent connections from a single IP address (default 50) */
+  /**
+   * Max concurrent connections from a single IP address, an IPv6 address
+   * counted by its /64 as the proxy's limit counts a caller (default 50)
+   */
   maxConnectionsPerIP?: number | undefined;
   /**
    * A limit on the connections that share a key — one user's tabs and

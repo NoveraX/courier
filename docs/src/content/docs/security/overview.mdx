@@ -100,7 +100,7 @@ A webhook is a call made to your app by its sender, and [`defineWebhook`](/docs/
 | A request body's whole arrival | 5 minutes, then `408` | `bodyTimeoutMs` |
 | A stream's lifetime | 30 minutes | `sseMaxLifetimeMs` |
 | A WebSocket message | 64 KB | `maxMessageSize` |
-| Connections from one address | 50 | `maxConnectionsPerIP` |
+| Connections from one address, an IPv6 address's /64 counted as one | 50 | `maxConnectionsPerIP` |
 | Messages per connection | 100 a second | `maxMessagesPerSecond` |
 | Subscriptions per connection | 100 | `maxSubscriptionsPerConnection` |
 | Wait for a channel's first frame | 3 seconds | `authTimeoutMs` |

@@ -1,4 +1,5 @@
 import { requestClientAddress } from "./client-address";
+import { callerKeyOf } from "./rate-limit/caller-key";
 
 /** Per-IP connection counter for DDoS/abuse protection */
 export interface IPTracker {
@@ -36,8 +37,12 @@ export function extractClientIP(request: Request, resolve?: ClientIPResolver): s
 
 /**
  * Create a per-IP connection tracker for DDoS/abuse protection.
- * Maintains a Map<ip, count> — increment on connect, decrement on disconnect.
- * When a single IP exceeds `maxPerIP`, new connections are rejected.
+ * Maintains a Map<caller, count> — increment on connect, decrement on
+ * disconnect. A caller is an address by the key the proxy's limit counts it
+ * by — an IPv6 address by its /64, which one subscriber is given whole and
+ * could otherwise spend address by address (see `callerKeyOf`) — and
+ * anything else a `clientIp` resolver names, as it is. When a single caller
+ * exceeds `maxPerIP`, new connections are rejected.
  *
  * @param maxPerIP - Maximum concurrent connections allowed per IP (e.g. 50)
  * @returns Tracker with acquire/release methods
@@ -55,18 +60,26 @@ export function createIPTracker(maxPerIP: number): IPTracker {
 
   return {
     acquire(ip) {
-      const current = counts.get(ip) ?? 0;
+      const caller = callerOf(ip);
+      const current = counts.get(caller) ?? 0;
       if (current >= maxPerIP) return false;
-      counts.set(ip, current + 1);
+      counts.set(caller, current + 1);
       return true;
     },
     release(ip) {
-      const current = counts.get(ip) ?? 0;
+      const caller = callerOf(ip);
+      const current = counts.get(caller) ?? 0;
       if (current <= 1) {
-        counts.delete(ip);
+        counts.delete(caller);
       } else {
-        counts.set(ip, current - 1);
+        counts.set(caller, current - 1);
       }
     },
   };
+}
+
+/* An address by its caller key; what is no address, a resolver's own name for the caller, as it is. */
+function callerOf(ip: string): string {
+  const key = callerKeyOf(ip);
+  return key === "unknown" ? ip : key;
 }

@@ -3,7 +3,8 @@
  * another site than its own: the browser decides whether the API gets its
  * cookies — Safari sends none — so Courier says so once, and says nothing
  * where the API shares the page's site, set `credentials` itself, or where
- * no page is.
+ * no page is. The part that says it is loaded with the first call that may
+ * have it to say, so each case waits for what the calls loaded.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -54,6 +55,7 @@ describe("a page whose session API is on another site", () => {
 
     await api.me();
     await api.me();
+    await vi.dynamicImportSettled();
 
     const said = warnings(warn);
     expect(said).toHaveLength(1);
@@ -71,6 +73,7 @@ describe("a page whose session API is on another site", () => {
     await accounts("subdomain", "https://api.example.com/v1").me();
     await accounts("relative", "/api").me();
     await accounts("own", "https://api.other.com", "include").me();
+    await vi.dynamicImportSettled();
 
     expect(warnings(warn)).toEqual([]);
   });
@@ -85,6 +88,7 @@ describe("a page whose session API is on another site", () => {
     );
 
     await accounts("native", "https://api.other.com").me();
+    await vi.dynamicImportSettled();
 
     expect(warnings(warn)).toEqual([]);
   });

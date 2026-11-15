@@ -1,7 +1,7 @@
 import type { CallSession } from "./call-session";
 import { cookieJarOf } from "./cookie-header";
 import { renewSessionPartition, sessionPartition } from "./one-user-partition";
-import { warnIfOtherSite } from "./other-site";
+import type * as OtherSite from "./other-site";
 import { sessionCredentials } from "./session-credentials";
 import type { SessionTarget } from "./session-target";
 import type * as StoredCookies from "./stored-cookies";
@@ -86,7 +86,7 @@ function startBrowserCall(
   target: SessionTarget,
   session: SessionOptions,
 ): (jar: ReadonlyMap<string, string>) => CallSession {
-  warnIfOtherSite(target, session);
+  noteOtherSite(target, session);
   if (target.unsafeMethod) renewSessionPartition();
   return (jar) => {
     const credentials = sessionCredentials(jar, session);
@@ -109,6 +109,26 @@ function startBrowserCall(
       renewsPartition: target.unsafeMethod,
     };
   };
+}
+
+let otherSite: Promise<typeof OtherSite> | undefined;
+
+/* An API that keeps the session in cookies, at an address of its own, may be on another site than
+   the page: the part that weighs the two sites, and says so once, is loaded with the first call
+   that may have that to say. The call goes whether it loads or not; a load that failed is tried
+   again by the next such call. */
+function noteOtherSite(target: SessionTarget, session: SessionOptions): void {
+  const { url } = target;
+  if (url === undefined || target.credentials !== undefined) return;
+  if ((session.cookies?.length ?? 0) === 0) return;
+  otherSite ??= import("./other-site").catch((cause: unknown) => {
+    otherSite = undefined;
+    throw cause;
+  });
+  void otherSite.then(
+    ({ warnIfOtherSite }) => warnIfOtherSite(target.name, url),
+    () => undefined,
+  );
 }
 
 let stored: Promise<typeof StoredCookies> | undefined;

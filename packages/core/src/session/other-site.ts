@@ -1,8 +1,6 @@
 import { createLogger } from "../logger";
 import { pageLocation } from "../utils/page-location";
 import { parseUrl } from "../utils/parse-url";
-import type { SessionTarget } from "./session-target";
-import type { SessionOptions } from "./types";
 
 const log = createLogger("Session");
 /* Each page origin and API address is weighed once: every call after asks a set. */
@@ -15,26 +13,26 @@ const IPV4 = /^\d{1,3}(?:\.\d{1,3}){3}$/;
  * browser's to keep from it: Safari sends an API on another site none of
  * them, and Chrome and Firefox only those it sets `SameSite=None; Secure`,
  * so the session can reach the API in one browser and not in another.
- * Nothing is said where the API set `credentials` itself, nor where no
- * page is, in React Native.
+ * Nothing is said where no page is, in React Native. A page loads this
+ * with its first call of an API that keeps its session in cookies, at an
+ * address of its own, and sets no `credentials` itself.
  *
- * @param target - The call, as the session reads it
- * @param session - The API's session
+ * @param endpoint - The endpoint called, as messages name it: `api.users.me`
+ * @param url - Where the API is reached: the call's `prefixUrl`, or its `baseURL`
  * @example
  * ```ts
- * warnIfOtherSite(target, { cookies: ["sid"] }); // the page on localhost, the API on 127.0.0.1
+ * warnIfOtherSite("accounts.me", "http://127.0.0.1:4000"); // on a page served from localhost
  * ```
  */
-export function warnIfOtherSite(target: SessionTarget, session: SessionOptions): void {
-  if ((session.cookies?.length ?? 0) === 0 || target.credentials !== undefined) return;
+export function warnIfOtherSite(endpoint: string, url: string): void {
   const page = pageAddress();
-  if (page === undefined || target.url === undefined) return;
-  const key = `${page.origin} ${target.url}`;
+  if (page === undefined) return;
+  const key = `${page.origin} ${url}`;
   if (weighed.has(key)) return;
   weighed.add(key);
-  const api = parseUrl(target.url, page.href);
+  const api = parseUrl(url, page.href);
   if (api === undefined || sameSite(page.hostname, api.hostname)) return;
-  const name = target.name.split(".")[0] || target.name;
+  const name = endpoint.split(".")[0] || endpoint;
   log.warn(
     `${name}: the API at ${api.origin} is on another site than this page, ${page.origin}. Safari sends an API on another site none of its cookies, and Chrome and Firefox only the ones it sets SameSite=None; Secure, so the session may not reach it. Serve the API on this page's site, under a subdomain of it, or call it through Courier's proxy`,
   );

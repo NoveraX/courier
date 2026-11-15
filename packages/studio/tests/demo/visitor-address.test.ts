@@ -59,8 +59,21 @@ describe("visitorAddress", () => {
     expect(visitorAddress(from("2001:db8:1:3::1"))).not.toBe(first);
   });
 
+  it("counts an IPv6 subscriber by its /64 network however its address is written", () => {
+    expect(visitorAddress(from("2001:DB8:0001:0002::1"))).toBe("2001:db8:1:2::/64");
+  });
+
   it("counts an IPv4 address IPv6 maps as the IPv4 address", () => {
     expect(visitorAddress(from("::ffff:203.0.113.9"))).toBe("203.0.113.9");
+  });
+
+  it("counts each IPv4 user a NAT64 translator carries by the user's own address, not as one network", () => {
+    expect(visitorAddress(from("64:ff9b::101:101"))).toBe("1.1.1.1");
+    expect(visitorAddress(from("64:ff9b::808:808"))).toBe("8.8.8.8");
+  });
+
+  it("counts a visitor a load balancer reported with a port by the address alone", () => {
+    expect(visitorAddress(from("10.0.1.4", "203.0.113.7:51234"))).toBe("203.0.113.7");
   });
 
   it("reads past the entries a trusted filter appended, to the address the filter saw", () => {

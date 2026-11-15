@@ -1,5 +1,7 @@
 import type { IncomingHttpHeaders } from "node:http";
-import { isIP, isIPv6 } from "node:net";
+import { isIP } from "node:net";
+
+import { callerKeyOf } from "@noverax/courier";
 
 import { specAddressKind } from "../spec-address-kind";
 import { NO_TRUSTED_PROXIES, plainAddress, type TrustedProxies } from "./trusted-proxies";
@@ -24,8 +26,10 @@ export interface VisitorConnection {
  * trusted proxies appended, as each proxy appends the address it saw; an
  * entry a visitor forges stands left of it. A visitor that connects
  * directly — past every proxy — is counted by its own address, whatever it
- * claims. An IPv6 address is counted by its /64 network, which one
- * subscriber is given whole.
+ * claims. The address is counted as Courier's own limit counts one, by
+ * `callerKeyOf`: an IPv6 address by its /64 network, which one subscriber
+ * is given whole, however it is written, and an IPv4 user a NAT64
+ * translator carries by the user's own address.
  *
  * @param connection - The connection's own address, and the request's headers
  * @param trusted - The proxies whose entries are passed over; none by default
@@ -44,13 +48,13 @@ export function visitorAddress(
   trusted: TrustedProxies = NO_TRUSTED_PROXIES,
 ): string {
   const plainPeer = peer === undefined ? undefined : plainAddress(peer);
-  if (plainPeer !== undefined && !viaProxy(plainPeer, trusted)) return counted(plainPeer);
+  if (plainPeer !== undefined && !viaProxy(plainPeer, trusted)) return callerKeyOf(plainPeer);
   const hops = forwardedHops(headers["x-forwarded-for"]);
   const named = namedByTrustedProxy(plainPeer, hops, headers, trusted);
-  if (named !== undefined) return counted(named);
+  if (named !== undefined) return callerKeyOf(named);
   const reported = hops.findLast((hop) => !trusted.has(hop)) ?? hops.at(-1);
-  if (reported !== undefined) return counted(reported);
-  return plainPeer === undefined ? "unknown" : counted(plainPeer);
+  if (reported !== undefined) return callerKeyOf(reported);
+  return callerKeyOf(plainPeer);
 }
 
 function viaProxy(address: string, trusted: TrustedProxies): boolean {
@@ -81,18 +85,4 @@ function namedByTrustedProxy(
   const value = headers[trusted.addressHeader];
   const named = (Array.isArray(value) ? value.join(",") : (value ?? "")).split(",").at(-1)?.trim();
   return named !== undefined && isIP(plainAddress(named)) !== 0 ? named : undefined;
-}
-
-/* An IPv4 address as itself, wherever IPv6 maps it; an IPv6 address by its /64 network. */
-function counted(address: string): string {
-  const plain = plainAddress(address);
-  return isIPv6(plain) ? `${network64(plain)}::/64` : plain;
-}
-
-function network64(address: string): string {
-  const [head = "", tail] = address.split("::");
-  const left = head === "" ? [] : head.split(":");
-  const right = tail === undefined || tail === "" ? [] : tail.split(":");
-  const zeros = Array.from({ length: 8 - left.length - right.length }, () => "0");
-  return [...left, ...zeros, ...right].slice(0, 4).join(":");
 }

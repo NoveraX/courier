@@ -9,6 +9,7 @@ import type { PresenceDiff } from "@noverax/courier/realtime";
 import { describe, expect, it, vi } from "vitest";
 
 import { createRedisPresence } from "../src/redis-presence";
+import type { RedisPresenceConfig } from "../src/types";
 
 /** One Redis, shared by every client the test makes, with real pub/sub. */
 function createBus() {
@@ -80,6 +81,29 @@ describe("a diff raised on one replica", () => {
 
     expect(seen).toHaveLength(1);
     expect(seen[0]?.joins[0]?.userId).toBe("u1");
+  });
+
+  it("reaches another replica made from the same configuration, an origin named in it too", async () => {
+    const bus = createBus();
+    const made = () =>
+      createRedisPresence({
+        redis: bus.client(),
+        subscriber: bus.client(),
+        prefix: "p:",
+        origin: "pod-1",
+      } as RedisPresenceConfig);
+    const a = made();
+    const b = made();
+    await a.connect();
+    await b.connect();
+
+    const seen: PresenceDiff[] = [];
+    b.onDiff("lobby", (d) => seen.push(d));
+    await new Promise((r) => setTimeout(r, 10));
+
+    await a.track("lobby", entry);
+
+    expect(seen).toHaveLength(1);
   });
 
   /** A replica has already run its own handlers before it publishes. */

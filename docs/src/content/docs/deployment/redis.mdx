@@ -58,15 +58,7 @@ The adapter works from the moment it is made, whether Redis is there or not:
 
 ### Echo Prevention
 
-Each adapter instance generates a unique `origin` UUID. Messages are tagged with this origin, and the adapter skips messages from itself — preventing echo loops in multi-replica setups.
-
-```ts
-const pubsub = createRedisPubSub({
-  publisher: new Redis(process.env.REDIS_URL ?? "redis://localhost:6379"),
-  subscriber: new Redis(process.env.REDIS_URL ?? "redis://localhost:6379"),
-  origin: process.env.HOSTNAME,  // optional: use pod name as origin
-})
-```
+Each adapter makes an id of its own, a random UUID, and tags what it publishes with it; it skips the messages tagged with its id, so a replica does not hear its own broadcasts twice. The id cannot be set: one the application chose could be shared — by the PM2 or `node:cluster` workers of one container, by services given one hostname — and adapters sharing it would skip each other's messages without a word. The presence adapter tells its diffs apart the same way.
 
 ### Topic Log
 

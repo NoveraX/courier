@@ -16,11 +16,6 @@ export interface RedisPresenceConfig {
    */
   subscriber?: Redis | undefined;
   /**
-   * Identifier stamped on this replica's diffs so it ignores their echo.
-   * Generated when omitted.
-   */
-  origin?: string | undefined;
-  /**
    * Redis instance for ZADD / HSET / ZRANGEBYSCORE commands.
    *
    * Typed against ioredis's default `legacy` reply mapping, which is what
@@ -55,11 +50,6 @@ export interface RedisPubSubConfig {
    * every message for this connection through the same handler.
    */
   subscriber: Redis;
-  /**
-   * Custom origin ID for echo prevention.
-   * Defaults to `crypto.randomUUID()`.
-   */
-  origin?: string | undefined;
   /**
    * Channel key prefix (e.g. `"courier:"`).
    * Applied to all topic names: `prefix + topic`.

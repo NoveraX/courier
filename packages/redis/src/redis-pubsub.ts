@@ -43,7 +43,10 @@ const log = createLogger("RedisPubSub");
  */
 export function createRedisPubSub(config: RedisPubSubConfig): PubSubAdapter {
   const { publisher, subscriber, prefix = "" } = config;
-  const origin = config.origin ?? crypto.randomUUID();
+  /* What tells this adapter's messages from the others', so it skips its own: an id no other
+     adapter has. One the application chose could be shared — by the workers of one host, by
+     services given one hostname — and adapters sharing it would skip each other's messages. */
+  const origin = crypto.randomUUID();
   const queue = createOutboundQueue(config.queue);
   const errorHandlers = new Set<(error: Error) => void>();
   const refusals = createRefusalLog("RedisPubSub");

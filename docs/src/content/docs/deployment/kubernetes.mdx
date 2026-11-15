@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Kubernetes",
   description: "Deploy Courier on Kubernetes with nginx-ingress, sticky sessions, PodDisruptionBudget, and HPA scaling on connection count.",
-  updated: "2026-09-15",
+  updated: "2026-11-15",
 }
 
 ## Deployment
@@ -56,10 +56,6 @@ spec:
                 configMapKeyRef:
                   name: courier-config
                   key: allowed-origin
-            - name: HOSTNAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
           livenessProbe:
             httpGet:
               path: /health

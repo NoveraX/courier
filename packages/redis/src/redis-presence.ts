@@ -52,7 +52,9 @@ export function createRedisPresence(config: RedisPresenceConfig): PresenceAdapte
   const errors = createErrorForwarder(redis, errorHandlers);
   const diffHandlers = new Map<string, Set<DiffHandler>>();
   const health = trackHealth(redis);
-  const origin = config.origin ?? crypto.randomUUID();
+  /* What tells this replica's diffs from the others', an id no other has, as the pub/sub
+     adapter's is. */
+  const origin = crypto.randomUUID();
   const clients = subscriber ? [redis, subscriber] : [redis];
   const emitError = createErrorEmitter(errorHandlers);
   const deliverLocally = createDiffEmitter(diffHandlers, emitError);

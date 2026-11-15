@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Docker",
   description: "Deploy Courier with Docker — multi-stage Dockerfile, Docker Compose with Redis, and Docker Swarm with Traefik for horizontal scaling.",
-  updated: "2026-10-04",
+  updated: "2026-11-15",
 }
 
 ## Dockerfile
@@ -352,7 +352,6 @@ traefik.http.services.${SERVICE}.loadbalancer.responseforwarding.flushinterval=1
 | `REDIS_URL` | — | Redis connection string |
 | `ALLOWED_ORIGIN` | — | CORS allowed origin |
 | `NODE_ENV` | — | Set to `production` |
-| `HOSTNAME` | — | Auto-set by Docker/K8s, used as PubSub origin |
 | `COURIER_LOG_LEVEL` | `info` | Lowest log level printed: `debug`, `info`, `warn`, `error` or `silent` |
 | `COURIER_LOG_FORMAT` | `text` | `json` writes one JSON object per line — time, level, scope, pid, message, error — for a log pipeline |
 | `NO_COLOR` | — | Any non-empty value turns colour off in the log |

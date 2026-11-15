@@ -24,7 +24,6 @@ export const pubsub = createRedisPubSub({
   publisher: new Redis(redisUrl),
   subscriber: new Redis(redisUrl),
   prefix: "courier:",
-  origin: process.env.HOSTNAME,
 })
 
 export const history = createRedisStream({

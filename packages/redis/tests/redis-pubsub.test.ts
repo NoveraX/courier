@@ -48,9 +48,15 @@ function adapterOn(publisher: Client, subscriber: Client, more: Partial<RedisPub
   return createRedisPubSub({
     publisher: publisher as unknown as RedisPubSubConfig["publisher"],
     subscriber: subscriber as unknown as RedisPubSubConfig["subscriber"],
-    origin: "here",
     ...more,
   });
+}
+
+/* What an adapter sent through its publisher, as Redis would deliver it back: channel and message. */
+function sentBy(publisher: Client): [string, string] {
+  const [call] = publisher.publish.mock.calls;
+  if (call === undefined) throw new Error("Nothing was published");
+  return call;
 }
 
 const fromAnother = (payload: unknown) =>
@@ -313,14 +319,16 @@ describe("createRedisPubSub", () => {
   });
 
   it("skips its own messages, and reports one on its channel that is no envelope", async () => {
+    const pub = createClient();
     const sub = createClient();
-    const pubsub = adapterOn(createClient(), sub);
+    const pubsub = adapterOn(pub, sub);
     const heard: unknown[] = [];
     const errors: string[] = [];
     pubsub.onError((error) => errors.push(error.message));
     await pubsub.subscribe("room", (message) => heard.push(message));
+    await pubsub.publish("room", "own");
 
-    sub.emit("message", "room", JSON.stringify({ origin: "here", payload: "own", timestamp: 1 }));
+    sub.emit("message", ...sentBy(pub));
     sub.emit("message", "room", "not-json{{");
     sub.emit("message", "room", JSON.stringify("hello"));
 
@@ -329,6 +337,21 @@ describe("createRedisPubSub", () => {
       'Not a Courier message on channel "room"',
       'Not a Courier message on channel "room"',
     ]);
+  });
+
+  it("hears another adapter made from the same configuration, an origin named in it too", async () => {
+    const config = { prefix: "courier:", origin: "pod-1" } as Partial<RedisPubSubConfig>;
+    const fromA = createClient();
+    const toB = createClient();
+    const a = adapterOn(fromA, createClient(), config);
+    const b = adapterOn(createClient(), toB, config);
+    const heard: unknown[] = [];
+    await b.subscribe("room", (message) => heard.push(message));
+
+    await a.publish("room", "from a");
+    toB.emit("message", ...sentBy(fromA));
+
+    expect(heard).toEqual(["from a"]);
   });
 
   it("reports a handler that throws, and still delivers to the others", async () => {

@@ -1,8 +1,8 @@
 /**
  * What a replica takes from the control channel: a command of a version and
  * a kind it knows, every field checked and bounded, or why it is set aside —
- * a newer replica's message skipped, anything else refused. Whatever
- * arrives, reading it never throws.
+ * an older or a newer replica's message skipped, anything else refused.
+ * Whatever arrives, reading it never throws.
  */
 import { describe, expect, it } from "vitest";
 
@@ -10,7 +10,7 @@ import { readClusterMessage } from "../src/adapter/cluster-message";
 import { seededRandom } from "./helpers/seeded-random";
 
 const disconnect = {
-  v: 1,
+  v: 2,
   id: "7d0f3f9e-6b8a-4c55-9a51-3c0e4b5f2a10",
   at: 1_700_000_000_000,
   cmd: {
@@ -67,8 +67,9 @@ describe("readClusterMessage", () => {
     });
   });
 
-  it("skips a message of a version it does not know, and a command of a kind it does not", () => {
-    expect(readClusterMessage({ ...disconnect, v: 2 })).toEqual({ skipped: "version" });
+  it("skips a message of a version it does not speak, and a command of a kind it does not know", () => {
+    expect(readClusterMessage({ ...disconnect, v: 1 })).toEqual({ skipped: "version" });
+    expect(readClusterMessage({ ...disconnect, v: 3 })).toEqual({ skipped: "version" });
     expect(readClusterMessage({ ...disconnect, cmd: { kind: "drain", selector: "c1" } })).toEqual({
       skipped: "kind",
     });

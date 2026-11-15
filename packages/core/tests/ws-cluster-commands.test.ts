@@ -4,7 +4,9 @@
  * their credentials again, reaches every replica holding one. A command is
  * checked before anything is done, and sent only when another replica may
  * hold what it names; with a cluster secret, a command no replica signed,
- * one sent again, and one sent long ago are refused, each on one line.
+ * one sent again — to the replica that sent it as well — one signed for
+ * the other handlers' channel, and one sent long ago are refused, each on
+ * one line, and the commands are carried out in the order they were sent.
  */
 import { format } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,6 +15,7 @@ import { createHandler } from "../src/adapter";
 import { CONTROL_CHANNEL } from "../src/adapter/cluster-control";
 import { createClusterSigner } from "../src/adapter/cluster-signature";
 import { createWSHandler } from "../src/adapter/handle-ws";
+import { SSE_CONTROL_CHANNEL } from "../src/adapter/sse-replication";
 import type { WSHandler, WSHandlerConfig } from "../src/adapter/ws-types";
 import { ConfigurationError } from "../src/errors";
 import type { PubSubAdapter } from "../src/realtime/adapters";
@@ -67,14 +70,27 @@ async function connect(handler: WSHandler, userId: string) {
   return { socket, connectionId: added()?.connectionId ?? "" };
 }
 
-/** What crosses the control channel, as a replica that only listens hears it. */
-async function overhear(bus: MemoryBus): Promise<unknown[]> {
+/** What crosses a control channel, as a replica that only listens hears it. */
+async function overhear(bus: MemoryBus, channel = CONTROL_CHANNEL): Promise<unknown[]> {
   const heard: unknown[] = [];
-  await bus.replica("listener").subscribe(CONTROL_CHANNEL, (message) => heard.push(message));
+  await bus.replica("listener").subscribe(channel, (message) => heard.push(message));
   return heard;
 }
 
 const settled = () => new Promise((resolve) => setTimeout(resolve, 20));
+
+/** Make Web Crypto's first signature, or its first check, end after those that follow it. */
+function slowFirst(step: "sign" | "verify"): void {
+  const subtle = crypto.subtle as unknown as Record<typeof step, (...args: unknown[]) => unknown>;
+  const original = subtle[step].bind(crypto.subtle);
+  let calls = 0;
+  vi.spyOn(subtle, step).mockImplementation(async (...args: unknown[]) => {
+    const first = calls++ === 0;
+    const result = await original(...args);
+    if (first) await new Promise((resolve) => setTimeout(resolve, 50));
+    return result;
+  });
+}
 
 describe("connections.disconnect across replicas", () => {
   it("closes a connection another replica holds, by its id, with the code and reason given", async () => {
@@ -170,7 +186,7 @@ describe("a cluster with a secret", () => {
   /** A command as the given secret, or none, would sign it; sent from outside the replicas. */
   async function inject(bus: MemoryBus, secret: string | undefined, at = Date.now()) {
     const unsigned = {
-      v: 1,
+      v: 2,
       id: crypto.randomUUID(),
       at,
       cmd: { kind: "disconnect", selector: { meta: { userId: "u1" } }, code: 4001, reason: "x" },
@@ -178,7 +194,7 @@ describe("a cluster with a secret", () => {
     const message =
       secret === undefined
         ? unsigned
-        : { ...unsigned, sig: await createClusterSigner(secret).sign(unsigned) };
+        : { ...unsigned, sig: await createClusterSigner(secret, CONTROL_CHANNEL).sign(unsigned) };
     await bus.replica("outsider").publish(CONTROL_CHANNEL, message);
     return message;
   }
@@ -222,6 +238,62 @@ describe("a cluster with a secret", () => {
     await expect.poll(() => warned.join("\n")).toContain("cluster command refused code=REPLAYED");
     expect(second.socket.closed).toBeUndefined();
   });
+
+  it("refuses a command it sent itself, published back to it by another", async () => {
+    const bus = createMemoryBus();
+    const heard = await overhear(bus);
+    const [a] = replicas(1, bus, { cluster: { secret: SECRET } }) as [WSHandler];
+    await a.connections.disconnect({ meta: { userId: "u1" } }, { code: 4001, reason: "x" });
+    await expect.poll(() => heard).toHaveLength(1);
+    const again = await connect(a, "u1");
+
+    await bus.replica("outsider").publish(CONTROL_CHANNEL, heard[0]);
+
+    await expect.poll(() => warned.join("\n")).toContain("cluster command refused code=REPLAYED");
+    expect(again.socket.closed).toBeUndefined();
+  });
+
+  it("refuses a command signed for the other handlers' channel, either way", async () => {
+    const bus = createMemoryBus();
+    const [sentOnWS, sentOnSSE] = [await overhear(bus), await overhear(bus, SSE_CONTROL_CHANNEL)];
+    const [a] = replicas(1, bus, { cluster: { secret: SECRET } }) as [WSHandler];
+    const streams = createHandler({ pubsub: bus.replica("streams"), cluster: { secret: SECRET } });
+    const held = await connect(a, "u1");
+    await a.connections.requireAuth({ meta: { userId: "u2" } }, { timeoutMs: 1_000 });
+    await streams.sseConnections.disconnect({ meta: { userId: "u1" } });
+    await expect.poll(() => [sentOnWS.length, sentOnSSE.length]).toEqual([1, 1]);
+    const outsider = bus.replica("outsider");
+
+    await outsider.publish(CONTROL_CHANNEL, sentOnSSE[0]);
+    await outsider.publish(SSE_CONTROL_CHANNEL, sentOnWS[0]);
+
+    const refused = () => warned.filter((line) => line.includes("code=SIGNATURE_INVALID"));
+    await expect.poll(refused).toHaveLength(2);
+    expect(held.socket.closed).toBeUndefined();
+    await streams.shutdownSSE({ drainMs: 0 });
+  });
+
+  it.each(["sign", "verify"] as const)(
+    "carries out commands in the order they were sent, though the first one's %s ends last",
+    async (step) => {
+      const [a, b] = replicas(2, createMemoryBus(), { cluster: { secret: SECRET } }) as [
+        WSHandler,
+        WSHandler,
+      ];
+      const held = await connect(b, "u1");
+      slowFirst(step);
+
+      void a.connections.requireAuth(held.connectionId, { timeoutMs: 60_001 });
+      void a.connections.requireAuth(held.connectionId, { timeoutMs: 60_002 });
+
+      const asked = () =>
+        held.socket.sent
+          .filter((frame) => frame.type === "reauth_required")
+          .map((frame) => frame.timeoutMs);
+      await expect.poll(asked).toHaveLength(2);
+      expect(asked()).toEqual([60_001, 60_002]);
+    },
+  );
 
   it("refuses a command sent more than a minute ago", async () => {
     const bus = createMemoryBus();

@@ -120,7 +120,7 @@ describe.skipIf(!available)(
       const b = await replica(SECRET);
       const held = await connect(b, "u1");
       const forged = {
-        v: 1,
+        v: 2,
         id: randomUUID(),
         at: Date.now(),
         cmd: { kind: "disconnect", selector: { meta: { userId: "u1" } }, code: 4001, reason: "x" },

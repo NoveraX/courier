@@ -228,10 +228,12 @@ export interface ConnectionLimitRule<TMeta = Record<string, unknown>> {
 /** How the replicas of one application trust the commands they send each other. */
 export interface ClusterOptions {
   /**
-   * A secret every replica shares, of 32 bytes or more: each command one
-   * sends the others — `connections.disconnect`, `connections.requireAuth`,
-   * `sseConnections.disconnect` — is signed with it, and one that is not,
-   * or not with it, is refused.
+   * A secret every replica shares, of 32 bytes or more, and no other
+   * application or environment: each command one sends the others —
+   * `connections.disconnect`, `connections.requireAuth`,
+   * `sseConnections.disconnect` — is signed with it for the channel it
+   * travels on, and one that is not, not with it, or not for that channel,
+   * is refused.
    * Without it, whoever can publish on the adapter's channels can close any
    * connection: on a Redis anything else reaches, set it, and keep
    * publishing on the prefix's channels to the application with Redis ACLs.

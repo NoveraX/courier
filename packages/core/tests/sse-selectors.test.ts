@@ -153,7 +153,7 @@ describe("the SSE registry's selectors", () => {
       reason: "x",
     };
 
-    await intruder.publish(SSE_CONTROL, { v: 1, id: "forged-1", at: Date.now(), cmd });
+    await intruder.publish(SSE_CONTROL, { v: 2, id: "forged-1", at: Date.now(), cmd });
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(usersOf(b)).toEqual(["u1"]);
 

@@ -4,26 +4,27 @@ import { COMMAND_KINDS, type ConnectionCommand, readCommand } from "./ws-connect
 
 /**
  * The version of the messages replicas exchange on the control channel. A
- * field a replica would act on is a new version, which a replica that does
- * not know it skips rather than half understands.
+ * field a replica would act on, or a change to what a signature covers, is
+ * a new version, which a replica that does not speak it skips rather than
+ * half understands.
  */
-const VERSION = 1;
+export const CLUSTER_MESSAGE_VERSION = 2;
 /** The longest message id taken, in characters. */
 const MAX_ID_LENGTH = 64;
 
 /** What one replica sends the others on the control channel. */
 export interface ClusterMessage {
-  readonly v: typeof VERSION;
+  readonly v: typeof CLUSTER_MESSAGE_VERSION;
   /** Unique: a replica acts on one id once */
   readonly id: string;
   /** When it was sent, in milliseconds since the epoch: a replica acts on it only near that time */
   readonly at: number;
   readonly cmd: ConnectionCommand;
-  /** With a cluster secret, the HMAC-SHA-256 of the rest, in hex */
+  /** With a cluster secret, the HMAC-SHA-256 of the rest and of the channel it travels on, in hex */
   readonly sig?: string;
 }
 
-/** A message read; one a newer replica sent, skipped; or why it is no message. */
+/** A message read; one of another version or kind, skipped; or why it is no message. */
 export type ReadMessage =
   | { readonly message: ClusterMessage; readonly selection: Selection }
   | { readonly skipped: "version" | "kind" }
@@ -33,9 +34,10 @@ export type ReadMessage =
  * Read what arrived on the control channel, whoever sent it: a command of a
  * version and a kind this replica knows, every field checked and bounded —
  * the command as the application's own is (`readCommand`) — or why it was
- * set aside. A newer replica's message, as during a rolling deploy, is
- * skipped; anything else that is not one is malformed. Reading never
- * throws, whatever arrives.
+ * set aside. A message of another version — an older or a newer replica's,
+ * as during a rolling deploy — is skipped, and so is a command of a kind a
+ * newer replica sends; anything else that is not one is malformed. Reading
+ * never throws, whatever arrives.
  *
  * @param raw - The payload as the adapter delivered it
  * @returns The message and what its command selects, or why it is set aside
@@ -49,8 +51,8 @@ export type ReadMessage =
 export function readClusterMessage(raw: unknown): ReadMessage {
   if (!isRecord(raw)) return { malformed: "a cluster message is an object" };
   const { v, id, at, cmd, sig } = raw;
-  if (typeof v === "number" && v !== VERSION) return { skipped: "version" };
-  if (v !== VERSION) return { malformed: "a cluster message names its version" };
+  if (typeof v === "number" && v !== CLUSTER_MESSAGE_VERSION) return { skipped: "version" };
+  if (v !== CLUSTER_MESSAGE_VERSION) return { malformed: "a cluster message names its version" };
   if (typeof id !== "string" || id.length === 0 || id.length > MAX_ID_LENGTH) {
     return { malformed: `a cluster message has an id of 1 to ${MAX_ID_LENGTH} characters` };
   }

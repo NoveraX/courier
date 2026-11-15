@@ -6,7 +6,7 @@ import { studioHooks } from "../studio";
 import { ownFields } from "../utils/own";
 import type { ConnectResult } from "./connection-meta";
 import { assertListedSettings } from "./runtime-policy";
-import { assertClientTerms } from "./ws-client-terms";
+import { assertHandlerTerms } from "./ws-client-terms";
 import { createHandlerCounters, type WSHandlerStats } from "./ws-handler-stats";
 import { createIPTracker } from "./ws-ip-tracker";
 import { connectionLimitOf } from "./ws-limit-rule";
@@ -50,7 +50,7 @@ export function createWSHandler(given?: WSHandlerConfig): WSHandler {
   const config = ownFields(given);
   provideServerCapabilities();
   assertListedSettings(config, "createWSHandler");
-  assertClientTerms(config);
+  assertHandlerTerms(config);
   if (config.sources !== undefined) {
     prepareSources(config.sources, "createWSHandler", "createWSHandler({ sources: { api } })");
   }

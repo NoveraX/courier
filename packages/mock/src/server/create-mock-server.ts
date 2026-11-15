@@ -26,6 +26,7 @@ import type { AnyMockScenario } from "../types";
 import { registerAdminRoutes } from "./admin-api";
 import { registerRequestRoutes } from "./api-routes";
 import { applyMiddleware } from "./app-middleware";
+import { assertHeartbeat } from "./channel-sockets/admission";
 import { generatedRoutes, routeKey } from "./generated-routes";
 import type { MockServer, MockServerOptions } from "./mock-server-types";
 import { persistedStore } from "./persisted-store";
@@ -39,6 +40,7 @@ export type { MockServer, MockServerOptions } from "./mock-server-types";
 
 /** @see {@link MockServerOptions} for full documentation */
 export function createMockServer(config?: MockServerOptions): MockServer {
+  assertHeartbeat(config?.ws?.heartbeat);
   const registry = createMockRegistry();
   const store = createMockStore();
   const history = createHistory(config?.historyLimit);

@@ -198,10 +198,10 @@ export type ConfigurationErrorCode =
    */
   | "CONNECTION_LIMIT_INVALID"
   /**
-   * A WebSocket handler's heartbeat or `maxMessageSize` — what it tells
-   * each client as it lets the socket in — is one no client keeps: a wait
-   * or a size that is no whole number of 1 or more, or an interval and a
-   * timeout longer together than a timer waits.
+   * A WebSocket handler's heartbeat or `maxMessageSize`, or a mock's
+   * heartbeat — what it tells each client as it lets the socket in — is
+   * one no client keeps: a wait or a size that is no whole number of 1 or
+   * more, or an interval and a timeout longer together than a timer waits.
    */
   | "WS_OPTIONS_INVALID"
   /** `.reads()` was named on an endpoint addressed with a verb that changes what it addresses. */

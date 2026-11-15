@@ -31,6 +31,7 @@ export { peerAddressOf, rememberPeerAddress } from "../adapter/peer-address";
 export { requestBodyStream } from "../adapter/read-body";
 export { readBodyText } from "../adapter/read-body-text";
 export { readAllowedHosts, readAllowedOrigins } from "../adapter/runtime-policy";
+export { assertClientTerms } from "../adapter/ws-client-terms";
 export { closeOf, closeWithNotice, isSendableCloseCode, noticeOf } from "../adapter/ws-close";
 export { WS_DEFAULTS } from "../adapter/ws-defaults";
 export { frameCredentials, frameHeadersOver } from "../adapter/ws-frame-credentials";

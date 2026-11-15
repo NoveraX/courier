@@ -1,5 +1,6 @@
 import { logger } from "@noverax/courier";
 import {
+  assertClientTerms,
   authOkFrame,
   closeWithNotice,
   type HeartbeatConfig,
@@ -120,6 +121,26 @@ export function heartbeatOf(config: HeartbeatConfig | undefined): SocketHeartbea
     intervalMs: config?.intervalMs ?? WS_DEFAULTS.heartbeatIntervalMs,
     timeoutMs: config?.timeoutMs ?? WS_DEFAULTS.heartbeatTimeoutMs,
   };
+}
+
+/**
+ * Refuse, as a mock is made, a heartbeat its `auth_ok` would tell a client
+ * and no client keeps, by the rules a Courier server's is held to: a
+ * client would take each of its sockets for a server of another version,
+ * and connect again for ever.
+ *
+ * @param config - The mock's `ws.heartbeat`, if it has one
+ * @throws ConfigurationError `WS_OPTIONS_INVALID`, naming the option
+ * @example
+ * ```ts
+ * assertHeartbeat({ intervalMs: 1.5 }); // throws: intervalMs takes a whole number of milliseconds
+ * ```
+ */
+export function assertHeartbeat(config: HeartbeatConfig | undefined): void {
+  assertClientTerms(
+    { ...heartbeatOf(config), maxMessageSize: WS_DEFAULTS.maxMessageSize },
+    (names) => `createMockServer({ ws: { heartbeat: { ${names.join(", ")} } } })`,
+  );
 }
 
 function admission(

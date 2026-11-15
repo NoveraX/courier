@@ -74,7 +74,11 @@ export interface MockServerOptions {
    * - `maxPayload` — maximum WebSocket frame size in bytes (default 1 MiB).
    * - `heartbeat` — how often each socket is pinged, and how long the mock
    *   waits for the pong before it closes the socket with 4408 (default
-   *   every 25 s, 10 s to answer, as a Courier server).
+   *   every 25 s, 10 s to answer, as a Courier server). Each is told to the
+   *   client as its socket is let in, so each takes a whole number of
+   *   milliseconds, 1 or more, and the two 2,147,483,647 ms at most
+   *   together, the longest a timer waits; any other is refused as the mock
+   *   is made, with a `ConfigurationError` (`WS_OPTIONS_INVALID`) naming it.
    */
   ws?:
     | {

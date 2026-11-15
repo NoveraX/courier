@@ -66,13 +66,26 @@ export function createSSEHandler(
   /* One log of refusals for every stream of the handler: a client refused
      over and over takes up one line an interval. */
   const refusals = createRefusalLog("SSE");
+  /* Streams let in under the cap whose variables, middleware and onSSEConnect are still awaited:
+     each holds its place until it opens, or is refused and gives it back. */
+  let admitting = 0;
 
   return async (request: Request): Promise<Response> => {
     if (registry.isShuttingDown) return unavailable("Service shutting down", "3");
-    if (config?.maxSSEConnections && registry.count >= config.maxSSEConnections) {
+    const cap = config?.maxSSEConnections;
+    if (cap && registry.count + admitting >= cap) {
       return unavailable("Too many SSE connections", "5");
     }
+    admitting++;
+    try {
+      return await open(request);
+    } finally {
+      admitting--;
+    }
+  };
 
+  /* A stream let in under the cap: its answer, registered by the time it is returned. */
+  async function open(request: Request): Promise<Response> {
     const url = new URL(request.url);
     const source = url.searchParams.get("_s");
     const group = url.searchParams.get("_g") || undefined;
@@ -187,5 +200,5 @@ export function createSSEHandler(
     });
 
     return new Response(stream, answerInit(200, responseHeaders));
-  };
+  }
 }

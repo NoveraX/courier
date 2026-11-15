@@ -1,4 +1,4 @@
-export const metadata = { title: "createHandler", description: "Universal adapter factory that creates Web Standard handlers for proxy-mode requests from any framework.", mode: "proxy", updated: "2026-11-06" }
+export const metadata = { title: "createHandler", description: "Universal adapter factory that creates Web Standard handlers for proxy-mode requests from any framework.", mode: "proxy", updated: "2026-11-15" }
 
 ## Import
 
@@ -44,7 +44,7 @@ A record of API source definitions created with `defineApi()`. Given, the handle
 | `bodyTimeoutMs` | 5 minutes | Longest a request body may take to arrive |
 | `sseHeaders` | — | Extra response headers on every SSE stream |
 | `sseMaxLifetimeMs` | 30 minutes | Longest an SSE stream stays open before the client reconnects with `Last-Event-ID` |
-| `maxSSEConnections` | unlimited | Most SSE streams open at once |
+| `maxSSEConnections` | unlimited | Most SSE streams open at once, each counted from its request on, while its middleware and `onSSEConnect` run; one more is answered 503 |
 | `onSSEConnect`, `onSSEDisconnect`, `onSSEError` | — | SSE lifecycle hooks |
 
 Every option is optional, so `createHandler()` is a complete call.

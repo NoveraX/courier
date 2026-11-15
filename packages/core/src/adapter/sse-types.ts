@@ -91,7 +91,10 @@ export interface SSEConnectionRegistry {
 
 /** SSE lifecycle hooks for connection tracking */
 export interface SSELifecycleConfig<TConnect extends ConnectResult = ConnectResult> {
-  /** Max concurrent SSE connections. Returns 503 when exceeded. */
+  /**
+   * Most SSE streams open at once, a request counted from its arrival on,
+   * while its middleware and `onSSEConnect` run; one more is answered 503.
+   */
   maxSSEConnections?: number | undefined;
   /**
    * Called when an SSE stream opens. Return the stream's metadata — an

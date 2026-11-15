@@ -591,6 +591,53 @@ describe("handleSSE — connection registry", () => {
     }
   });
 
+  it("counts a stream against maxSSEConnections from its request on, while its hooks run", async () => {
+    const admitting = Promise.withResolvers<void>();
+    const sources = createSSESource(async function* (ctx) {
+      yield { data: "open" };
+      await new Promise((resolve) => ctx.signal.addEventListener("abort", resolve, { once: true }));
+    });
+    const handler = setupHandler(sources, {
+      maxSSEConnections: 2,
+      onSSEConnect: async () => {
+        await admitting.promise;
+        return {};
+      },
+    });
+
+    const answers = Array.from({ length: 5 }, () =>
+      handler.handleSSE(sseRequest("_s=testSource&_m=feed")),
+    );
+    admitting.resolve();
+    const statuses = (await Promise.all(answers)).map((response) => response.status);
+
+    expect(statuses.toSorted()).toEqual([200, 200, 503, 503, 503]);
+    expect(handler.sseConnections.count).toBe(2);
+    await handler.shutdownSSE({ drainMs: 10 });
+  });
+
+  it("gives a refused stream's place under maxSSEConnections back", async () => {
+    const sources = createSSESource(async function* () {
+      yield { data: "x" };
+    });
+    let refuse = true;
+    const handler = setupHandler(sources, {
+      maxSSEConnections: 1,
+      onSSEConnect: () => {
+        if (refuse) throw new Error("no session");
+        return {};
+      },
+    });
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    expect((await handler.handleSSE(sseRequest("_s=testSource&_m=feed"))).status).toBe(403);
+    refuse = false;
+    const opened = await handler.handleSSE(sseRequest("_s=testSource&_m=feed"));
+
+    expect(opened.status).toBe(200);
+    await collectSSEText(opened);
+  });
+
   it("returns 503 during shutdown", async () => {
     const sources = createSSESource(async function* () {
       yield { data: "x" };

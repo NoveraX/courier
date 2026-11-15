@@ -19,7 +19,8 @@ function baseChannel(baseTopic: string): string {
  * Bridge between PubSubAdapter and ConnectionRegistry.
  * Manages ref-counted pubsub subscriptions per topic:
  * - First local subscriber → pubsub.subscribe(topic), and to its endpoint's
- *   channel for broadcasts to every qualified topic
+ *   channel for broadcasts to every qualified topic; a subscription is
+ *   confirmed once the adapter has taken them
  * - Last local subscriber leaves → pubsub.unsubscribe(topic)
  * - Remote messages → delivered to the local connections they concern
  * - With the adapter's log, a topic's events are numbered by it, and reach
@@ -32,6 +33,12 @@ export interface PubSubBridge {
   onTopicSubscribe(topic: string): void;
   /** Called when a topic loses its last local subscriber */
   onTopicUnsubscribe(topic: string): void;
+  /**
+   * Settles once the adapter has taken a topic's channels, its own and its
+   * endpoint's: what another replica publishes there after reaches this
+   * one's subscribers
+   */
+  taken(topic: string): Promise<unknown>;
   /** Called when a connection opens locally */
   onConnectionOpen(): void;
   /** Called when a connection closes locally */
@@ -66,6 +73,7 @@ export interface PubSubBridge {
  * @example
  * const bridge = createPubSubBridge(pubsub, registry, refusals);
  * bridge.onTopicSubscribe('api.chat.room#{"room":"a"}');
+ * await bridge.taken('api.chat.room#{"room":"a"}');
  * await bridge.publishEvent('api.chat.room#{"room":"a"}', { text: "hi" });
  */
 export function createPubSubBridge(
@@ -119,6 +127,10 @@ export function createPubSubBridge(
       const { baseTopic } = unqualifyTopic(topic);
       channels.release(topic);
       channels.release(baseChannel(baseTopic));
+    },
+    taken(topic) {
+      const { baseTopic } = unqualifyTopic(topic);
+      return Promise.all([channels.taken(topic), channels.taken(baseChannel(baseTopic))]);
     },
     onConnectionOpen: () =>
       channels.retain(EVERY_CONNECTION, (message) => void registry.broadcast(message)),

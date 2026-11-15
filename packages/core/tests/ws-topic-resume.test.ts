@@ -7,7 +7,9 @@
  * events numbered and kept, so the subscriber can come back for them; and
  * once the pub/sub adapter reaches its server — back from an outage, or for
  * the first time after a subscription was made — each subscription is told
- * `resync`.
+ * `resync`. On a replica of several, a subscription is told `subscribed`
+ * once the adapter has taken its topic: what another replica publishes
+ * after reaches it.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -16,7 +18,7 @@ import type { WSHandler, WSHandlerConfig } from "../src/adapter/ws-types";
 import { courier } from "../src/define/courier";
 import type { Sources } from "../src/define/types";
 import type { AdapterState, PubSubAdapter } from "../src/realtime/adapters";
-import { createMemoryBus } from "../src/realtime/memory-bus";
+import { createMemoryBus, type MemoryBus } from "../src/realtime/memory-bus";
 import { qualifyTopic } from "../src/realtime/ws/topic-key";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { _resetSourcesForTests, registerSources } from "../src/server/sources";
@@ -215,4 +217,50 @@ describe("a pub/sub adapter once it reaches its server", () => {
       .poll(() => early.sent)
       .toContainEqual({ type: "resync", topic: ROOM, seq: 0, epoch: first.epoch });
   });
+});
+
+/* A replica's adapter on a bus whose server takes each subscription a moment after it is asked
+   for, telling `onTaken` of each: until then, what the other replicas publish does not reach it. */
+function lateReplica(bus: MemoryBus, onTaken: (channel: string) => void): PubSubAdapter {
+  const replica = bus.replica("late");
+  return {
+    ...replica,
+    get state() {
+      return replica.state;
+    },
+    subscribe: (channel, handler) =>
+      new Promise((resolve, reject) => {
+        setTimeout(() => {
+          onTaken(channel);
+          replica.subscribe(channel, handler).then(resolve, reject);
+        });
+      }),
+  };
+}
+
+describe("a subscription on one replica of several", () => {
+  it.each([
+    ["without a log", {}],
+    ["with a log", { log: {} }],
+  ])(
+    "%s, is told subscribed once the adapter has taken its topic, and hears what is published after",
+    async (_, options) => {
+      const bus = createMemoryBus(options);
+      const told: string[] = [];
+      let socket: FakeSocket | undefined;
+      const pubsub = lateReplica(bus, (channel) => {
+        if (channel === ROOM) told.push(...(socket?.sent ?? []).map((frame) => frame.type));
+      });
+      socket = open(serve({ pubsub }));
+      const elsewhere = serve({ pubsub: bus.replica("elsewhere") });
+
+      await subscribe(socket);
+      expect(told).not.toContain("subscribed");
+      await elsewhere.connections.broadcastToTopic(ROOM, "after subscribed");
+
+      await expect
+        .poll(() => socket.sent.filter((frame) => frame.type === "data").map((f) => f.payload))
+        .toContain("after subscribed");
+    },
+  );
 });

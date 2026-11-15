@@ -1,8 +1,9 @@
 /**
  * How a replica's handler holds its pub/sub subscriptions: one per channel
  * while a local connection needs it, the adapter keeping each one it was
- * given, and nothing waiting on the adapter — a subscription it has not
- * taken yet is let go of once it does, and stopping waits on none.
+ * given, and only a subscription's confirmation waiting on the adapter — a
+ * subscription it has not taken yet is let go of once it does, and
+ * stopping waits on none.
  */
 import { format } from "node:util";
 

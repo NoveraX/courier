@@ -92,7 +92,8 @@ export async function startPush(
 
   const entry: WSSubscriptionEntry = { topic, authorized, record, cleanup: () => ended.abort() };
   holdSubscription(ctx, entry);
-  /* Registered first, then sent what it missed: a live event that comes meanwhile follows it. */
+  /* Registered first, then sent what it missed once the adapter has taken the topic: a live
+     event that comes meanwhile follows it. */
   recovered = await resume();
 
   /* Ended meanwhile, its generator is closed before it runs. */

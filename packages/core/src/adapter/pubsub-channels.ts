@@ -8,6 +8,8 @@ interface TrackedChannel {
   refCount: number;
   /** Set once the adapter has taken the subscription */
   unsubscribe: (() => void) | undefined;
+  /** Settles once the adapter has taken the subscription; set as it is asked for */
+  taken: Promise<void> | undefined;
 }
 
 /** Reference-counted pub/sub subscriptions, one per channel. */
@@ -19,6 +21,11 @@ export interface PubSubChannels {
   retain(channel: string, deliver: (message: unknown, logged?: LoggedPosition) => void): void;
   /** Drop a reference on a channel. The last unsubscribes from it. */
   release(channel: string): void;
+  /**
+   * Settles once the adapter has taken a channel held here, so what other
+   * replicas publish there after reaches it; at once for one not held.
+   */
+  taken(channel: string): Promise<void>;
   /** Unsubscribe from every channel, at once: nothing still under way is waited for. */
   destroy(): void;
 }
@@ -28,8 +35,9 @@ export interface PubSubChannels {
  * adapter. The adapter keeps each subscription it was given — made again
  * after a reconnect, retried after a refusal — so a channel is subscribed
  * once, when its first reference is taken, and never forgotten while a
- * local user needs it. Nothing waits on the adapter: a subscription it has
- * not yet taken is let go of as soon as it is.
+ * local user needs it. Taking and dropping references waits on nothing: a
+ * subscription the adapter has not yet taken is let go of as soon as it is,
+ * and who needs to know it was taken asks `taken()`.
  *
  * @param pubsub - The adapter shared by every replica
  * @returns The channel tracker
@@ -37,6 +45,7 @@ export interface PubSubChannels {
  * @example
  * const channels = createPubSubChannels(pubsub);
  * channels.retain('api.chat.room#{"room":"a"}', (message) => deliver(message));
+ * await channels.taken('api.chat.room#{"room":"a"}');
  * channels.release('api.chat.room#{"room":"a"}');
  */
 export function createPubSubChannels(pubsub: PubSubAdapter): PubSubChannels {
@@ -47,9 +56,9 @@ export function createPubSubChannels(pubsub: PubSubAdapter): PubSubChannels {
     channel: string,
     tracked: TrackedChannel,
     deliver: (m: unknown, logged?: LoggedPosition) => void,
-  ): void {
+  ): Promise<void> {
     const current = (): boolean => !destroyed && channels.get(channel) === tracked;
-    pubsub
+    return pubsub
       .subscribe(channel, (message, logged) => {
         if (current()) deliver(message, logged);
       })
@@ -83,9 +92,9 @@ export function createPubSubChannels(pubsub: PubSubAdapter): PubSubChannels {
         existing.refCount++;
         return;
       }
-      const tracked: TrackedChannel = { refCount: 1, unsubscribe: undefined };
+      const tracked: TrackedChannel = { refCount: 1, unsubscribe: undefined, taken: undefined };
       channels.set(channel, tracked);
-      subscribe(channel, tracked, deliver);
+      tracked.taken = subscribe(channel, tracked, deliver);
     },
     release(channel) {
       const tracked = channels.get(channel);
@@ -95,6 +104,7 @@ export function createPubSubChannels(pubsub: PubSubAdapter): PubSubChannels {
       channels.delete(channel);
       letGo(channel, tracked);
     },
+    taken: (channel) => channels.get(channel)?.taken ?? Promise.resolve(),
     destroy() {
       destroyed = true;
       for (const [channel, tracked] of channels) letGo(channel, tracked);

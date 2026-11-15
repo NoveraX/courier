@@ -130,7 +130,8 @@ export async function startChannel(
   };
   holdSubscription(ctx, entry);
 
-  /* Registered first, then sent what it missed: a live event that comes meanwhile follows it. */
+  /* Registered first, then sent what it missed once the adapter has taken the topic: a live
+     event that comes meanwhile follows it. */
   recovered = await resume();
   /* Ended while that was read, it never joins, and so has nothing to leave. */
   if (ended.signal.aborted) return false;

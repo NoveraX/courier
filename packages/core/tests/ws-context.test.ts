@@ -240,6 +240,7 @@ describe("buildContext", () => {
     const bridge = {
       onTopicSubscribe: vi.fn(),
       onTopicUnsubscribe: vi.fn(),
+      taken: vi.fn(),
       onConnectionOpen: vi.fn(),
       onConnectionClose: vi.fn(),
       log: undefined,

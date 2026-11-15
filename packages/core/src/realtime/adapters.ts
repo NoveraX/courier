@@ -137,6 +137,9 @@ export interface PublishOptions {
  * - a subscription is a wish it keeps: made while its server is away, or
  *   refused, it is made again once the server answers, and every one is
  *   made again after each reconnect;
+ * - `subscribe()` settles once the server has taken the subscription, so
+ *   what is published after reaches it — at once while the server is away,
+ *   and within a deadline while it is slow to answer or refuses it;
  * - what it has sent and the server has yet to answer is bounded, and a
  *   message published past that bound, or while it is not ready, waits in
  *   a queue bounded by count, bytes and age; past them the oldest are
@@ -159,8 +162,11 @@ export interface PubSubAdapter extends AdapterLifecycle {
    */
   publish(topic: string, message: unknown, options?: PublishOptions): Promise<void>;
   /**
-   * Subscribe to a topic: resolves at once, the adapter making the
-   * subscription as soon as and as often as its server needs it. The
+   * Subscribe to a topic. It settles once the server has taken the
+   * subscription, so what is published after reaches the handler; at once
+   * while the adapter does not reach its server, and within a deadline
+   * while the server is slow to answer or refuses it — the subscription
+   * made all the same, as soon as and as often as its server needs it. The
    * handler receives the payload of other replicas' messages; the
    * adapter's own are skipped.
    * @returns Unsubscribe function

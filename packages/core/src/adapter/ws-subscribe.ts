@@ -23,7 +23,8 @@ const TOO_MANY_SUBSCRIPTIONS = { code: WS_CODE.TOO_MANY, message: "Too many subs
  *
  * Full flow: validate topic → check limits → resolve endpoint → validate
  * variables → run middleware → authorize → tell the client of a renamed
- * topic → start channel/push → send "subscribed".
+ * topic → start channel/push, which waits for the replicas' pub/sub
+ * adapter to take the topic → send "subscribed".
  *
  * The "subscribed" confirmation is sent AFTER channel/push initialization:
  * the client holds its messages until it arrives, so none reaches the

@@ -310,7 +310,10 @@ export interface SubscriptionOpening {
   readonly authorized?: AuthorizedSubscription | undefined;
   /** Studio's record of it, which its entry holds and its own end closes */
   readonly record?: SubscriptionTracker | undefined;
-  /** Sends what the subscription missed, once it is registered; whether it sent all of it */
+  /**
+   * Sends what the subscription missed, once it is registered and the
+   * replicas' pub/sub adapter has taken its topic; whether it sent all of it
+   */
   readonly resume?: (() => boolean | Promise<boolean>) | undefined;
 }
 

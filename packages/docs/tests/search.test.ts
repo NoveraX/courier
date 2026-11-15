@@ -9,8 +9,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { type Docs, loadDocs } from "../src/docs";
 import { DOCS_LIMITS } from "../src/limits";
-import { type SearchIndex, searchIndex, wordsOf } from "../src/search";
+import { type SearchHit, type SearchIndex, searchIndex } from "../src/search";
+import { wordsOf } from "../src/words";
 import { type Bundled, bundled } from "./support/bundled";
+import { type Answer, SEARCHES } from "./support/searches";
 
 let folder: Bundled;
 let docs: Docs;
@@ -37,20 +39,36 @@ function seeded(seed: number): () => number {
 }
 
 describe("a search's words", () => {
-  it("are an identifier whole and its parts, lowercased, a plural's s let go", () => {
-    expect(wordsOf("createProxyCaller HTTPError calls x-visitor-address")).toEqual([
-      "createproxycaller",
-      "create",
-      "proxy",
+  it("are an identifier whole and its parts, lowercased, each its English stem", () => {
+    expect(wordsOf("createProxyCaller HTTPError mapped retries x-visitor-address")).toEqual([
+      "createproxycal",
+      "creat",
+      "proxi",
       "caller",
       "httperror",
       "http",
       "error",
-      "call",
+      "map",
+      "retri",
       "x",
       "visitor",
       "address",
     ]);
+  });
+});
+
+describe("the searches people make", () => {
+  const answers = (hit: SearchHit, answer: Answer): boolean =>
+    hit.page === answer.page && (answer.section === undefined || hit.section === answer.section);
+
+  it("each find a part that answers them among the results a search gives by default", () => {
+    const missed = SEARCHES.filter(
+      (search) =>
+        !index
+          .search(search.query, DOCS_LIMITS.defaultResults)
+          .some((hit) => search.answers.some((answer) => answers(hit, answer))),
+    ).map((search) => search.query);
+    expect(missed).toEqual([]);
   });
 });
 

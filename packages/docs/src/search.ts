@@ -1,5 +1,6 @@
 import type { Docs, DocsPage } from "./docs";
 import { DOCS_LIMITS } from "./limits";
+import { indexStemmers, type Stemmer, wordsOf } from "./words";
 
 /** A part of a page a search finds, and where to read it. */
 export interface SearchHit {
@@ -41,29 +42,6 @@ function boost(section: Section, phrase: string): number {
   return phrase.includes(" ") && named.some((name) => name.includes(phrase)) ? PHRASE_BOOST : 1;
 }
 
-/* A word as a search compares it: lowercased, a plural's `s` let go. */
-function stem(word: string): string {
-  return word.length > 3 && word.endsWith("s") && !word.endsWith("ss") ? word.slice(0, -1) : word;
-}
-
-/**
- * The words of a text as a search reads them: letters and digits, each
- * identifier both whole and split where its case turns — `createProxyCaller`
- * is itself and `create`, `proxy`, `caller`.
- *
- * @param text - The text
- * @returns Its words, in order, lowercased
- */
-export function wordsOf(text: string): string[] {
-  const words: string[] = [];
-  for (const run of text.match(/[\p{L}\p{N}]+/gu) ?? []) {
-    const parts = run.match(/\p{Lu}+(?!\p{Ll})|\p{Lu}?\p{Ll}+|\p{N}+|\p{L}+/gu) ?? [run];
-    words.push(stem(run.toLowerCase()));
-    if (parts.length > 1) for (const part of parts) words.push(stem(part.toLowerCase()));
-  }
-  return words;
-}
-
 function counted(words: readonly string[]): Map<string, number> {
   const counts = new Map<string, number>();
   for (const word of words) counts.set(word, (counts.get(word) ?? 0) + 1);
@@ -71,7 +49,7 @@ function counted(words: readonly string[]): Map<string, number> {
 }
 
 /* Each page's parts: what is above its first heading, then each heading's lines up to the next. */
-function sectionsOf(page: DocsPage): Section[] {
+function sectionsOf(page: DocsPage, stem: Stemmer): Section[] {
   const lines = page.markdown.split("\n");
   const starts = [
     { heading: page.title, anchor: "", line: 0 },
@@ -80,9 +58,9 @@ function sectionsOf(page: DocsPage): Section[] {
   return starts.map((start, at) => {
     const body = lines.slice(at === 0 ? 0 : start.line + 1, starts[at + 1]?.line ?? lines.length);
     const fields = [
-      wordsOf(page.title),
-      at === 0 ? [] : wordsOf(start.heading),
-      wordsOf(body.join("\n")),
+      wordsOf(page.title, stem),
+      at === 0 ? [] : wordsOf(start.heading, stem),
+      wordsOf(body.join("\n"), stem),
     ];
     return {
       page,
@@ -96,17 +74,17 @@ function sectionsOf(page: DocsPage): Section[] {
 }
 
 /* How many of the search's words a line holds. */
-function holds(line: string, words: ReadonlySet<string>): number {
-  return new Set(wordsOf(line).filter((word) => words.has(word))).size;
+function holds(line: string, words: ReadonlySet<string>, stem: Stemmer): number {
+  return new Set(wordsOf(line, stem).filter((word) => words.has(word))).size;
 }
 
 /* The line of the part that holds the most of the search's words, cut around the first of them. */
-function snippetOf(section: Section, words: ReadonlySet<string>): string {
+function snippetOf(section: Section, words: ReadonlySet<string>, stem: Stemmer): string {
   const lines = section.lines
     .map((line) => line.trim())
     .filter((line) => line !== "" && !line.startsWith("```"));
   const best = lines.reduce(
-    (top, line) => (holds(line, words) > holds(top, words) ? line : top),
+    (top, line) => (holds(line, words, stem) > holds(top, words, stem) ? line : top),
     lines[0] ?? "",
   );
   const characters = Array.from(best);
@@ -126,7 +104,9 @@ export interface SearchIndex {
    * The parts of the docs that answer a search best: by how often its words
    * stand in each part's page title, heading and text — the rarer a word,
    * the more it counts — and more when the words stand together in a
-   * heading. No more than two parts of one page, and ties in the docs' order.
+   * heading. A word counts by its English stem, so `mapping` finds `map`
+   * and `.map()`. No more than two parts of one page, and ties in the docs'
+   * order.
    *
    * @param query - What to look for: words, an export's name, an option
    * @param limit - The most results
@@ -143,11 +123,12 @@ export interface SearchIndex {
  * @returns The index
  * @example
  * ```ts
- * searchIndex(docs).search("cancel previous", 5)[0]?.page; // "advanced/abort"
+ * searchIndex(docs).search(".map() endpoint response", 5)[0]?.section; // "Mapping the answer"
  * ```
  */
 export function searchIndex(docs: Docs): SearchIndex {
-  const sections = [...docs.pages.values()].flatMap(sectionsOf);
+  const { indexed, asked } = indexStemmers();
+  const sections = [...docs.pages.values()].flatMap((page) => sectionsOf(page, indexed));
   const average = FIELD_WEIGHTS.map(
     (_, field) =>
       sections.reduce((sum, section) => sum + (section.lengths[field] ?? 0), 0) /
@@ -165,7 +146,7 @@ export function searchIndex(docs: Docs): SearchIndex {
 
   return {
     search(query, limit) {
-      const words = [...new Set(wordsOf(query))].slice(0, DOCS_LIMITS.queryWords);
+      const words = [...new Set(wordsOf(query, asked))].slice(0, DOCS_LIMITS.queryWords);
       if (words.length === 0) return [];
       const phrase = query.trim().toLowerCase();
       const scored = sections.flatMap((section, order) => {
@@ -195,7 +176,7 @@ export function searchIndex(docs: Docs): SearchIndex {
           title: section.page.title,
           section: section.heading,
           url: section.anchor === "" ? section.page.url : `${section.page.url}#${section.anchor}`,
-          snippet: snippetOf(section, wanted),
+          snippet: snippetOf(section, wanted, asked),
         });
         if (hits.length >= limit) break;
       }

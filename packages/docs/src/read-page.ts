@@ -1,6 +1,6 @@
 import type { Docs, DocsPage } from "./docs";
 import { DOCS_LIMITS } from "./limits";
-import { wordsOf } from "./search";
+import { wordsOf } from "./words";
 
 /** What a read asks for: a page, one of its parts, and where in it to start. */
 export interface ReadRequest {

@@ -14,13 +14,31 @@ const WITHOUT_ENDS = /^[\t\n\r ]*([^\t\n\r ](?:.*[^\t\n\r ])?)?/s;
 
 /**
  * A header value as `fetch` sends it — without the tabs, spaces and line
- * breaks at its ends — refused before the platform refuses it if `fetch`
- * could not send it: a control character other than a tab, a line break
- * inside it among them, or a character past U+00FF. `Headers` takes some
- * control characters that the dispatcher sending the request then refuses,
- * a failure no retry mends; and the platform's refusal can repeat the value
- * whole, where a header's value is often a credential. This one names the
- * header and never the value, before anything is sent.
+ * breaks at its ends — or `undefined` where `fetch` could not send it: it
+ * holds a control character other than a tab, a line break inside it among
+ * them, or a character past U+00FF. `Headers` takes some control characters
+ * that the dispatcher sending the request then refuses, a failure no retry
+ * mends.
+ *
+ * @param value - The value
+ * @returns The value as `fetch` sends it, or `undefined`
+ * @example
+ * ```ts
+ * sentHeaderValue(" sha-256=abc\n"); // "sha-256=abc"
+ * sentHeaderValue("a\x7fb"); // undefined
+ * ```
+ */
+export function sentHeaderValue(value: string): string | undefined {
+  const sent = WITHOUT_ENDS.exec(value)?.[1] ?? "";
+  return UNSENDABLE.test(sent) ? undefined : sent;
+}
+
+/**
+ * A header value as `fetch` sends it, refused before the platform refuses
+ * it if `fetch` could not send it, as `sentHeaderValue` reads it. The
+ * platform's refusal can repeat the value whole, where a header's value is
+ * often a credential; this one names the header and never the value,
+ * before anything is sent.
  *
  * @param name - The header's name
  * @param value - Its value
@@ -33,8 +51,8 @@ const WITHOUT_ENDS = /^[\t\n\r ]*([^\t\n\r ](?:.*[^\t\n\r ])?)?/s;
  * ```
  */
 export function sendableValue(name: string, value: string, said?: string): string {
-  const sent = WITHOUT_ENDS.exec(value)?.[1] ?? "";
-  if (!UNSENDABLE.test(sent)) return sent;
+  const sent = sentHeaderValue(value);
+  if (sent !== undefined) return sent;
   throw new ConfigurationError(
     "HEADER_VALUE_INVALID",
     `${said ?? `The "${name}" header's value`} holds a control character other than a tab, or one past U+00FF; the value is not shown.`,
@@ -48,9 +66,10 @@ export function sendableValue(name: string, value: string, said?: string): strin
  * proxy client's, one the proxy serves in this process, the fetch
  * client's. Each value is checked as it is added, and added as `fetch`
  * sends it, so one no request can carry is refused here by the header's
- * name, before the platform refuses it repeating the value. A `Headers`
- * holds values the platform checked as they were set, and is copied as it
- * is.
+ * name, before the platform refuses it repeating the value. A `Headers` is
+ * checked too, whoever filled it — the caller, a middleware's
+ * `ctx.headers`: it takes some control characters the dispatcher then
+ * refuses.
  *
  * @param input - The headers, as a call, an API, a caller or a middleware gave them
  * @returns A new `Headers` for the request
@@ -61,7 +80,6 @@ export function sendableValue(name: string, value: string, said?: string): strin
  * ```
  */
 export function sendableHeaders(input: unknown): Headers {
-  if (input instanceof Headers) return new Headers(input);
   const headers = new Headers();
   for (const [name, value] of entriesOf(input)) {
     if (value !== undefined) headers.append(name, sendableValue(name, String(value)));
@@ -69,7 +87,8 @@ export function sendableHeaders(input: unknown): Headers {
   return headers;
 }
 
-/* A record's own entries — Node's conversion of a whole record drops a key `__proto__` — or a list's pairs. */
+/* A record's own entries — Node's conversion of a whole record drops a key `__proto__` — or the
+   pairs of a list or a `Headers`, which gives each `set-cookie` apart. */
 function entriesOf(input: unknown): Array<readonly [string, unknown]> {
   if (typeof input !== "object" || input === null) return [];
   if (!isIterable(input)) return Object.entries(input);

@@ -437,7 +437,7 @@ import { api } from "./sources"
 await createCaller(api).find({ q: "red", "X-Digest": "sha-256=abc" })
 ```
 
-The variables are validated whole, then the named ones are taken out and set as headers under their own names; one left unset sends no header. A list is written comma-separated and an object as its keys and values in turn, as OpenAPI's `simple` style writes a header. For a call through the proxy it runs in your application's server, so the values travel with the variables and the browser sets no such header itself.
+The variables are validated whole, then the named ones are taken out and set as headers under their own names; one left unset sends no header. A list is written comma-separated and an object as its keys and values in turn, as OpenAPI's `simple` style writes a header. For a call through the proxy it runs in your application's server, so the values travel with the variables and the browser sets no such header itself. A value no header carries — a control character other than a tab, a line break inside it among them, or a character past U+00FF — fails the call's variables as a value their schema refuses does: a `ValidationError` whose issue names the variable, answered `422` through the proxy, with nothing sent and the value not repeated.
 
 ---
 

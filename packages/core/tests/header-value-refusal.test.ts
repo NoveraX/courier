@@ -21,6 +21,7 @@ import { courier, defineApi } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
 import { ConfigurationError } from "../src/errors";
 import { createFetch } from "../src/fetch";
+import { defineMiddleware } from "../src/middleware/define";
 import { retryMiddleware } from "../src/middleware/index";
 import { createProxyCaller } from "../src/proxy-caller";
 import { inProcessRoute } from "../src/server/in-process-route";
@@ -100,6 +101,43 @@ describe("a header value no request can carry", () => {
     const caller = createCaller(apiWith(), { headers: { "x-api-key": `${SECRET}\u0000` } });
 
     await refusal(caller.read());
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("is refused in a `Headers`, which takes a control character fetch's dispatcher refuses", async () => {
+    vi.stubGlobal("fetch", fetchSpy);
+    const onTheApi = defineApi({
+      name: "api",
+      baseURL: "https://api.test",
+      headers: new Headers({ "x-api-key": `${SECRET}\x7f` }),
+      endpoints: { read: endpoint.get("items") },
+    });
+
+    await refusal(createCaller(onTheApi).read());
+    await refusal(
+      callerWith()
+        .with({ headers: new Headers({ "x-api-key": `${SECRET}\x01` }) })
+        .read(),
+    );
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("is refused when a middleware sets it", async () => {
+    vi.stubGlobal("fetch", fetchSpy);
+    const api = defineApi({
+      name: "api",
+      baseURL: "https://api.test",
+      middleware: [
+        defineMiddleware("key", "before", (ctx) => {
+          ctx.headers.set("x-api-key", `${SECRET}\x0b`);
+        }),
+      ],
+      endpoints: { read: endpoint.get("items") },
+    });
+
+    await refusal(createCaller(api).read());
 
     expect(fetchSpy).not.toHaveBeenCalled();
   });

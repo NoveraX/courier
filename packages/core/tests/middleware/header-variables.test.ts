@@ -79,6 +79,24 @@ describe("variables sent as headers", () => {
     expect(isValidationError(failure)).toBe(true);
     expect(upstream.received).toEqual([]);
   });
+
+  it.each([
+    ["a delete", "a\x7fb"],
+    ["a character past U+00FF", "\u041f\u0440\u0438\u0432\u0435\u0442"],
+    ["a line break", "sha-256=abc\nX-Injected: 1"],
+  ])(
+    "fail the call's variables when one holds %s, which no header carries, with nothing sent",
+    async (_held, value) => {
+      const failure = await createCaller(api())
+        .find({ q: "red", "X-Digest": value })
+        .catch((error: unknown) => error);
+
+      expect(isValidationError(failure)).toBe(true);
+      expect(failure).toMatchObject({ target: "variables", issues: [{ path: ["X-Digest"] }] });
+      expect(String(failure)).not.toContain(value);
+      expect(upstream.received).toEqual([]);
+    },
+  );
 });
 
 describe("variables sent as headers through the proxy", () => {
@@ -101,5 +119,17 @@ describe("variables sent as headers through the proxy", () => {
     const sent = upstream.last();
     expect(JSON.parse(sent.body.toString())).toEqual({ name: "chair" });
     expect(sent.headers["idempotency-key"]).toBe("key-12345");
+  });
+
+  it("fail the call's variables when one holds what no header carries, as the page reads it", async () => {
+    const client = createProxyCaller(routesOf(api(), "things"), { proxyPath: { http: proxy.url } });
+
+    const failure = await client
+      .find({ q: "red", "X-Digest": "a\x7fb" })
+      .catch((error: unknown) => error);
+
+    expect(isValidationError(failure)).toBe(true);
+    expect(failure).toMatchObject({ target: "variables", issues: [{ path: ["X-Digest"] }] });
+    expect(upstream.received).toEqual([]);
   });
 });

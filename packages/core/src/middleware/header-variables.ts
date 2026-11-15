@@ -1,5 +1,7 @@
 import { defineOwn } from "../utils/define-own";
+import { sentHeaderValue } from "../utils/header-value";
 import { isRecord } from "../utils/is-record";
+import { ValidationError } from "../validation";
 import { defineMiddleware } from "./define";
 import type { Middleware } from "./types";
 
@@ -13,7 +15,11 @@ import type { Middleware } from "./types";
  * turn, as OpenAPI's `simple` style writes a header; anything else as text.
  * It runs where the call is made: for a call through the proxy, in the
  * application's server, so the values travel with the variables and the
- * browser sends no such header itself.
+ * browser sends no such header itself. A value no header carries — a
+ * control character other than a tab, or a character past U+00FF — fails
+ * the call's variables, as one that fails their schema does: a
+ * `ValidationError` naming the variable, `422` through the proxy, with
+ * nothing sent and the value not repeated.
  *
  * @param names - The variables to send as headers, each under its own name
  * @returns The middleware, for an endpoint's `.use()` or a source's `middleware`
@@ -36,10 +42,23 @@ export function headerVariablesMiddleware(names: readonly string[]): Middleware 
     const rest: Record<string, unknown> = {};
     for (const [name, value] of Object.entries(ctx.variables)) {
       if (!headers.has(name)) defineOwn(rest, name, value);
-      else if (value !== undefined && value !== null) ctx.headers.set(name, headerText(value));
+      else if (value !== undefined && value !== null)
+        ctx.headers.set(name, headerValue(name, value));
     }
     ctx.variables = rest;
   });
+}
+
+function headerValue(name: string, value: unknown): string {
+  const sent = sentHeaderValue(headerText(value));
+  if (sent !== undefined) return sent;
+  throw new ValidationError("variables", [
+    {
+      message:
+        "Cannot be sent as a header: it holds a control character other than a tab, or one past U+00FF",
+      path: [name],
+    },
+  ]);
 }
 
 function headerText(value: unknown): string {

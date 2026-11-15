@@ -1,10 +1,16 @@
 import { parseAddress, plainAddress } from "../../utils/ip-address";
 import { requestClientAddress } from "../client-address";
 
+/* The first 96 bits of RFC 6052's well-known prefix, `64:ff9b::/96`, under which a translator
+   gives an IPv6 server each IPv4 user it carries, that user's address its last 32 bits. */
+const NAT64_PREFIX = 0x64ff9bn << 64n;
+
 /**
  * The key Courier's limit counts an address by: an IPv4 address as it is,
- * wherever IPv6 maps it, and an IPv6 address by its /64 network, which one
- * subscriber is given whole and could otherwise spend address by address.
+ * wherever IPv6 maps it or a NAT64 translator's well-known prefix,
+ * `64:ff9b::/96`, carries it, and any other IPv6 address by its /64
+ * network, which one subscriber is given whole and could otherwise spend
+ * address by address.
  * No address, or anything that is not one, counts as one unknown caller.
  *
  * @param address - The user's address, as a header or a socket writes it
@@ -19,7 +25,8 @@ export function callerKeyOf(address: string | undefined): string {
   const parsed = address === undefined ? undefined : parseAddress(plainAddress(address));
   if (parsed === undefined) return "unknown";
   const { family, value } = parsed;
-  if (family === 4) return [24n, 16n, 8n, 0n].map((shift) => (value >> shift) & 0xffn).join(".");
+  const v4 = family === 4 || value >> 32n === NAT64_PREFIX ? value & 0xffffffffn : undefined;
+  if (v4 !== undefined) return [24n, 16n, 8n, 0n].map((shift) => (v4 >> shift) & 0xffn).join(".");
   const network = value >> 64n;
   const groups = [48n, 32n, 16n, 0n].map((shift) => ((network >> shift) & 0xffffn).toString(16));
   return `${groups.join(":")}::/64`;

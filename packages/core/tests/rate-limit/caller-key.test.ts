@@ -14,6 +14,13 @@ describe("callerKeyOf", () => {
     expect(callerKeyOf("::ffff:198.51.100.23")).toBe("198.51.100.23");
   });
 
+  it("counts each IPv4 user a NAT64 translator carries by that user's own address", () => {
+    expect(callerKeyOf("64:ff9b::198.51.100.23")).toBe("198.51.100.23");
+    expect(callerKeyOf("64:ff9b::c633:6418")).toBe("198.51.100.24");
+    expect(callerKeyOf("[64:ff9b::203.0.113.7]:443")).toBe("203.0.113.7");
+    expect(callerKeyOf("64:ff9b:0:0:1::1")).toBe("64:ff9b:0:0::/64");
+  });
+
   it("counts an IPv6 address by its /64 network, however the address is written", () => {
     expect(callerKeyOf("2001:db8:0:7::12")).toBe("2001:db8:0:7::/64");
     expect(callerKeyOf("2001:0db8:0000:0007:ffff:ffff:ffff:ffff")).toBe("2001:db8:0:7::/64");

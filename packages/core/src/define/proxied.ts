@@ -32,6 +32,8 @@ type SentAsItself<T> = T extends ArrayBuffer | ArrayBufferView
  * type Row = Proxied<{ id: string; at: Date; tags: Set<string> }>;
  * // { id: string; at: string; tags: Record<string, never> }
  * type User = Proxied<{ id: string; name: string }>; // { id: string; name: string }
+ * type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
+ * type Settings = Proxied<Json>; // Json
  * ```
  */
 export type Proxied<T> =
@@ -72,17 +74,31 @@ type WrittenAs<T> =
           : T extends ReadonlySet<unknown> | ReadonlyMap<unknown, unknown>
             ? Record<string, never>
             : T extends readonly unknown[]
-              ? { [K in keyof T]: InList<Written<T[K]>> }
+              ? WrittenList<T>
               : {
                   [K in keyof T as K extends symbol
                     ? never
                     : [T[K]] extends [Unwritten]
                       ? never
-                      : K]: {} extends Pick<T, K>
+                      : K]: OptionalProperty<T, K> extends true
                     ? /* Left out when it holds nothing, so it holds a value where it is there. */
                       Written<Exclude<T[K], undefined>>
                     : Written<T[K]>;
                 };
 
+/* A list as JSON writes it: one of any length as an array type, a tuple item by item. The
+   checker works an array type's items out once they are read, and a mapped type's as it is
+   made, which for a list of a recursive type — JSON's own value among them — never ends. */
+type WrittenList<T extends readonly unknown[]> = T[number][] extends T
+  ? T extends unknown[]
+    ? InList<Written<T[number]>>[]
+    : readonly InList<Written<T[number]>>[]
+  : { [K in keyof T]: InList<Written<T[K]>> };
+
 /* An item of a list as JSON writes it: one it has no value for is `null`. */
 type InList<T> = T extends undefined ? null : T;
+
+/* Whether a key names one optional property, rather than the keys of an index signature, any
+   of which may hold nothing. */
+type OptionalProperty<T, K extends keyof T> =
+  {} extends Record<K, unknown> ? false : {} extends Pick<T, K> ? true : false;

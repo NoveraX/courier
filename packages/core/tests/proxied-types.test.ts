@@ -7,6 +7,7 @@
  * reads them back.
  */
 import { describe, expect, expectTypeOf, it } from "vitest";
+import { z } from "zod";
 
 import { courier, defineApi, type Proxied } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
@@ -36,12 +37,42 @@ class Money {
   }
 }
 
+/* JSON's own value, as an application writes it, as type-fest gives it, and as an ORM's JSON column does. */
+type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
+type FestObject = { [key in string]: FestJson } & { [key in string]?: FestJson | undefined };
+type FestJson = string | number | boolean | null | FestObject | FestJson[] | readonly FestJson[];
+type ColumnObject = { [key in string]?: ColumnJson };
+interface ColumnArray extends Array<ColumnJson> {}
+type ColumnJson = string | number | boolean | ColumnObject | ColumnArray | null;
+
+interface Profile {
+  id: string;
+  prefs: Json;
+}
+
+const jsonSchema = z.json();
+
 describe("a value as a page receives it through the proxy", () => {
   it("is its own type where JSON keeps it whole, by its name, a recursive one too", () => {
     expectTypeOf<Proxied<User>>().toEqualTypeOf<User>();
     expectTypeOf<Proxied<Comment>>().toEqualTypeOf<Comment>();
     expectTypeOf<Proxied<Array<User | null>>>().toEqualTypeOf<Array<User | null>>();
     expectTypeOf<Proxied<"a" | 1 | true>>().toEqualTypeOf<"a" | 1 | true>();
+  });
+
+  it("is JSON's own value itself, however its type is written, alone or in an answer", () => {
+    expectTypeOf<Proxied<Json>>().toEqualTypeOf<Json>();
+    expectTypeOf<Proxied<FestJson>>().toEqualTypeOf<FestJson>();
+    expectTypeOf<Proxied<ColumnJson>>().toEqualTypeOf<ColumnJson>();
+    expectTypeOf<Proxied<Profile>>().toEqualTypeOf<Profile>();
+    expectTypeOf<Proxied<{ at: Date; data: Json }>>().toEqualTypeOf<{ at: string; data: Json }>();
+  });
+
+  it("keeps that a key of an index signature may hold nothing, as JSON leaves such a key out", () => {
+    expectTypeOf<Proxied<{ [key: string]: Date | undefined }>>().toEqualTypeOf<{
+      [key: string]: string | undefined;
+    }>();
+    expectTypeOf<Proxied<{ at?: Date | undefined }>>().toEqualTypeOf<{ at?: string }>();
   });
 
   it("is what JSON writes of a value, its toJSON asked first", () => {
@@ -98,6 +129,9 @@ describe("a page's proxy client", () => {
         .response<{ id: string }>()
         .map((visit) => ({ ...visit, at: new Date(0), pages: new Set(["/"]) })),
       ticks: stream.get("ticks").response<{ at: Date }>(),
+      settings: endpoint.get("settings").response<Json>(),
+      profile: endpoint.get("profile").response<Profile>(),
+      document: endpoint.get("document").response(jsonSchema),
     },
   });
 
@@ -116,6 +150,9 @@ describe("a page's proxy client", () => {
         .toHaveProperty("at")
         .toEqualTypeOf<string>();
       expectTypeOf(page.ticks).returns.toEqualTypeOf<Subscription<{ at: string }>>();
+      expectTypeOf(page.settings).returns.resolves.toEqualTypeOf<Json>();
+      expectTypeOf(page.profile).returns.resolves.toEqualTypeOf<Profile>();
+      expectTypeOf(page.document).returns.resolves.toEqualTypeOf<z.output<typeof jsonSchema>>();
     };
     expect(typeOnly).toBeTypeOf("function");
   });

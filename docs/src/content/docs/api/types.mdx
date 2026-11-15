@@ -220,6 +220,8 @@ import type { Proxied } from "@noverax/courier/define"
 type Row = Proxied<{ id: string; at: Date; tags: Set<string> }>
 // { id: string; at: string; tags: Record<string, never> }
 type Same = Proxied<{ id: string; name?: string }> // { id: string; name?: string }
+type Json = string | number | boolean | null | Json[] | { [key: string]: Json }
+type Settings = Proxied<Json> // Json, a recursive type JSON keeps whole
 type Bytes = Proxied<Uint8Array> // ArrayBuffer: bytes travel as themselves
 ```
 

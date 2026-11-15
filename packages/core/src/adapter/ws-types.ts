@@ -126,7 +126,13 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
    * address, and the cap becomes a guarantee instead of a default.
    */
   clientIp?: ClientIPResolver | undefined;
-  /** Per-subscription authorization — throw or return false to reject */
+  /**
+   * Per-subscription authorization — throw or return false to reject. It
+   * runs before the subscription joins its topic or is sent anything, and
+   * again for each subscription when `onReauth` changes the connection's
+   * metadata, so who may hold a subscription is checked here: `onJoin` and
+   * a channel's generator run once it has joined.
+   */
   authorize?:
     | ((info: {
         connectionId: string;
@@ -195,9 +201,10 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
    * throw to refuse them. Refused credentials close the
    * connection at once with 4401 — and so do any sent again when this is not
    * set, as nothing could check them. Taken, they lift the deadline
-   * `connections.requireAuth` set, and when who the connection is changed, each of
-   * its subscriptions is authorized again: one `authorize` now refuses ends
-   * with 4403.
+   * `connections.requireAuth` set, and when the metadata returned differs
+   * from the old — a field added, removed, or not `Object.is` the one it had
+   * — `authorize` runs again for each of its subscriptions, and nothing else
+   * does: one it now refuses ends with 4403.
    */
   onReauth?:
     | ((info: {
@@ -272,7 +279,7 @@ export interface AuthorizedSubscription {
 export interface WSSubscriptionEntry {
   /** Topic string (e.g. "chat.messages") */
   topic: string;
-  /** What it was authorized as, so it is authorized again once who the connection is changes */
+  /** What it was authorized as, so `authorize` runs again for it once who the connection is changes */
   authorized?: AuthorizedSubscription | undefined;
   /** Cleanup function — calls onLeave or cancels generator */
   cleanup: () => void | Promise<void>;

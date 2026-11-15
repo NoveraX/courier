@@ -19,9 +19,9 @@ const TIMED_OUT = Symbol("onReauth did not settle in time");
  * the handshake with the frame's headers on it, and the frame's `auth`, and
  * returns the connection's new metadata, which replaces the old whole; from
  * then on its subscriptions are made with those headers, the deadline
- * `connections.requireAuth` set is lifted, and each subscription it holds is
- * authorized again when who it is changed — a field added, removed or given
- * another value. Credentials `onReauth` refuses close the connection at once —
+ * `connections.requireAuth` set is lifted, and `authorize` runs again for
+ * each subscription it holds when who it is changed — a field added,
+ * removed or given another value. Credentials `onReauth` refuses close the connection at once —
  * and so does any, on a handler with no `onReauth` to check them: the
  * connection holds on to nothing it was not shown to be.
  *

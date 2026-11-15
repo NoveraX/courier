@@ -30,7 +30,7 @@ export const chat = defineGroup({
 })
 ```
 
-A channel's `onJoin` runs once its subscription is set up and sent what it missed. When the subscription ends — its client leaves it or subscribes again, its connection closes, or the channel closes it — `ctx.signal` fires and `onLeave` runs, once for each `onJoin` called: one that refused the join too, and one still running, which it does not wait for and whose `ctx.send` reaches no one now. A subscription its client leaves before it joins runs neither.
+A channel's `onJoin` runs once its subscription is set up and sent what it missed, and so does a channel's generator: the subscription has joined its topic by then, so a refusal thrown in either ends it only after the topic's events may have reached it. Check who may subscribe in the handler's [`authorize`](/docs/deployment/standalone-server#configuration) or in a middleware, which run before anything is sent; `authorize` runs again [when renewed credentials change who the connection is](/docs/advanced/realtime-connections#who-a-connection-is). When the subscription ends — its client leaves it or subscribes again, its connection closes, or the channel closes it — `ctx.signal` fires and `onLeave` runs, once for each `onJoin` called: one that refused the join too, and one still running, which it does not wait for and whose `ctx.send` reaches no one now. A subscription its client leaves before it joins runs neither.
 
 ## Serving a stream
 
@@ -66,7 +66,7 @@ export const orders = defineGroup({
 })
 ```
 
-Returning ends the stream: the client stops reading and does not reconnect. Throwing fails it. A `RealtimeError` — `ForbiddenError`, `AuthError`, `RateLimitError`, `RealtimeTimeoutError`, or one built with its own code — reaches the client with its code and message; any other error reaches it as code `5000`, "Stream failed", and in full only the server's log.
+Returning ends the stream: the client stops reading and does not reconnect. Throwing fails it. A check like `canWatch` holds back a stream's events, which its generator yields, but not a channel's: its subscription has joined its topic before its generator runs, so who may subscribe to a channel is checked in `authorize`, as the [overview](#overview) says. A `RealtimeError` — `ForbiddenError`, `AuthError`, `RateLimitError`, `RealtimeTimeoutError`, or one built with its own code — reaches the client with its code and message; any other error reaches it as code `5000`, "Stream failed", and in full only the server's log.
 
 ## Reaching a stream or a channel
 

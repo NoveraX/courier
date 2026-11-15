@@ -10,12 +10,14 @@ import type { McpServerOptions } from "./server-options";
 import { shownOutputSchema, structuredOutputOf } from "./tool-definition";
 import { limitedCall, notNow } from "./tool-limit";
 import { toolResult } from "./tool-result";
+import { unknownArguments } from "./unknown-arguments";
 import { visibleTool } from "./visible-tools";
 
 /**
- * Answer `tools/call`: find the tool the caller may see, refuse a call over
- * its limit, confirm one a person confirms — once its limit would take it,
- * and wherever the client can ask — run it, and write what came of it.
+ * Answer `tools/call`: find the tool the caller may see, refuse a call that
+ * names an argument the tool does not take, or one over its limit, confirm
+ * one a person confirms — once its limit would take it, and wherever the
+ * client can ask — run it, and write what came of it.
  *
  * @param params - The request's params: `name`, `arguments`, and on a retry
  *   `inputResponses` and `requestState`
@@ -56,6 +58,8 @@ export async function callTool(
     tool.refused?.(args, caller, { kind, message });
     return { content: [{ type: "text", text: message }], isError: true };
   };
+  const unknown = unknownArguments(tool, args);
+  if (unknown !== undefined) return refuse("validation", unknown);
   const limited = limitedCall(tool, limits, options, connection.principal);
   /* `allowDestructive` stands in for a person only where the client cannot ask one. */
   if (confirmsEachCall(tool) && (!options.allowDestructive || canBeAsked(era, connection))) {

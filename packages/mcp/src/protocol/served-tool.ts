@@ -34,7 +34,12 @@ export interface ServedTool {
    * always is, and a write too where the project's policy says so.
    */
   readonly confirm?: boolean | undefined;
-  /** What it takes, as JSON Schema: always an object. */
+  /**
+   * What it takes, as JSON Schema: always an object. Where it says
+   * `additionalProperties: false` and gives no `patternProperties`, a call
+   * naming an argument its `properties` do not is refused before anything
+   * runs.
+   */
   readonly inputSchema: JSONSchema;
   /** What it answers with, as JSON Schema, when that is known. */
   readonly outputSchema?: JSONSchema | undefined;

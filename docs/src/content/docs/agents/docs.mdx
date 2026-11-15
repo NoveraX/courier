@@ -1,4 +1,4 @@
-export const metadata = { title: "Docs for Your Agent", description: "Courier's documentation for the version your project installs, as Markdown the agent in your editor reads from node_modules — with no network, and nothing older from memory.", mode: "both", updated: "2026-11-06" }
+export const metadata = { title: "Docs for Your Agent", description: "Courier's documentation for the version your project installs, as Markdown the agent in your editor reads from node_modules — with no network, and nothing older from memory.", mode: "both", updated: "2026-11-15" }
 
 ## The docs of the version you install
 
@@ -54,7 +54,7 @@ In Cursor or VS Code, add the same command to `.cursor/mcp.json` or `.vscode/mcp
 | `docs_read` | A page as Markdown, or the part of it under one heading, by its heading's words or its anchor: the page as `docs_search` or `docs_list` names it, or as a link in another page does, `/docs/<page>#<anchor>`. A page longer than 32,000 characters comes in pieces, each saying where the next one starts. |
 | `docs_list` | Every page by section, with what it covers. |
 
-Each answer names the version the docs are for.
+Each answer names the version the docs are for. A call with an argument its tool does not take is refused with the ones it takes, rather than answered without it: a part of a page is read by `section`.
 
 ## Over the network
 

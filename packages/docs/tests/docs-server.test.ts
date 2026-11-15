@@ -140,6 +140,11 @@ describe("the docs server", () => {
       { page: "quick-start", section: 3 },
       "section is a heading of the page, or its anchor",
     ],
+    [
+      "docs_read",
+      { page: "quick-start", heading: "Install" },
+      '"heading" is not an argument of docs_read, which takes "page", "section" and "offset"',
+    ],
   ])("refuses %s with %j, saying why", async (name, args, message) => {
     const server = docsServer(folder.dir);
     const { result, text } = await tool(server, await opened(server), name, args);

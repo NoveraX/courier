@@ -16,13 +16,21 @@ export interface RetryBudget {
    * @param spent - What its last retry spent, if it made one
    */
   answered(spent: number | undefined): void;
+  /**
+   * A retry it paid for was not sent — its call was cancelled while it
+   * waited, or the hook before it threw: what it spent comes back.
+   *
+   * @param spent - What the retry spent
+   */
+  refund(spent: number): void;
 }
 
 /**
  * A token bucket of retries, as AWS SDKs keep one: each retry spends a
  * share of it — one after a timeout, which keeps an upstream waiting
  * longest, twice as much — and an answer gives back what its last retry
- * spent, or a little when it needed none. While an upstream fails, its
+ * spent, or a little when it needed none; a retry that is never sent costs
+ * nothing. While an upstream fails, its
  * callers' retries stop once the bucket is empty, rather than piling onto
  * it as it tries to recover; answers fill it again.
  *
@@ -45,6 +53,9 @@ export function retryBudget(): RetryBudget {
     },
     answered(spent) {
       left = Math.min(capacity, left + (spent ?? refill));
+    },
+    refund(spent) {
+      left = Math.min(capacity, left + spent);
     },
   };
 }

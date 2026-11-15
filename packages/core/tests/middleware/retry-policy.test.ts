@@ -384,6 +384,20 @@ describe("the retry budget", () => {
     expect(outcome.sentAt).toHaveLength(1);
   });
 
+  it("gets back what a retry spent when its call is cancelled before the retry is sent", async () => {
+    const budget = retryBudget();
+    for (let cancelled = 0; cancelled < 100; cancelled++) {
+      const controller = new AbortController();
+      const ctx = contextFor({ signal: controller.signal });
+      await call({ limit: 10, delay: 1_000 }, [answer(503)], ctx, budget, () => controller.abort());
+    }
+
+    const outcome = await call({ limit: 1, delay: 1 }, [answer(503), ok], contextFor(), budget);
+
+    expect(outcome.response).toMatchObject({ status: 200 });
+    expect(outcome.sentAt).toHaveLength(2);
+  });
+
   it("spends twice as much on a timeout, which kept the upstream waiting longest", async () => {
     const budget = retryBudget();
     const retried = { limit: 10, delay: 1, retryOn: ["timeout"] } as const;

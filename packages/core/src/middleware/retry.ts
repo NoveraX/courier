@@ -126,13 +126,19 @@ export function retryPolicy(options: RetryOptions, budget: RetryBudget): WrapMid
           return unwrap(outcome, outer);
         spent = budget.spend(failure);
         if (spent === undefined) return unwrap(outcome, outer);
-        if (onRetry) {
-          await waitUnlessStopped(
-            onRetry({ attempt: retry + 2, delay: wait, failure }, ctx),
-            ctx.signal,
-          );
+        try {
+          if (onRetry) {
+            await waitUnlessStopped(
+              onRetry({ attempt: retry + 2, delay: wait, failure }, ctx),
+              ctx.signal,
+            );
+          }
+          await pause(wait, ctx.signal);
+        } catch (error) {
+          /* The retry it paid for is not sent, so the upstream never bears it. */
+          budget.refund(spent);
+          throw error;
         }
-        await pause(wait, ctx.signal);
       }
     } finally {
       limitTo?.end();

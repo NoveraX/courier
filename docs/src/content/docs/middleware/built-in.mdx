@@ -127,7 +127,7 @@ retryMiddleware({ limit: 5, deadline: 10_000 }) // five retries at most, ten sec
 
 ### The retry budget
 
-The calls a policy retries share a budget, as the AWS SDKs keep one: a retry spends 5 of 500, a retry after a timeout 10, and a call that is answered gives back what its last retry spent — or 1, when it needed none. While an upstream keeps failing, the retries stop once the budget is spent and every call fails after its first attempt, rather than piling onto an upstream that is trying to recover; answers fill the budget again. Each `retryMiddleware()` has a budget of its own; the `.retry()` policies of one API's endpoints share one.
+The calls a policy retries share a budget, as the AWS SDKs keep one: a retry spends 5 of 500, a retry after a timeout 10, and a call that is answered gives back what its last retry spent — or 1, when it needed none. A retry that is never sent, its call cancelled while it waited, costs nothing. While an upstream keeps failing, the retries stop once the budget is spent and every call fails after its first attempt, rather than piling onto an upstream that is trying to recover; answers fill the budget again. Each `retryMiddleware()` has a budget of its own; the `.retry()` policies of one API's endpoints share one.
 
 ### Told of each retry
 

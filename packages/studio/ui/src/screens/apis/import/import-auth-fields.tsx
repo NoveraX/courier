@@ -49,6 +49,7 @@ function HeaderRows({ headers, set, onChange }: HeaderRowsProps): React.ReactNod
             value={row.variable}
             set={set}
             onChange={(variable) => change(at, { variable })}
+            className="flex-1"
           />
           {headers.length > 1 && (
             <button
@@ -126,7 +127,7 @@ export function ImportAuthFields({ auth, onChange }: ImportAuthFieldsProps): Rea
         />
       )}
       {auth.kind === "basic" && (
-        <div className="flex gap-2 max-sm:flex-col">
+        <div className="grid gap-2 sm:grid-cols-2">
           <VariableInput
             label="User variable"
             placeholder="SPEC_USER"

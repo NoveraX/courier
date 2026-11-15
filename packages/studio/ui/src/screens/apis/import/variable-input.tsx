@@ -8,6 +8,8 @@ interface VariableInputProps {
   /** Whether Studio's environment sets each variable it answered for. */
   set: ReadonlyMap<string, boolean>;
   onChange: (value: string) => void;
+  /** How it sits among the fields of a row that holds it: `flex-1` to take what the row leaves. */
+  className?: string;
 }
 
 /**
@@ -15,7 +17,11 @@ interface VariableInputProps {
  * whether Studio's environment sets it once Studio has said. A value is
  * never typed here.
  *
- * @param props - The field's label and example, the name, what Studio said, and what typing does
+ * It is as wide as what holds it lets it be. A row that holds it beside
+ * other fields grows it with `className="flex-1"`; in a column, `flex-1`
+ * would size its height instead and squeeze the field to its text.
+ *
+ * @param props - The field's label and example, the name, what Studio said, what typing does, and how it sits in a row
  * @returns The field
  * @example
  * ```tsx
@@ -28,10 +34,16 @@ export function VariableInput({
   value,
   set,
   onChange,
+  className,
 }: VariableInputProps): React.ReactNode {
   const known = set.get(value.trim());
   return (
-    <label className="flex h-9.5 min-w-0 flex-1 items-center gap-2 rounded-[9px] border border-line-strong bg-inset px-3 focus-within:border-brand pointer-coarse:h-11">
+    <label
+      className={cn(
+        "flex h-9.5 min-w-0 items-center gap-2 rounded-[9px] border border-line-strong bg-inset px-3 focus-within:border-brand pointer-coarse:h-11",
+        className,
+      )}
+    >
       <span className="shrink-0 text-small text-fg-subtle">{label}</span>
       <input
         value={value}

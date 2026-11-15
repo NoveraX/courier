@@ -173,4 +173,44 @@ describe("every HTTP entry point", () => {
     expect(listed.status).toBe(200);
     expect(rebound.status).toBe(421);
   });
+
+  /* The browser on this machine is the peer a forwarded name is believed from, and a page
+     adds X-Forwarded-Host to a call on its own origin without a preflight. */
+  it.each([
+    ["GET", {}],
+    ["POST", { "content-type": "application/json", origin: "http://rebound.example" }],
+    ["SSE", { accept: "text/event-stream" }],
+  ] as const)(
+    "answers %s 421 for a rebound page that forwards a served name itself",
+    async (kind, headers) => {
+      const port = await serve();
+
+      const answer = await send(port, {
+        method: kind === "SSE" ? "GET" : kind,
+        host: `rebound.example:${port}`,
+        headers: { ...headers, "x-forwarded-host": `localhost:${port}` },
+        body: kind === "POST" ? JSON.stringify({ variables: {} }) : undefined,
+      });
+
+      expect(answer.status).toBe(421);
+      expect(JSON.parse(answer.body).message).toContain(`"rebound.example:${port}"`);
+      expect(upstream.received).toHaveLength(0);
+    },
+  );
+
+  it("serves a proxy's request by the name it forwards while the Host it reaches the app by is served too", async () => {
+    const port = await serve({ allowedHosts: ["app.example.com"] });
+    const forwarded = { "x-forwarded-host": "app.example.com" };
+
+    const byAddress = await send(port, {
+      method: "GET",
+      host: `127.0.0.1:${port}`,
+      headers: forwarded,
+    });
+    const byName = await send(port, { method: "GET", host: "web:3000", headers: forwarded });
+
+    expect(byAddress.status).toBe(200);
+    expect(byName.status).toBe(421);
+    expect(JSON.parse(byName.body).message).toContain('"web:3000"');
+  });
 });

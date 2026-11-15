@@ -13,7 +13,10 @@ import { isLocalAddress } from "./utils/local-address";
  * `X-Forwarded-Proto` and `X-Forwarded-Host` say what the client used, but
  * only when the socket's peer is local or on a private network — the rule
  * the per-address WebSocket limit applies to `X-Forwarded-For` — so a caller
- * on a public address cannot claim another site's name.
+ * on a public address cannot claim another site's name. A browser on this
+ * machine or its network sends them too, from a page on a rebound name; the
+ * request keeps the `Host` it came with, which the proxy's host rule weighs
+ * as well.
  *
  * @param nodeReq - The incoming request
  * @returns The scheme (without `:`) and host, or no host when none was sent

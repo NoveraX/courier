@@ -1,4 +1,4 @@
-export const metadata = { title: "Proxy Mode", description: "Framework-agnostic reverse proxy that hides secrets, bypasses CORS, and carries the cookies you name from any frontend to any backend.", mode: "proxy", updated: "2026-11-06" }
+export const metadata = { title: "Proxy Mode", description: "Framework-agnostic reverse proxy that hides secrets, bypasses CORS, and carries the cookies you name from any frontend to any backend.", mode: "proxy", updated: "2026-11-15" }
 
 ## What is proxy mode?
 
@@ -125,7 +125,7 @@ While the setting cannot be read, the route admits nothing:
 
 Every request is then answered `500` with the code `SERVER_MISCONFIGURED`, localhost's included, and every socket is answered `auth_error` and closed with `1011`. The answer says nothing of why; the server's log names the setting, where it came from and what is wrong, once.
 
-The WebSocket handlers take the same option. Behind a reverse proxy the host is the one the browser used, read from `X-Forwarded-Host` where the adapter trusts it — see [Behind a Reverse Proxy](/docs/deployment/overview#behind-a-reverse-proxy).
+The WebSocket handlers take the same option. Behind a reverse proxy the host is the one the browser used, read from `X-Forwarded-Host` where the adapter trusts it — see [Behind a Reverse Proxy](/docs/deployment/overview#behind-a-reverse-proxy). The request's own `Host` must be served as well: a page on a rebound name can add `X-Forwarded-Host` to its calls, naming a host you serve, but not change the `Host` its browser writes. A proxy that reaches the app by a name of its own in `Host` — `web:3000` in Docker — needs that name listed too, or to pass the browser's on (`proxy_set_header Host $host`); a loopback name or an IP address is always served.
 
 ### Origin validation
 

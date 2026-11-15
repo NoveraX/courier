@@ -1,5 +1,5 @@
 import type { ConfigurationError } from "../errors";
-import { isHostServed } from "./host-policy";
+import { unservedHost } from "./host-policy";
 import { isOriginAllowed } from "./origin-policy";
 import { readAllowedHosts, readAllowedOrigins, reportUnreadSetting } from "./runtime-policy";
 import type { SessionClose } from "./ws-close";
@@ -39,7 +39,7 @@ export function admitSocket(
   const origins = readAllowedOrigins(config.allowedOrigins);
   if (!hosts.ok) return misconfigured(hosts.error);
   if (!origins.ok) return misconfigured(origins.error);
-  if (!isHostServed(new URL(request.url).host, hosts.value)) return { kind: "host" };
+  if (unservedHost(request, hosts.value) !== undefined) return { kind: "host" };
   if (!isOriginAllowed(request, origins.value)) return { kind: "origin" };
   const ip = extractClientIP(request, config.clientIp);
   if (!ipTracker.acquire(ip)) return { kind: "limit" };

@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Deployment Overview",
   description: "Choose the right deployment strategy for your Courier application — standalone server, framework adapter, single or multi-replica.",
-  updated: "2026-11-06",
+  updated: "2026-11-15",
 }
 
 ## Deployment Models
@@ -80,7 +80,7 @@ The proxy route refuses a request another site's page made — the check that st
 
 The same name decides which host the request was addressed to, which every route checks against `allowedHosts` to refuse a DNS-rebinding page with `421`. Production serves every name until `allowedHosts` lists them; list the public names your proxy routes to the app to refuse the rest as well — see [Host validation](/docs/proxy-mode/overview#host-validation).
 
-The Node adapters (Express, Fastify, NestJS and the standalone server) read `X-Forwarded-Proto` and `X-Forwarded-Host` — but only from a proxy on a loopback or private address (`127.0.0.1`, `::1`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `fc00::/7`). A caller on a public address cannot claim another site's name with them. Next.js reports every route's URL on the host it was started with, so its adapter reads `X-Forwarded-Host` and `X-Forwarded-Proto`, which Next fills from `Host` when no proxy did, as Next's own Server Actions do. SvelteKit and the other Web-standard adapters take the URL from their framework, which applies its own proxy settings.
+The Node adapters (Express, Fastify, NestJS and the standalone server) read `X-Forwarded-Proto` and `X-Forwarded-Host` — but only from a proxy on a loopback or private address (`127.0.0.1`, `::1`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `fc00::/7`). A caller on a public address cannot claim another site's name with them. A browser on the machine or its network can, from a page on a rebound name, so every route checks the request's own `Host` too, by the same rule: keep the proxy passing the browser's `Host` on, as below, or list the name it reaches the app by. Next.js reports every route's URL on the host it was started with, so its adapter reads `X-Forwarded-Host` and `X-Forwarded-Proto`, which Next fills from `Host` when no proxy did, as Next's own Server Actions do. SvelteKit and the other Web-standard adapters take the URL from their framework, which applies its own proxy settings.
 
 ```nginx title="nginx.conf"
 location / {

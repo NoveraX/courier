@@ -150,6 +150,22 @@ describe("createWSHandler", () => {
     vi.unstubAllEnvs();
   });
 
+  it("closes a socket whose own Host the app does not serve, whatever host its URL names", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const sources = createWSSource(vi.fn());
+    const { handleSocket } = setupWSHandler(sources, {});
+
+    const ws = createMockSocket();
+    await admit(
+      handleSocket,
+      ws,
+      new Request("http://localhost:3000/ws", { headers: { host: "rebound.example:3000" } }),
+    );
+
+    expect(ws._closed).toEqual({ code: 4421, reason: "Host not allowed" });
+    vi.unstubAllEnvs();
+  });
+
   it("keeps a socket opened on a host allowedHosts lists", async () => {
     vi.stubEnv("NODE_ENV", "development");
     const sources = createWSSource(vi.fn());

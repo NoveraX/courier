@@ -11,7 +11,10 @@
  *
  * A page cannot use them to pass for another site: a browser refuses to send
  * either on a cross-origin request unless a preflight allowed it, and the
- * proxy decides from `Sec-Fetch-Site` wherever the browser sends it.
+ * proxy decides from `Sec-Fetch-Site` wherever the browser sends it. A page
+ * on a rebound name sends them on its own origin, for a host the app serves;
+ * the `Host` its browser writes is kept, and the proxy's host rule weighs it
+ * as well.
  *
  * @param request - The request Next handed to the route
  * @returns A request whose URL carries the addressed origin, or the same

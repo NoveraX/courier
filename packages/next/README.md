@@ -128,7 +128,7 @@ Pages on other origins may call the route when `allowedOrigins` lists them. Thei
 export const { GET, POST, OPTIONS } = apiRoute({ allowedOrigins: ["https://admin.example.com"] })
 ```
 
-The route answers only for the host names the app is reached by, which stops a DNS-rebinding page: `localhost`, `*.localhost` and IP addresses always, and in production every name until `allowedHosts` lists them. Any other host gets `421`. A dev server reached by another name lists it: `apiRoute({ allowedHosts: ["myapp.test"] })`.
+The route answers only for the host names the app is reached by, which stops a DNS-rebinding page: `localhost`, `*.localhost` and IP addresses always, and in production every name until `allowedHosts` lists them. Any other host gets `421`, in `Host` or in the `X-Forwarded-Host` the route reads: a rebound page can add that header itself, never change its `Host`. A dev server reached by another name lists it: `apiRoute({ allowedHosts: ["myapp.test"] })`.
 
 `next build` runs the route module while it collects page data, before the deployment's variables are there. A list computed from one fails the build, so give a function, which the route calls with the first request, or set `COURIER_ALLOWED_HOSTS` on the deployment, comma-separated:
 

@@ -9,6 +9,12 @@
  * names can refuse it, so a request for any other name is answered 421
  * Misdirected Request.
  *
+ * A request names its host twice where an adapter takes the client's name from
+ * a proxy's `X-Forwarded-Host`: in its URL, and in the `Host` it came with.
+ * The page can add the first to a call on its own origin — a rebound page
+ * names a host the app serves there — but its browser writes the second, so
+ * both must be served.
+ *
  * Loopback names and IP literals are always served: a page on one of them is
  * on the user's own machine or at an address nobody can point elsewhere.
  * Anything else is served when `allowedHosts` names it — as the config lists
@@ -27,25 +33,32 @@ import { type HostNames, isHostNamed } from "./host-names";
 import { type AllowedHostsSetting, readAllowedHosts, reportUnreadSetting } from "./runtime-policy";
 
 /**
- * Decide whether a request was addressed to a host this app serves.
+ * The name a request was addressed by that this app does not serve: the host
+ * its URL names, as the adapter built it — from a proxy's `X-Forwarded-Host`
+ * where it believes one — or the one its own `Host` names.
  *
- * @param request - The incoming request, whose URL names the host it was
- *   addressed to
- * @param allowedHosts - The app's own host names; see {@link isHostAccepted}
- * @returns Whether the request may proceed
+ * @param request - The incoming request
+ * @param hosts - The names `readAllowedHosts` read, or none when nothing sets them
+ * @returns The first name not served, or `undefined` when the request may proceed
  *
  * @example
  * ```ts
- * isHostAllowed(request, ["app.example.com", "*.example.com"]);
- * isHostAllowed(request, () => [new URL(process.env.APP_URL ?? "").host]);
+ * const rebound = new Request("http://localhost:3000/api/request", {
+ *   headers: { host: "rebound.example:3000", "x-forwarded-host": "localhost:3000" },
+ * });
+ * unservedHost(rebound, undefined); // "rebound.example:3000" outside production
  * ```
  */
-export function isHostAllowed(request: Request, allowedHosts?: AllowedHostsSetting): boolean {
-  return isHostAccepted(new URL(request.url).host, allowedHosts);
+export function unservedHost(request: Request, hosts: HostNames | undefined): string | undefined {
+  const addressed = new URL(request.url).host;
+  if (!isHostServed(addressed, hosts)) return addressed;
+  const sent = request.headers.get("host");
+  return sent === null || sent === addressed || isHostServed(sent, hosts) ? undefined : sent;
 }
 
 /**
- * The same rule, for a server that speaks in parts rather than in `Request`.
+ * The same rule for one name, for a server that speaks in parts rather than
+ * in `Request`.
  *
  * An entry is a host name — `app.example.com`, a port after it read past —
  * or `*.example.com` for the sub-domains of one, not the name itself. Names

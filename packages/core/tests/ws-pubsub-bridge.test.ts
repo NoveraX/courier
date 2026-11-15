@@ -223,6 +223,30 @@ describe("a broadcast between two replicas on one bus", () => {
       .poll(() => [inRoomA, inRoomB].map((entry) => entry.sendEncoded.mock.calls.length))
       .toEqual([1, 1]);
   });
+
+  it("still reaches the endpoint's other topics once a connection closed as it left one", async () => {
+    const bus = createMemoryBus();
+    const a = replica(bus.replica("a"));
+    const b = replica(bus.replica("b"));
+    const letGo = vi.spyOn(b.bridge, "onTopicUnsubscribe");
+    const inRoomB = createEntry("b-2");
+    b.registry.add(createEntry("b-1"));
+    b.registry.add(inRoomB);
+    const leaving = Promise.withResolvers<void>();
+    const roomA = { topic: 'api.chat.room#{"room":"a"}', cleanup: () => leaving.promise };
+    b.topics.subscribe("b-1", roomA);
+    b.topics.subscribe("b-2", { topic: 'api.chat.room#{"room":"b"}', cleanup: vi.fn() });
+
+    /* Its client left room a, whose onLeave still runs as the socket closes. */
+    const left = b.topics.release("b-1", roomA);
+    const closed = b.topics.disconnectAll("b-1");
+    leaving.resolve();
+    await Promise.all([left, closed]);
+    await a.bridge.publishToBaseTopic("api.chat.room", "to every room");
+
+    expect(letGo.mock.calls).toEqual([['api.chat.room#{"room":"a"}']]);
+    await expect.poll(() => inRoomB.sendEncoded.mock.calls.length).toBe(1);
+  });
 });
 
 describe("topic manager hooks", () => {

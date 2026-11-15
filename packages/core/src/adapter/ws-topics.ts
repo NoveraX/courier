@@ -8,7 +8,7 @@ const log = createLogger("WS");
 export interface TopicManagerHooks {
   /** Called when a topic gains its first local subscriber */
   onFirstSubscriber?: (topic: string) => void;
-  /** Called when a topic loses its last local subscriber */
+  /** Called once each time a topic loses its last local subscriber */
   onLastUnsubscriber?: (topic: string) => void;
 }
 
@@ -58,8 +58,11 @@ export interface ServerTopicManager {
  * subscription before it is still being ended — its generator finishing,
  * its `onJoin` refusing late — and whatever comes of the older one leaves
  * the newer one as it is. Each subscription's cleanup runs once, however
- * many ask for it, and while it runs the subscription is still held, so
- * its `onLeave` can reach the topic.
+ * many ask for it — its client leaving it and its socket closing as it
+ * runs — and while it runs the subscription is still held, so its
+ * `onLeave` can reach the topic. Once it has run, the subscription is
+ * forgotten once, and a topic it leaves without a subscriber is
+ * announced once.
  *
  * @param hooks - Optional lifecycle hooks for pubsub bridge integration
  */
@@ -126,18 +129,10 @@ export function createServerTopicManager(hooks?: TopicManagerHooks): ServerTopic
   }
 
   async function disconnectAll(connectionId: string): Promise<void> {
-    const topics = connections.get(connectionId);
-    if (!topics) return;
-
-    const topicNames = [...topics.keys()];
-    const cleanups = [...topics.values()].map(end);
-    await Promise.allSettled(cleanups);
-    connections.delete(connectionId);
-
-    for (const topic of topicNames) {
-      index.remove(topic, connectionId);
-      if (!index.has(topic)) hooks?.onLastUnsubscriber?.(topic);
-    }
+    const entries = [...(connections.get(connectionId)?.values() ?? [])];
+    await Promise.allSettled(entries.map(end));
+    /* One a release still ending has forgotten by now is not forgotten, or announced, again. */
+    for (const entry of entries) forget(connectionId, entry);
   }
 
   return {

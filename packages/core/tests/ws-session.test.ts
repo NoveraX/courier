@@ -175,10 +175,12 @@ describe("createSession", () => {
   it("sets no deadline for a request with none", () => {
     vi.useFakeTimers();
     const socket = createFakeSocket();
+    const session = createSession(socket);
+    session.admit(OK);
 
-    createSession(socket).requireAuth(0);
+    session.requireAuth(0);
 
-    expect(socket.sent).toEqual([{ type: "reauth_required", timeoutMs: 0 }]);
+    expect(socket.sent.slice(1)).toEqual([{ type: "reauth_required", timeoutMs: 0 }]);
     expect(vi.getTimerCount()).toBe(0);
   });
 
@@ -222,13 +224,14 @@ describe("createSession", () => {
     vi.useFakeTimers();
     const socket = createFakeSocket();
     const session = createSession(socket);
+    session.admit(OK);
     session.requireAuth(1_000);
 
     session.dispose();
     session.requireAuth(1_000);
 
     expect(vi.getTimerCount()).toBe(0);
-    expect(socket.sent).toEqual([{ type: "reauth_required", timeoutMs: 1_000 }]);
+    expect(socket.sent.slice(1)).toEqual([{ type: "reauth_required", timeoutMs: 1_000 }]);
   });
 });
 

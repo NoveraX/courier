@@ -8,7 +8,6 @@ import {
   runCommand,
 } from "./ws-connection-command";
 import { createLogFollower } from "./ws-log-follower";
-import { createMetaIndex } from "./ws-meta-index";
 import {
   type BroadcastTargets,
   broadcastToAll,
@@ -16,6 +15,7 @@ import {
   broadcastToTopic,
   resyncEvery,
 } from "./ws-registry-broadcast";
+import { createRegistryMembers } from "./ws-registry-members";
 import type {
   ConnectionInfo,
   InternalConnectionRegistry,
@@ -62,9 +62,8 @@ export function createConnectionRegistry(
   options: RegistryOptions = {},
 ): InternalConnectionRegistry {
   const { history, log } = options;
-  const entries = new Map<string, RegistryEntry>();
-  /* Of each entry's metadata as it was let in, or renewed: what a selector compares. */
-  const metaIndex = createMetaIndex();
+  const members = createRegistryMembers();
+  const { entries } = members;
   let topicManager: ServerTopicManager | undefined;
   const sequences = createTopicSequences();
 
@@ -122,35 +121,13 @@ export function createConnectionRegistry(
     async evict(connectionIds) {
       runCommand(evictCommand(connectionIds), registry);
     },
-    add(entry) {
-      const held = entries.get(entry.connectionId);
-      if (held) metaIndex.remove(entry.connectionId, held.meta);
-      entry.meta = Object.freeze({ ...entry.meta });
-      entries.set(entry.connectionId, entry);
-      metaIndex.add(entry.connectionId, entry.meta);
-    },
-    remove(connectionId) {
-      const entry = entries.get(connectionId);
-      if (!entry) return;
-      entries.delete(connectionId);
-      metaIndex.remove(connectionId, entry.meta);
-    },
-    updateMeta(connectionId, meta) {
-      const entry = entries.get(connectionId);
-      if (!entry) return;
-      metaIndex.remove(connectionId, entry.meta);
-      entry.meta = Object.freeze({ ...meta });
-      metaIndex.add(connectionId, entry.meta);
-    },
+    join: (entry) => members.join(entry),
+    add: (entry) => members.add(entry),
+    remove: (connectionId) => members.remove(connectionId),
+    updateMeta: (connectionId, meta) => members.updateMeta(connectionId, meta),
     getEntry: (connectionId) => entries.get(connectionId),
-    select(selection) {
-      if ("ids" in selection) {
-        const named = [...new Set(selection.ids)].map((id) => entries.get(id));
-        return named.filter((entry): entry is RegistryEntry => entry !== undefined);
-      }
-      const named = metaIndex.select(selection.fields).map((id) => entries.get(id));
-      return named.filter((entry): entry is RegistryEntry => entry !== undefined);
-    },
+    select: (selection) => members.select(selection),
+    reach: (selection) => members.reach(selection),
     setTopicManager(tm) {
       topicManager = tm;
     },

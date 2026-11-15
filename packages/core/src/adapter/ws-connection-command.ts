@@ -4,10 +4,10 @@ import { closeReason } from "./close-reason";
 import { readSelector, type Selection } from "./connection-selector";
 import { isSendableCloseCode } from "./ws-close";
 import type {
+  CommandTarget,
   ConnectionSelector,
   DisconnectOptions,
   InternalConnectionRegistry,
-  RegistryEntry,
   RequireAuthOptions,
 } from "./ws-registry-types";
 
@@ -124,15 +124,16 @@ export function evictCommand(connectionIds: readonly string[]): CheckedCommand {
 }
 
 /**
- * Carry a command out on the connections of this replica it selects.
+ * Carry a command out on the connections of this replica it selects: those
+ * let in, and those `onConnect` admitted that are not let in yet.
  *
- * @returns The entries it reached
+ * @returns The connections it reached
  */
 export function runCommand(
   { command, selection }: CheckedCommand,
   registry: InternalConnectionRegistry,
-): RegistryEntry[] {
-  const entries = registry.select(selection);
+): CommandTarget[] {
+  const entries = registry.reach(selection);
   for (const entry of entries) {
     if (command.kind === "disconnect") entry.close(command.code, command.reason);
     else if (command.kind === "evict") entry.evict();

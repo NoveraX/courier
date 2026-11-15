@@ -21,8 +21,17 @@ export interface AdmissionRules {
   readonly authTimeoutMs: number;
   /** How long `onConnect` may take */
   readonly hookTimeoutMs: number;
-  /** The code the socket closed with, when the client left while it was being admitted */
-  readonly left: () => number | undefined;
+  /**
+   * The code the connection ended with while it was being admitted: its
+   * client left, or the server closed it — a command, an eviction
+   */
+  readonly ended: () => number | undefined;
+  /**
+   * Makes the connection known to commands once `onConnect` has said who
+   * it is: a disconnect, an eviction or a request for its credentials
+   * reaches it from then on, though it is not let in yet
+   */
+  readonly join: (ctx: WSSocketContext) => void;
   /**
    * Takes the connection's place under a limit on its key's connections,
    * once `onConnect` has said who it is: false when the limit refuses it
@@ -47,10 +56,13 @@ const TIMED_OUT = Symbol("onConnect did not settle in time");
  * or credentials `onConnect` refuses close the connection with why, after
  * `auth_error`, and the refusal is logged on one line; an `onConnect` that
  * has not settled by its deadline closes it as a fault of the server,
- * which the client may retry. Under a limit on its key's connections, it
- * then takes its place, and one the limit refuses is closed with 4429. A
- * client that left while `onConnect` admitted it, and one the limit
- * refused, has its `onDisconnect` run, so what `onConnect` set up is undone.
+ * which the client may retry. From the moment `onConnect` says who it is,
+ * a command reaches it: a sign-out or an eviction ends it, and credentials
+ * asked for again are asked for once it is let in. Under a limit on its
+ * key's connections it then takes its place, unless it has ended by then,
+ * and one the limit refuses is closed with 4429. A connection that ended
+ * after `onConnect` admitted it, and one the limit refused, has its
+ * `onDisconnect` run, so what `onConnect` set up is undone.
  *
  * @param ctx - The connection
  * @param inbox - What its socket sent before it was admitted
@@ -68,7 +80,7 @@ export async function admitConnection(
   rules: AdmissionRules,
 ): Promise<AdmissionOutcome> {
   const admission = await awaitCredentials(ctx, inbox, rules.authTimeoutMs);
-  if (rules.left() !== undefined) return LEFT;
+  if (rules.ended() !== undefined) return LEFT;
   if ("refused" in admission) {
     refuse(ctx, admission.refused, undefined);
     return REFUSED;
@@ -100,14 +112,17 @@ export async function admitConnection(
       clearTimeout(timer);
     }
   }
-  /* Admitted by onConnect, so onDisconnect hears of it however it ends here. */
-  if (rules.limit && !(await rules.limit(ctx))) {
+  /* Admitted by onConnect, so onDisconnect hears of it however it ends here. Who it is is known:
+     a sign-out or an eviction that comes while its place is taken reaches it. Ended by then, it
+     takes no place, and gives up no other connection of its key. */
+  rules.join(ctx);
+  if (rules.ended() === undefined && rules.limit && !(await rules.limit(ctx))) {
     const why = { kind: "limit" } as const;
     ctx.session.close(why);
-    await disconnected(ctx, rules, closeOf(why).code);
+    await disconnected(ctx, rules, rules.ended() ?? closeOf(why).code);
     return REFUSED;
   }
-  const code = rules.left();
+  const code = rules.ended();
   if (code === undefined) return { kind: "admitted", id };
   await disconnected(ctx, rules, code);
   return LEFT;

@@ -3,7 +3,7 @@ import type { RefusalLog } from "../logger/refusal-log";
 import type { WebSocketLike } from "../realtime/adapters";
 import { WS_CODE } from "../realtime/ws/ws-codes";
 import { rememberPeerAddress } from "./peer-address";
-import { activateConnection } from "./ws-activate";
+import { activateConnection, commandTargetOf } from "./ws-activate";
 import { admitSocket } from "./ws-admission";
 import { admitConnection } from "./ws-admit-connection";
 import { connectionFields } from "./ws-connection-fields";
@@ -122,15 +122,22 @@ export function openSockets(
       onDisconnect: config.onDisconnect,
       authTimeoutMs: config.authTimeoutMs ?? WS_DEFAULTS.authTimeoutMs,
       hookTimeoutMs: ctx.middlewareTimeoutMs,
-      left: () => closedWith,
+      ended: () => closedWith ?? ctx.session.closedWith,
+      join: (admitted) => registry.join({ ...commandTargetOf(admitted), meta: admitted.meta }),
       limit: limiter && ((admitted) => withinLimit(limiter, admitted)),
     });
     if (outcome.kind === "admitted") {
       activateConnection(ws, inbox, ctx, opening, outcome.id);
       return;
     }
+    letGo(ctx);
+  }
+
+  /* A connection not let in: its place, its address's slot and its joining are given up. */
+  function letGo(ctx: WSSocketContext): void {
     limiter?.release(ctx.connectionId);
     ipTracker.release(ctx.clientIP);
+    registry.remove(ctx.connectionId);
     ctx.session.dispose();
   }
 
@@ -177,9 +184,8 @@ export function openSockets(
     /* What fails while a connection is admitted ends that connection, never the process. */
     initConnection(ws, inbox, ctx).catch((error: unknown) => {
       log.error(`Connection ${ctx.connectionId} could not be admitted`, error);
-      limiter?.release(ctx.connectionId);
-      ipTracker.release(ctx.clientIP);
       ctx.session.close({ kind: "internal" });
+      letGo(ctx);
     });
   }
 

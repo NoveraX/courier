@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Replication Guide",
   description: "Production-ready multi-replica setup for every supported framework — Next.js, Express, Fastify, Hono, NestJS, and Standalone Server.",
-  updated: "2026-11-13",
+  updated: "2026-11-15",
 }
 
 This guide shows a complete, production-ready realtime setup with Redis adapters for each supported framework.
@@ -493,7 +493,7 @@ export async function askForFreshTokens(connections: ConnectionRegistry, userId:
 
 `sseConnections.disconnect()` takes the same selectors, comparing what `onSSEConnect` returned, and ends the streams on every replica whose HTTP or SSE handler was given the same `pubsub`; the standalone server passes its own to both. A stream ended so says nothing of why, and its client reconnects as from a dropped one, so revoke the user's credentials too: `onSSEConnect` then refuses it. The SSE handlers' commands travel on a channel of their own, signed with the same `cluster.secret`.
 
-A selector is a connection id, `{ id }` with as many as 1000 of them, or `{ meta }` comparing up to 16 fields of what `onConnect` returned, each to a string, a number or a boolean. The metadata compared is a copy taken as the connection was let in, renewed by each `onReauth`: a change made to `ctx.meta` after that is not seen, and `get()` and `list()` hand out copies of it too. Each replica finds the connections a selector names through an index of those fields, without a pass over every connection. One the handler cannot use — no id, a field compared to an object — rejects with a `TypeError` before anything is closed, and so does a code no socket can send. The call resolves once this replica's connections are closed and the command for the others has gone to the adapter; it is not sent at all when every id it names is this replica's. A replica Redis cannot reach at that moment misses the command, so revoke the user's credentials as well: a client that reconnects is then refused by `onConnect`. `count`, `get`, `list()` and `send()` stay with the replica that holds the connections.
+A selector is a connection id, `{ id }` with as many as 1000 of them, or `{ meta }` comparing up to 16 fields of what `onConnect` returned, each to a string, a number or a boolean. The metadata compared is a copy taken as `onConnect` returned it, renewed by each `onReauth`: a change made to `ctx.meta` after that is not seen, and `get()` and `list()` hand out copies of it too. A connection is reached from the moment `onConnect` returns, while it still waits for its place under `maxConnectionsPerKey`: `disconnect()` closes it before it is let in, and `requireAuth()` asks for its credentials as soon as it is. `count`, `get` and `list()` show the connections let in. Each replica finds the connections a selector names through an index of those fields, without a pass over every connection. One the handler cannot use — no id, a field compared to an object — rejects with a `TypeError` before anything is closed, and so does a code no socket can send. The call resolves once this replica's connections are closed and the command for the others has gone to the adapter; it is not sent at all when every id it names is this replica's. A replica Redis cannot reach at that moment misses the command, so revoke the user's credentials as well: a client that reconnects is then refused by `onConnect`. `count`, `get`, `list()` and `send()` stay with the replica that holds the connections.
 
 ### Capping a User's Connections
 
@@ -510,7 +510,7 @@ const ws = createWSHandler({
 })
 ```
 
-Over the limit, the oldest connection of the key is closed with `4409` "Replaced by a newer connection", wherever it is held, and a Courier client does not reconnect on it. With `onExceed: "reject"`, the new connection is closed with `4429` instead, and its `onDisconnect` runs. The server tells its client to try again in 10 seconds, as a place may free meanwhile, and `onConnect` and `onDisconnect` run for each try. A key that is `undefined` puts the connection under no limit.
+Over the limit, the oldest connection of the key is closed with `4409` "Replaced by a newer connection", wherever it is held, one still being let in as well, and a Courier client does not reconnect on it. A connection that has ended by the time `onConnect` returns — a tab closed meanwhile — takes no place and replaces none. With `onExceed: "reject"`, the new connection is closed with `4429` instead, and its `onDisconnect` runs. The server tells its client to try again in 10 seconds, as a place may free meanwhile, and `onConnect` and `onDisconnect` run for each try. A key that is `undefined` puts the connection under no limit.
 
 Keys reach the store hashed, with HMAC under `cluster.secret` when it is set, never as they are. If the store cannot decide within 2 seconds, the replica decides by its own count of the key's connections and logs why: a limit guards against abuse, and an outage of the store must not lock users out.
 

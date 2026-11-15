@@ -20,9 +20,9 @@ export type MetaValue = string | number | boolean;
  * Which connections an operation concerns: one by its id, several by
  * theirs — at most 1000 — or each whose metadata has every field given —
  * 1 to 16 — equal to its value, a string, a finite number or a boolean.
- * The metadata compared is what `onConnect` gave as the connection was let
- * in, or the last `onReauth` renewed: a change to `ctx.meta` after that is
- * not seen.
+ * The metadata compared is what `onConnect` gave, or the last `onReauth`
+ * renewed: a change to `ctx.meta` after that is not seen. A command reaches
+ * a connection from the moment `onConnect` returns, before it is let in.
  *
  * @example
  * ```ts
@@ -120,9 +120,27 @@ export interface RegistryEntry {
   evict: () => void;
 }
 
+/** What a command reaches of a connection: closing it, giving it up for a newer one, asking for its credentials again. */
+export type CommandTarget = Pick<RegistryEntry, "connectionId" | "close" | "requireAuth" | "evict">;
+
+/** A connection `onConnect` admitted that is not let in yet, as commands reach it. */
+export interface JoiningEntry extends CommandTarget {
+  /** What `onConnect` gave: what a selector compares */
+  readonly meta: Readonly<Record<string, unknown>>;
+}
+
 /** @internal Registry with add/remove methods for handler integration */
 export interface InternalConnectionRegistry extends ConnectionRegistry {
+  /**
+   * Hold a connection `onConnect` admitted until it is let in or let go: a
+   * command reaches it from now on — a disconnect, an eviction, a request
+   * for its credentials, this replica's or another's — while what reads or
+   * messages connections sees only those added
+   */
+  join(entry: JoiningEntry): void;
+  /** Let a connection in, which ends its joining */
   add(entry: RegistryEntry): void;
+  /** Let a connection go, joining or added */
   remove(connectionId: string): void;
   /** Renew a connection's metadata after `onReauth`: a copy of it is what selectors compare from now on */
   updateMeta(connectionId: string, meta: Record<string, unknown>): void;
@@ -130,6 +148,8 @@ export interface InternalConnectionRegistry extends ConnectionRegistry {
   getEntry(connectionId: string): RegistryEntry | undefined;
   /** This replica's entries a selection names, each once */
   select(selection: Selection): RegistryEntry[];
+  /** What a command for a selection reaches on this replica, each once: the connections added, and those joining */
+  reach(selection: Selection): CommandTarget[];
   /** Close the connections a limit gave up for newer ones, wherever they are held */
   evict(connectionIds: readonly string[]): Promise<void>;
   /** Inject topic manager after creation (breaks circular init dependency) */

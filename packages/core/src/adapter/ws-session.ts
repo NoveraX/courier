@@ -10,6 +10,8 @@ import { closeWithNotice, isSendableCloseCode, type SessionClose } from "./ws-cl
 export interface WSSession {
   /** Whether the server has closed it, or begun to */
   readonly closing: boolean;
+  /** The code the server closed it with, once it has */
+  readonly closedWith: number | undefined;
   /** Whether it was let in: its client was sent `auth_ok` */
   readonly admitted: boolean;
   /**
@@ -26,7 +28,8 @@ export interface WSSession {
   /**
    * Ask the client for its credentials again; unless they are taken within
    * `timeoutMs` the connection is closed. The deadline replaces the one an
-   * earlier request set, and 0 sets none: it lifts the earlier one.
+   * earlier request set, and 0 sets none: it lifts the earlier one. Asked
+   * before the client is let in, they are asked for once it is.
    * @returns The function that lifts the deadline
    */
   requireAuth(timeoutMs: number): () => void;
@@ -36,6 +39,12 @@ export interface WSSession {
   dispose(): void;
 }
 
+/** Credentials asked for again before the client was let in, and what lifts their deadline once asked. */
+interface EarlyRequest {
+  readonly timeoutMs: number;
+  lift?: (() => void) | undefined;
+}
+
 /**
  * The life of one connection: it is let in once, by `auth_ok`, and closed
  * in one place, once — what asks for a close after the first is the same
@@ -43,7 +52,8 @@ export interface WSSession {
  * `auth_error` while the client has not been let in, `disconnect` once it
  * has. The credentials asked for again have a deadline of their own, which
  * closes the connection when they are not renewed in time, and which
- * closing or renewing lifts.
+ * closing or renewing lifts; asked for before the client is let in, they
+ * are asked for just after `auth_ok`, the latest request's deadline.
  *
  * @param ws - The connection's socket
  * @param onClose - Told the code of the close the server sends, as it sends it
@@ -56,8 +66,10 @@ export interface WSSession {
  */
 export function createSession(ws: WebSocketLike, onClose?: (code: number) => void): WSSession {
   let closing = false;
+  let closedWith: number | undefined;
   let accepted: WSMessage | undefined;
   let deadline: ReturnType<typeof setTimeout> | undefined;
+  let asked: EarlyRequest | undefined;
 
   function lift(): void {
     clearTimeout(deadline);
@@ -78,6 +90,9 @@ export function createSession(ws: WebSocketLike, onClose?: (code: number) => voi
     get closing() {
       return closing;
     },
+    get closedWith() {
+      return closedWith;
+    },
     get admitted() {
       return accepted !== undefined;
     },
@@ -85,6 +100,9 @@ export function createSession(ws: WebSocketLike, onClose?: (code: number) => voi
       if (closing || accepted) return;
       accepted = ok;
       tell(ok);
+      const request = asked;
+      asked = undefined;
+      if (request) request.lift = session.requireAuth(request.timeoutMs);
     },
     close(why) {
       if (why.kind === "application" && !isSendableCloseCode(why.code)) {
@@ -96,10 +114,19 @@ export function createSession(ws: WebSocketLike, onClose?: (code: number) => voi
       closing = true;
       lift();
       const { code } = closeWithNotice(ws, why, accepted !== undefined);
+      closedWith = code;
       onClose?.(code);
     },
     requireAuth(timeoutMs) {
       if (closing) return () => undefined;
+      if (accepted === undefined) {
+        const request: EarlyRequest = { timeoutMs };
+        asked = request;
+        return () => {
+          if (asked === request) asked = undefined;
+          request.lift?.();
+        };
+      }
       tell({ type: "reauth_required", timeoutMs });
       lift();
       if (timeoutMs <= 0) return () => undefined;

@@ -56,7 +56,10 @@ function endpointOf(page: Page) {
   return page.getByRole("button", { name: /^Endpoint: / });
 }
 
-/* The Playground on `users.get`, its variables' editor ready to type in. */
+/* The Playground on `users.get`, its variables' editor ready to type in.
+   The editor opens on what the project keeps for it: Studio keeps the
+   Playground's drafts for the project, and an earlier test's page may have
+   sent one, so a test sets the text it checks. */
 async function variablesOf(page: Page) {
   await page.goto(studio.link);
   /* The link opens the setup, which moves to the Timeline once it sees the
@@ -86,7 +89,7 @@ test("draws a quote in the variables the moment it is typed", async ({ page }) =
 
 test("undoes the indent Tab adds, as it undoes typing", async ({ page }) => {
   const editor = await variablesOf(page);
-  const sample = await editor.inputValue();
+  const opened = await editor.inputValue();
   await editor.fill('{\n"id": ""\n}');
   await editor.evaluate((area) => {
     if (area instanceof HTMLTextAreaElement) area.setSelectionRange(2, 2);
@@ -101,7 +104,7 @@ test("undoes the indent Tab adds, as it undoes typing", async ({ page }) => {
      indent ended, as it undoes any typing. Either way the text is one it
      held before, where a wiped history left the indent in place. */
   await expect.poll(() => editor.inputValue()).not.toBe('{\nx  "id": ""\n}');
-  expect([sample, '{\n"id": ""\n}', '{\nx"id": ""\n}']).toContain(await editor.inputValue());
+  expect([opened, '{\n"id": ""\n}', '{\nx"id": ""\n}']).toContain(await editor.inputValue());
 });
 
 test("keeps the lines ⌘/ comments out selected, their marks with them", async ({ page }) => {
@@ -129,6 +132,7 @@ test("says a value of another type than its schema takes, before the call is sen
   const editor = await variablesOf(page);
   const status = page.getByRole("region", { name: "Request" }).getByRole("status");
 
+  await editor.fill('{ "id": "1" }');
   await expect(status).toHaveText("Valid · matches the types and required fields of users.get");
   await editor.fill('{ "id": 1 }');
   await expect(status).toHaveText('"id" expects string, got number');

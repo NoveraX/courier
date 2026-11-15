@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-/** What the Playground keeps while Studio is open: each endpoint's variables, the headers and the mode. */
+/** What the Playground keeps of what was typed: each endpoint's variables, the headers and the mode. */
 export interface PlaygroundDrafts {
   /** The variables typed for each endpoint, by its key; an endpoint without starts from its sample. */
   variables: Readonly<Record<string, string>>;
@@ -14,9 +14,11 @@ export interface PlaygroundDrafts {
 }
 
 /**
- * The Playground's drafts, kept in memory so leaving the page and coming
- * back keeps what was typed — and never written to storage, since headers
- * and variables can hold credentials.
+ * The Playground's drafts, which Studio keeps for the project: a page is
+ * sent them as it connects and follows what another page changes, and a
+ * page with the token sends what is typed once the typing pauses. Leaving
+ * the page, reloading it or opening Studio in another browser keeps what
+ * was typed.
  *
  * @example
  * ```ts

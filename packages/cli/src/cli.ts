@@ -47,7 +47,7 @@ const COMMANDS: readonly Command[] = [
     name: "upgrade",
     description: "Move the project to a new release of Courier",
     summary:
-      "Move the project to a new release of Courier: every one of its packages raised at once in the workspace's manifests, the breaking changes of each release it crosses shown, and one install, undone with the changes when it fails",
+      "Move the project to a new release of Courier: every one of its packages raised at once in the workspace's manifests, Courier's block in AGENTS.md brought up to date, and one install, undone with the changes when it fails. None of the project's code changes: what a release asks of it is in the release's notes",
     args: UPGRADE_ARGS,
     run: (rawArgs, showUsage) => void runMain(upgradeCommand, { rawArgs, showUsage }),
   },

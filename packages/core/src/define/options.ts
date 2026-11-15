@@ -150,8 +150,9 @@ export interface RetryOptions {
   /**
    * Which failures deserve another attempt: answers' statuses, `"network"`
    * for a request that got no answer and `"timeout"` for one whose time ran
-   * out, or a test of why the attempt failed (default: `"network"` and 408,
-   * 425, 429, 500, 502, 503, 504).
+   * out, or a test of why the attempt failed (default: `"network"` but a
+   * refused certificate and undici's own `headersTimeout` and `bodyTimeout`,
+   * and 408, 425, 429, 500, 502, 503, 504).
    */
   retryOn?: readonly RetryTrigger[] | ((failure: RetryFailure) => boolean) | undefined;
   /**

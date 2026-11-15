@@ -27,8 +27,9 @@ import type {
  * `"network"`; one whose own time ran out — a `TimeoutError` — as
  * `"timeout"`. By default `"network"` and the answers 408, 425, 429, 500,
  * 502, 503 and 504 are retried; a timeout is not, as a slow upstream would
- * only be made slower, nor a certificate the platform refused, nor a 4xx
- * the caller has to fix. An error that is none of these, such as a
+ * only be made slower — nor, for that reason, the runtime's own wait for
+ * the answer running out, undici's `headersTimeout` and `bodyTimeout` — nor
+ * a certificate the platform refused, nor a 4xx the caller has to fix. An error that is none of these, such as a
  * response that fails its schema or a middleware that throws, is never
  * retried, whatever `retryOn` says.
  *

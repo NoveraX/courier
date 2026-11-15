@@ -137,6 +137,26 @@ describe("what a policy retries where retryOn says nothing", () => {
     },
   );
 
+  it.each(["UND_ERR_HEADERS_TIMEOUT", "UND_ERR_BODY_TIMEOUT"])(
+    "does not retry an upstream the platform's own wait ran out on, as %s: it would only be slower",
+    async (code) => {
+      const outcome = await call({ delay: 1 }, [dropped(code), ok]);
+
+      expect(outcome.error).toMatchObject({ name: "NetworkError", systemCode: code });
+      expect(outcome.sentAt).toHaveLength(1);
+    },
+  );
+
+  it("retries an upstream the platform's own wait ran out on when retryOn names the network", async () => {
+    const outcome = await call({ delay: 1, retryOn: ["network"] }, [
+      dropped("UND_ERR_HEADERS_TIMEOUT"),
+      ok,
+    ]);
+
+    expect(outcome.response).toMatchObject({ status: 200 });
+    expect(outcome.sentAt).toHaveLength(2);
+  });
+
   it("does not retry a request whose own time ran out: a slow upstream would only be slower", async () => {
     const outcome = await call({ delay: 1 }, [timedOut, ok]);
 

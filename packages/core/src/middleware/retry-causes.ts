@@ -12,13 +12,20 @@ const BEFORE_SENDING: ReadonlySet<string> = new Set([
   "EHOSTUNREACH",
   "UND_ERR_CONNECT_TIMEOUT",
 ]);
+/* The platform's own waits on an upstream that took the request — undici's `headersTimeout` and
+   `bodyTimeout`: the answer's headers, or the next piece of its body, did not come in time. */
+const UPSTREAM_TOO_SLOW: ReadonlySet<string> = new Set([
+  "UND_ERR_HEADERS_TIMEOUT",
+  "UND_ERR_BODY_TIMEOUT",
+]);
 const RETRIED: ReadonlySet<number> = new Set(RETRY_DEFAULTS.statuses);
 
 /**
  * Whether a failure deserves another attempt where `retryOn` says nothing:
  * a request that got no answer, unless its certificate was refused, which
  * no second try mends; an answer whose status is one an upstream may get
- * over. A request whose own time ran out is not sent again: an upstream
+ * over. A request whose own time ran out is not sent again, nor one the
+ * platform's own wait for the upstream's answer ran out on: an upstream
  * that is slow would only be made slower.
  *
  * @param failure - Why the attempt failed
@@ -28,7 +35,12 @@ export function retriedByDefault(failure: RetryFailure): boolean {
   if (failure.kind === "status") return RETRIED.has(failure.status);
   if (failure.kind === "timeout") return false;
   const code = failure.error.systemCode;
-  return code === undefined || !(CERTIFICATE_VERDICTS.has(code) || code.startsWith("ERR_TLS_CERT"));
+  if (code === undefined) return true;
+  return !(
+    CERTIFICATE_VERDICTS.has(code) ||
+    code.startsWith("ERR_TLS_CERT") ||
+    UPSTREAM_TOO_SLOW.has(code)
+  );
 }
 
 /**

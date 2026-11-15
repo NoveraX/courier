@@ -248,6 +248,13 @@ describe("the wait before each retry", () => {
     expect(outcome.sentAt).toEqual([0, 2_000]);
   });
 
+  it("is what an answer's Retry-After asks in seconds with a fraction", async () => {
+    const outcome = await call({ delay: 100 }, [answer(503, { "retry-after": "1.5" }), ok]);
+
+    expect(waitsOf(outcome)).toEqual([1_500]);
+    expect(outcome.sentAt).toEqual([0, 1_500]);
+  });
+
   it("is what an answer's Retry-After asks as a date", async () => {
     const at = new Date(Date.now() + 3_000).toUTCString();
 
@@ -264,14 +271,17 @@ describe("the wait before each retry", () => {
     expect(waitsOf(outcome)).toEqual([0]);
   });
 
-  it("is the backoff where Retry-After says neither seconds nor a date", async () => {
-    const outcome = await call({ delay: 100, jitter: "none" }, [
-      answer(503, { "retry-after": "soon" }),
-      ok,
-    ]);
+  it.each(["soon", "2026-03-02T09:00:03Z", "Mon, 02 Mar 2026 25:00:03 GMT"])(
+    "is the backoff where Retry-After is %j, neither seconds nor an HTTP date",
+    async (said) => {
+      const outcome = await call({ delay: 100, jitter: "none" }, [
+        answer(503, { "retry-after": said }),
+        ok,
+      ]);
 
-    expect(waitsOf(outcome)).toEqual([100]);
-  });
+      expect(waitsOf(outcome)).toEqual([100]);
+    },
+  );
 
   it("is not waited when Retry-After asks for longer than maxDelay: the call fails at once", async () => {
     const outcome = await call({ maxDelay: 10_000 }, [answer(503, { "retry-after": "11" }), ok]);

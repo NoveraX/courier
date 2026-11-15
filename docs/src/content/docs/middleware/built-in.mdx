@@ -114,7 +114,7 @@ A non-2xx answer rejects the call with an `HTTPError`; `retryOn` is shown the an
 
 With the defaults, the three waits are random times up to 300 ms, 600 ms and 1.2 s. Random waits spread out the clients an outage failed at once, so they do not all come back at once and fail the recovering upstream again. With `limit: 10`, the waits stop growing at 20 s rather than reaching minutes. Pass `random` to make the waits predictable in a test.
 
-An answer with a `Retry-After` header, in seconds or as an HTTP date, is waited for as it asks instead of the backoff — a 429 from a rate limiter is asked again when it says. One that asks for longer than `maxDelay` is not retried: the call fails at once with that answer, and its caller decides what to do.
+An answer with a `Retry-After` header is waited for as it asks instead of the backoff — a 429 from a rate limiter is asked again when it says. The header is read in seconds, a fraction such as `1.5` too, or as an HTTP date in any of the three forms HTTP has for one, a date already past asking for no wait; a value that is neither, an ISO date among them, is not read, and the backoff applies. One that asks for longer than `maxDelay` is not retried: the call fails at once with that answer, and its caller decides what to do.
 
 ### A deadline for the whole call
 

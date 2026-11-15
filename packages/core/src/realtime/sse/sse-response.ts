@@ -1,5 +1,6 @@
 import { createLogger } from "../../logger";
 import { ONCE } from "../../utils/own";
+import { retryAfterWait } from "../../utils/retry-after";
 import { CLIENT_LIMITS } from "../client-limits";
 import { ConnectionError } from "../errors";
 
@@ -72,14 +73,12 @@ export function eventStreamOf(response: Response): ReadableStream<Uint8Array> | 
  * ```
  */
 export async function refusal(response: Response, signal: AbortSignal): Promise<SSEResponseError> {
-  const retryAfter = Number(response.headers.get("Retry-After"));
-  const retryAfterMs =
-    Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : undefined;
+  const asked = retryAfterWait(response.headers.get("Retry-After"), Date.now());
   const said = await bodyOf(response, signal);
   return new SSEResponseError(
     response.status,
     said.message ?? response.statusText,
-    retryAfterMs,
+    asked,
     said.issues,
   );
 }

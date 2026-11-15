@@ -1,7 +1,5 @@
+import { retryAfterWait } from "../utils/retry-after";
 import type { RetryFailure } from "./types";
-
-/* Retry-After in seconds: digits alone, as RFC 9110 writes delay-seconds; ten of them are past any cap. */
-const SECONDS = /^\d{1,10}$/;
 
 /** How a policy spaces its attempts. */
 export interface Spacing {
@@ -30,8 +28,9 @@ export function backoffWait(spacing: Spacing, retry: number): number {
 
 /**
  * How long an answer asks to be waited for before it is asked again: its
- * `Retry-After`, in seconds or as an HTTP date — one in the past asks for
- * no wait. A header that says neither is not read.
+ * `Retry-After`, in seconds or as an HTTP date, as `retryAfterWait` reads
+ * it — one in the past asks for no wait. A header it does not read is not
+ * a wait asked for.
  *
  * @param failure - Why the attempt failed
  * @param now - The time, in ms since the epoch
@@ -39,9 +38,5 @@ export function backoffWait(spacing: Spacing, retry: number): number {
  */
 export function retryAfterOf(failure: RetryFailure, now: number): number | undefined {
   if (failure.kind !== "status") return undefined;
-  const said = failure.headers.get("retry-after")?.trim();
-  if (said === undefined || said === "") return undefined;
-  if (SECONDS.test(said)) return Number(said) * 1000;
-  const at = Date.parse(said);
-  return Number.isNaN(at) ? undefined : Math.max(0, at - now);
+  return retryAfterWait(failure.headers.get("retry-after"), now);
 }

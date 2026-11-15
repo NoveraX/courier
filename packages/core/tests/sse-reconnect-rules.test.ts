@@ -139,9 +139,13 @@ describe("the backoff", () => {
     expect(waits).toEqual([5_100, 300_200]);
   });
 
-  it("waits no less than the Retry-After of a 503", async () => {
+  it.each([
+    ["seconds", "2"],
+    ["a date", "Sun, 15 Nov 2026 12:00:02 GMT"],
+  ])("waits no less than the Retry-After of a 503 in %s", async (_form, retryAfter) => {
+    vi.setSystemTime(Date.UTC(2026, 10, 15, 12));
     stubFetch((call) =>
-      call === 0 ? { status: 503, headers: { "Retry-After": "2" } } : undefined,
+      call === 0 ? { status: 503, headers: { "Retry-After": retryAfter } } : undefined,
     );
     const subscription = open();
     const waits = waitsOf(subscription);

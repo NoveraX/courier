@@ -75,15 +75,25 @@ function serverFailure(
   return { ...result, data: { success: false, message: "Request failed" } };
 }
 
-/* No token where the call requires one is the user's to mend by signing in, not the server's
-   failure: answered 401 as the upstream would have, with nothing in the log. Read by its code
-   rather than its class, so a page that sends no token carries none of authMiddleware's code. */
-function tokenMissing(
+/* What the caller is to mend, not the server's failure, answered so with nothing in the log: no
+   token where the call requires one, which the user mends by signing in, answered 401 as the
+   upstream would have; and variables no request to the upstream can carry — a file in those of
+   an endpoint whose verb sends them in the address, which a page cannot tell — answered 400, the
+   message naming where the value sits, not what it holds. Read by their codes rather than their
+   classes, so a page that sends no token carries none of authMiddleware's code. */
+const MENDED_BY_CALLER = new Map([
+  ["TOKEN_MISSING", 401],
+  ["VARIABLE_NOT_ENCODABLE", 400],
+]);
+
+function callersToMend(
   error: unknown,
 ): { status: number; headers: Headers; data: unknown } | undefined {
-  if (!isCourierError(error) || error.code !== "TOKEN_MISSING") return undefined;
+  if (!isCourierError(error)) return undefined;
+  const status = MENDED_BY_CALLER.get(error.code);
+  if (status === undefined) return undefined;
   return {
-    status: 401,
+    status,
     headers: new Headers(),
     data: { success: false, message: error.message, code: error.code },
   };
@@ -152,7 +162,7 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
       ? upstreamAnswer(failure)
       : failure instanceof NetworkError || failure instanceof TimeoutError
         ? unansweredUpstream(failure)
-        : (tokenMissing(failure) ?? serverFailure(failure, ctx.context));
+        : (callersToMend(failure) ?? serverFailure(failure, ctx.context));
 
   ctx.report?.requestError(failure, ctx, responseResult.status);
   return timed(ctx, {

@@ -1,4 +1,4 @@
-export const metadata = { title: "File Upload", description: "Upload files with FormData and real-time progress tracking via XHR.", mode: "both", updated: "2026-11-07" }
+export const metadata = { title: "File Upload", description: "Upload files with FormData and real-time progress tracking via XHR.", mode: "both", updated: "2026-11-15" }
 
 ## Overview
 
@@ -108,6 +108,8 @@ What no form of the request carries is refused before anything is sent, with a `
 | a file in the variables of a `get`, `head`, `options` or `del` | those send their variables in the address, which holds text |
 
 A read sends a `FormData`'s text fields in its address, as a browser sends a form whose method is GET; a file in it is refused the same way.
+
+Through the proxy, the page cannot tell which verb an endpoint calls upstream, so a file in the variables of one that sends them in the address goes to the server, which refuses the call before anything reaches the upstream: the call rejects with an `HTTPError` of status `400` whose `data` is `{ "success": false, "code": "VARIABLE_NOT_ENCODABLE", "message": … }`, the message a direct call's error has, and the server's log stays quiet, as it does for [a call without its token](/docs/middleware/built-in#before-there-is-a-token).
 
 Through the proxy, a record that holds a file travels as a record upload: a multipart body of its own media type, `multipart/vnd.courier.variables`, which holds the call's options, the record with each file's place, and the files. The server restores the record, so the endpoint's schema, its middleware and its closure see what a direct call sees, and the upstream receives the form a direct call sends — the same parts, each file passed through as it arrived.
 

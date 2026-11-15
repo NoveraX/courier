@@ -152,7 +152,9 @@ export type ConfigurationErrorCode =
    * sits: a `Set` or a `Map`, which JSON writes as `{}`; a file in a request
    * that sends its variables in its address; a file deeper than a field of
    * the variables or an item of a list there, which a form sends as JSON; a
-   * stream inside a record; binary data in a list.
+   * stream inside a record; binary data in a list. Through the proxy, where
+   * the page cannot tell a request that sends its variables in its address,
+   * the server answers such a call 400 with this code and the message.
    */
   | "VARIABLE_NOT_ENCODABLE"
   /** A client built from routes was asked for an endpoint they do not name, which the proxy refuses. */

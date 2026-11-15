@@ -24,8 +24,9 @@ const UNKNOWN = "unknown";
  * it reads any proxied request's. A peer on a public address is the caller
  * itself, and is the whole chain: what it claims about addresses before it
  * is its own word. Where the runtime does not report the connection —
- * Next.js, an edge function — the chain the framework or the platform in
- * front recorded is passed on.
+ * Next.js, React Router, an edge function — the chain the proxy or the
+ * platform in front recorded is passed on; Next.js reached directly keeps
+ * the one the user wrote.
  *
  * The chain is kept from the right, as the proxies wrote it, since whatever
  * a user writes stands left of their hops: up to the first hop that is no

@@ -1,4 +1,4 @@
-export const metadata = { title: "Remix & React Router", description: "Serve Courier's proxy from a React Router 7 or Remix v2 resource route, with @noverax/courier-remix.", mode: "proxy", updated: "2026-11-07" }
+export const metadata = { title: "Remix & React Router", description: "Serve Courier's proxy from a React Router 7 or Remix v2 resource route, with @noverax/courier-remix.", mode: "proxy", updated: "2026-11-15" }
 
 `@noverax/courier-remix` serves the proxy that `createProxyCaller` and `createProxyQueryCaller` call: one route answers every endpoint, reads over `GET` and writes over `POST`, and streams server-sent events.
 
@@ -109,7 +109,7 @@ export const middleware = [requestContext()]
 
 React Router 8 runs route middleware as it is; React Router 7 runs it with `future: { v8_middleware: true }` in `react-router.config.ts`. The session cookies the API sets reach the browser on the response, a document's or a data request's. The request is kept in `AsyncLocalStorage`, which Node provides, and Cloudflare with the `nodejs_compat` flag; the main entry imports none of it.
 
-`react-router-serve` hands React Router a `Request` alone, so `forward`'s client address is not sent. An Express server of your own tells it: serve the requests with `requestContext` from `@noverax/courier-express` instead. A server of your own that calls the handler `createRequestHandler` makes — Bun's, Deno's, a Worker's — wraps it:
+`react-router-serve` hands React Router a `Request` alone, so `forward` sends only the chain a proxy in front recorded, without the connection's address. An Express server of your own tells it: serve the requests with `requestContext` from `@noverax/courier-express` instead. A server of your own that calls the handler `createRequestHandler` makes — Bun's, Deno's, a Worker's — wraps it:
 
 ```ts title="server.ts"
 import { createRequestHandler } from "react-router"

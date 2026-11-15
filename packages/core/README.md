@@ -257,7 +257,7 @@ const auth = defineGroup({
 })
 ```
 
-A client address is never copied from the caller, which can write any: the proxy sends the upstream an `X-Forwarded-For` it writes from the connection — the chain a reverse proxy on a loopback or private address wrote, with that proxy's address appended, or the caller's own public address. A runtime that does not report the caller's address (the Web-standard adapters) sends none. To forward the caller's copy as before, because a platform in front writes it, name it: `allowedHeaders: ["x-forwarded-for"]`.
+A client address is never copied from the caller, which can write any: the proxy sends the upstream an `X-Forwarded-For` it writes from the connection — the chain a reverse proxy on a loopback or private address wrote, with that proxy's address appended, or the caller's own public address. Where the runtime does not report the connection — Next.js, React Router, an edge function — the chain the proxy or the platform in front recorded goes on, so serve the app behind one that appends the address it saw: Next.js reached directly keeps the `X-Forwarded-For` the caller wrote. A platform that writes the header itself, such as a CDN that overwrites whatever the client sent, can have its copy forwarded by naming it: `allowedHeaders: ["x-forwarded-for"]`.
 
 A proxied call carries the server's credentials, so it follows an upstream redirect only while the redirect stays on the origin the call was sent to; a redirect to another origin reaches the caller as its status, unfollowed. Set `redirect: "follow"` on a source that trusts every redirect its upstream sends.
 

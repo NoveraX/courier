@@ -19,8 +19,11 @@ export type HeaderOf = (name: string) => string | null | undefined;
  * and an entry the user forges stands left of it; or, for a request one of
  * the named proxies passed on, the header `COURIER_CLIENT_ADDRESS_HEADER`
  * names, such as DDoS-Guard's `DDG-Connecting-IP`. Where the runtime does not
- * report the connection — Next.js, an edge function — the chain's last entry
- * is the one the framework or the platform in front recorded.
+ * report the connection — Next.js, React Router, an edge function — the chain
+ * is believed as the proxy or the platform in front recorded it: Next.js
+ * writes the connection's address only into a request that carries no
+ * `X-Forwarded-For`, and keeps one the user wrote, so it needs a proxy in
+ * front that appends the address it saw.
  *
  * @param peer - The connection's address, or the one the framework vouches for
  * @param header - Reads the request's headers

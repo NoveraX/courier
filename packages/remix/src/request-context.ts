@@ -11,7 +11,8 @@ import { withWebRequestContext } from "@noverax/courier/node";
  * with `future.v8_middleware` set. It keeps the request in
  * `AsyncLocalStorage`, which Node provides, and Cloudflare with the
  * `nodejs_compat` flag. A server that hands React Router a `Request` alone,
- * as `react-router-serve` does, tells no client address.
+ * as `react-router-serve` does, tells no connection's address: only the
+ * chain a proxy in front recorded goes on.
  *
  * @returns The middleware, to list in the root route's `middleware`
  * @example

@@ -5,8 +5,9 @@
  * reach, another epoch, or no position at all is answered `recovered:
  * false`. A topic its last subscriber left is held for `maxAgeMs`, its
  * events numbered and kept, so the subscriber can come back for them; and
- * once the pub/sub adapter is back from an outage, each subscription is
- * told `resync`.
+ * once the pub/sub adapter reaches its server — back from an outage, or for
+ * the first time after a subscription was made — each subscription is told
+ * `resync`.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -162,24 +163,37 @@ describe("resuming a subscription", () => {
   });
 });
 
-describe("a pub/sub adapter back from an outage", () => {
-  it("tells each live subscription resync, and resumes nothing from before it", async () => {
-    const listeners = new Set<(state: AdapterState) => void>();
-    const inner = createMemoryBus().replica("replica");
-    const pubsub: PubSubAdapter = {
-      ...inner,
-      onStateChange: (listener) => {
-        listeners.add(listener);
-        return () => listeners.delete(listener);
-      },
-    };
+/* A pub/sub adapter in a state the test changes. */
+function adapterIn(state: AdapterState) {
+  const listeners = new Set<(state: AdapterState) => void>();
+  let current = state;
+  const pubsub: PubSubAdapter = {
+    ...createMemoryBus().replica("replica"),
+    get state() {
+      return current;
+    },
+    onStateChange: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+  const become = (next: AdapterState) => {
+    current = next;
+    for (const listener of listeners) listener(next);
+  };
+  return { pubsub, become };
+}
+
+describe("a pub/sub adapter once it reaches its server", () => {
+  it("tells each live subscription resync after an outage, and resumes nothing from before it", async () => {
+    const { pubsub, become } = adapterIn("ready");
     const handler = serve({ pubsub, history: {} });
     const live = open(handler);
     const first = await subscribe(live);
     await handler.connections.broadcastToTopic(ROOM, "before");
 
-    for (const listener of listeners) listener("degraded");
-    for (const listener of listeners) listener("ready");
+    become("degraded");
+    become("ready");
 
     await expect
       .poll(() => live.sent)
@@ -187,5 +201,18 @@ describe("a pub/sub adapter back from an outage", () => {
     expect(await subscribe(open(handler), { seq: 0, epoch: first.epoch })).toMatchObject({
       recovered: false,
     });
+  });
+
+  it("tells resync to each subscription made before it first reached its server", async () => {
+    const { pubsub, become } = adapterIn("connecting");
+    const handler = serve({ pubsub, history: {} });
+    const early = open(handler);
+    const first = await subscribe(early);
+
+    become("ready");
+
+    await expect
+      .poll(() => early.sent)
+      .toContainEqual({ type: "resync", topic: ROOM, seq: 0, epoch: first.epoch });
   });
 });

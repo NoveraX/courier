@@ -6,7 +6,7 @@ import { type BroadcastTargets, deliverToTopic } from "./ws-registry-broadcast";
 import { WS_SERVER_LIMITS } from "./ws-server-limits";
 import type { TopicPosition } from "./ws-topic-sequences";
 
-/** How many topics a replica back from an outage catches up from the log at once. */
+/** How many topics a replica whose adapter reached its server catches up from the log at once. */
 const CATCH_UP_AT_ONCE = 16;
 
 /** An event of a topic that came while the ones before it were read from the log. */
@@ -19,7 +19,7 @@ interface Waiting {
 export interface LogFollower {
   /** Deliver an event the log numbered, as the pub/sub adapter brought it */
   deliver(topic: string, payload: unknown, logged: LoggedPosition): void;
-  /** Catch every topic this replica counts up with the log: the adapter is back from an outage */
+  /** Catch every topic this replica counts up with the log: the adapter reached its server */
   catchUp(): Promise<void>;
 }
 

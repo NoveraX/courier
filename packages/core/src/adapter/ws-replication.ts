@@ -52,12 +52,14 @@ export function replicate(
     },
     refusals,
   });
-  /* Back from an outage, the adapter may have missed what other replicas
-     published: each topic is caught up from the log, when it keeps one;
-     otherwise every subscription is told, and resumes nothing from before. */
+  /* Until the adapter reaches its server — back from an outage, or for the
+     first time after subscriptions were made — it may have missed what
+     other replicas published: each topic is caught up from the log, when it
+     keeps one; otherwise every subscription is told, and resumes nothing
+     from before. With no subscription yet, there is nothing to catch up. */
   let previous = pubsub.state;
   const stopHearing = pubsub.onStateChange((state) => {
-    if (state === "ready" && previous === "degraded") void registry.catchUp();
+    if (state === "ready" && previous !== "ready") void registry.catchUp();
     previous = state;
   });
   return {

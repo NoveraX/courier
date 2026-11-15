@@ -171,9 +171,10 @@ export interface InternalConnectionRegistry extends ConnectionRegistry {
    */
   eventsAfter(topic: string, since: unknown): readonly string[] | undefined;
   /**
-   * The pub/sub adapter is back from an outage, which may have cost events:
-   * with a log, each topic is caught up from it; without, or for a topic
-   * the log cannot catch up, the subscriptions are told `resync`
+   * The pub/sub adapter reached its server — back from an outage, or for
+   * the first time after subscriptions were made — and may have missed
+   * events: with a log, each topic is caught up from it; without, or for a
+   * topic the log cannot catch up, the subscriptions are told `resync`
    */
   catchUp(): Promise<void>;
   /** Deliver an event a log numbered to this replica's subscribers of its topic, in the order of its number */

@@ -15,6 +15,7 @@
 import { HTTPError } from "../errors";
 import { assertReadable, getResponseData } from "../http-client/response";
 import type { ResponseType } from "../http-client/types";
+import { cancellation } from "../utils/cancellation";
 import { defineOwn } from "../utils/define-own";
 import { coreFetch } from "../utils/fetch";
 import type { FetchClient, FetchClientOptions, RequestOptions } from "./types";
@@ -60,17 +61,32 @@ async function request<TResponse>(
 ): Promise<TResponse> {
   const fullUrl = joinUrl(defaults.baseURL ?? "", url);
   const headers = mergeHeaders(defaults.headers, options?.headers);
+  const signal = options?.signal;
 
   const response = await coreFetch(method, fullUrl, {
     json: options?.json,
     body: options?.body,
     searchParams: options?.searchParams,
     timeout: options?.timeout ?? defaults.timeout,
-    signal: options?.signal,
+    signal,
     ...(headers && { headers }),
   });
+  try {
+    return await answerOf<TResponse>(method, response, options?.responseType ?? "json");
+  } catch (error) {
+    /* A cancellation that lands while the answer is read stops the read with the caller's
+       reason, which the reader reports as a body it could not parse: it is the cancellation. */
+    if (signal?.aborted) throw cancellation(signal);
+    throw error;
+  }
+}
 
-  const type = options?.responseType ?? "json";
+/* What the request resolves to, read from its answer, or the HTTPError the answer is. */
+async function answerOf<TResponse>(
+  method: string,
+  response: Response,
+  type: ResponseType,
+): Promise<TResponse> {
   assertReadable(response);
   /* Checked before HEAD returns, so a HEAD answered 404 or 401 does not
      resolve as though the resource were there. */
@@ -87,6 +103,10 @@ async function request<TResponse>(
 
 /**
  * Create a lightweight fetch client with baseURL, default headers, and JSON handling.
+ *
+ * A request cancelled through its `signal` rejects with an `AbortError`, the
+ * reason it was given as its cause, whether the answer has come or its body
+ * is still arriving.
  *
  * @param defaults - Default options applied to every request
  * @returns Fetch client with `get`, `post`, `put`, `patch`, `del`, `head` and `query` methods

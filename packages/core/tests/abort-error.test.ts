@@ -3,7 +3,8 @@
  * it and wherever it was: the caller's signal — before the request left,
  * while it was out, or while a middleware held it between attempts — with
  * the reason the caller gave as its cause, and a newer call of its
- * endpoint that superseded it, with the code `SUPERSEDED`. A deadline that
+ * endpoint that superseded it, with the code `SUPERSEDED`; a `createFetch`
+ * request too, cancelled while its answer's body arrives. A deadline that
  * ran out stays a `TimeoutError`, and a cancellation is no failure
  * `onError` is told of.
  */
@@ -58,6 +59,19 @@ const api = defineApi({
       .use(retryMiddleware({ deadline: 20 })),
   },
 });
+
+/* A 200 whose body begins and stops coming, as fetch gives one: reading on waits until the
+   request is cancelled, then fails with the reason. `onRead` is told once the reading has begun. */
+function halfAnswer(signal: AbortSignal | null | undefined, onRead: () => void): Response {
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode('{"items":[1,2,'));
+      signal?.addEventListener("abort", () => controller.error(signal.reason), { once: true });
+    },
+    pull: onRead,
+  });
+  return new Response(body, { headers: { "content-type": "application/json" } });
+}
 
 /* Once the request is out, so the cancellation meets it in flight. */
 async function sent(): Promise<void> {
@@ -202,6 +216,25 @@ describe("a createFetch request", () => {
     const reason = new Error("navigated away");
     const call = createFetch({ baseURL: UPSTREAM }).get("/read", { signal: controller.signal });
     await sent();
+
+    controller.abort(reason);
+
+    const error: unknown = await call.catch((thrown: unknown) => thrown);
+    expect(error).toBeInstanceOf(AbortError);
+    expect(error).toMatchObject({ code: "ABORTED", cause: reason });
+  });
+
+  it("cancelled while its answer's body arrives rejects with an AbortError whose cause is the reason given", async () => {
+    const reading = Promise.withResolvers<void>();
+    upstream.mockImplementationOnce((input, init) =>
+      Promise.resolve(
+        halfAnswer(input instanceof Request ? input.signal : init?.signal, reading.resolve),
+      ),
+    );
+    const controller = new AbortController();
+    const reason = new Error("navigated away");
+    const call = createFetch({ baseURL: UPSTREAM }).get("/read", { signal: controller.signal });
+    await reading.promise;
 
     controller.abort(reason);
 

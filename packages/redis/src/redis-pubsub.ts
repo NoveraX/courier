@@ -3,7 +3,7 @@ import type { AdapterState, PubSubAdapter, PubSubEnvelope } from "@noverax/couri
 import { createLogger } from "@noverax/courier/server";
 
 import { CONNECT_TIMEOUT_MS, DISCONNECT_TIMEOUT_MS } from "./adapter-deadlines";
-import { createOutboundQueue } from "./outbound-queue";
+import { createOutboundQueue, outboundLimits } from "./outbound-queue";
 import { trackPubSubState } from "./pubsub-state";
 import { createOutbound, stoppedError } from "./redis-outbound";
 import { createRedisTopicLog } from "./redis-topic-log";
@@ -17,12 +17,15 @@ const log = createLogger("RedisPubSub");
  * Redis Pub/Sub adapter for horizontal WS scaling, on two connections: one
  * publishes, the other subscribes.
  *
- * It works from the moment it is made, connected to Redis or not: while
- * Redis is away what is published waits in a queue bounded by count,
- * bytes and age — the oldest dropped past them, counted in `stats()` and
- * logged — and is sent in order once Redis is back; every subscription
- * asked for is made as soon as Redis answers, made again after each
- * reconnect, and tried again after a pause when Redis refuses it.
+ * It works from the moment it is made, connected to Redis or not. It sends
+ * Redis no more than the queue's bounds hold unanswered; past them, and
+ * while Redis is away, what is published waits in a queue bounded by
+ * count, bytes and age — the oldest dropped past them, an event before
+ * one of Courier's commands, counted in `stats()` and logged — and is sent
+ * in order as Redis answers or is back, the commands first. A publish
+ * waits for Redis's answer `maxAgeMs` at most. Every subscription asked
+ * for is made as soon as Redis answers, made again after each reconnect,
+ * and tried again after a pause when Redis refuses it.
  * `connect()` waits until both connections are ready; `disconnect()`
  * settles within its deadline whatever Redis does, and leaves the two
  * clients, which are yours, open.
@@ -47,7 +50,8 @@ export function createRedisPubSub(config: RedisPubSubConfig): PubSubAdapter {
      adapter has. One the application chose could be shared — by the workers of one host, by
      services given one hostname — and adapters sharing it would skip each other's messages. */
   const origin = crypto.randomUUID();
-  const queue = createOutboundQueue(config.queue);
+  const limits = outboundLimits(config.queue);
+  const queue = createOutboundQueue(limits);
   const errorHandlers = new Set<(error: Error) => void>();
   const refusals = createRefusalLog("RedisPubSub");
   const counts = { published: 0, delivered: 0, dropped: 0 };
@@ -61,10 +65,11 @@ export function createRedisPubSub(config: RedisPubSubConfig): PubSubAdapter {
   const state = trackPubSubState([publisher, subscriber], report);
   const subscriptions = createSubscriptionReconciler(subscriber, report);
   const stopped = () => state.current === "stopped";
-  /* Behind what waits, in order, until the "ready" that sends it. */
-  const { dispatch, flush, drop } = createOutbound({
+  /* Sent at once, or behind what waits, as Redis answers and comes back. */
+  const { dispatch, resume, drop, inFlight } = createOutbound({
     publisher,
     queue,
+    limits,
     counts,
     refusals,
     report,
@@ -94,7 +99,7 @@ export function createRedisPubSub(config: RedisPubSubConfig): PubSubAdapter {
 
   const connected = (): void => subscriptions.connected();
   const lost = (): void => subscriptions.disconnected();
-  publisher.on("ready", flush);
+  publisher.on("ready", resume);
   publisher.on("error", report);
   subscriber.on("ready", connected);
   subscriber.on("close", lost);
@@ -119,7 +124,13 @@ export function createRedisPubSub(config: RedisPubSubConfig): PubSubAdapter {
     previous = next;
   });
 
-  const outlet = { publisher, prefix, origin, dispatch };
+  const outlet = {
+    publisher,
+    prefix,
+    origin,
+    dispatch: (command: () => Promise<unknown>, bytes: number) =>
+      dispatch(command, bytes, "events"),
+  };
   const topicLog = config.log && createRedisTopicLog(outlet, config.log);
 
   return {
@@ -137,7 +148,7 @@ export function createRedisPubSub(config: RedisPubSubConfig): PubSubAdapter {
       drop(queue.clear(), "STOPPED");
       subscriber.off("message", deliver);
       await subscriptions.stop(options?.timeoutMs ?? DISCONNECT_TIMEOUT_MS);
-      publisher.off("ready", flush);
+      publisher.off("ready", resume);
       publisher.off("error", report);
       subscriber.off("ready", connected);
       subscriber.off("close", lost);
@@ -151,12 +162,16 @@ export function createRedisPubSub(config: RedisPubSubConfig): PubSubAdapter {
       return () => errorHandlers.delete(handler);
     },
     onStateChange: (listener) => state.onChange(listener),
-    async publish(topic, message) {
+    async publish(topic, message, options) {
       if (state.current === "stopped") throw stoppedError();
       const envelope: PubSubEnvelope = { origin, payload: message, timestamp: Date.now() };
       const payload = JSON.stringify(envelope);
       const command = () => publisher.publish(prefix + topic, payload);
-      return dispatch(command, Buffer.byteLength(payload));
+      return dispatch(
+        command,
+        Buffer.byteLength(payload),
+        options?.control ? "commands" : "events",
+      );
     },
     async subscribe(topic, handler) {
       if (state.current === "stopped") throw stoppedError();
@@ -165,6 +180,7 @@ export function createRedisPubSub(config: RedisPubSubConfig): PubSubAdapter {
     stats: () => ({
       state: state.current,
       channels: { wanted: subscriptions.wanted, confirmed: subscriptions.confirmed },
+      inFlight: inFlight(),
       queued: { messages: queue.messages, bytes: queue.bytes },
       dropped: counts.dropped,
       published: counts.published,

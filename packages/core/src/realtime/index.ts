@@ -13,6 +13,7 @@ export type {
   PresenceAdapter,
   PresenceDiff,
   PresenceEntry,
+  PublishOptions,
   PubSubAdapter,
   PubSubEnvelope,
   PubSubStats,

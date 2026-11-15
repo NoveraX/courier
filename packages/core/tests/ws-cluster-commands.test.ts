@@ -348,3 +348,23 @@ describe("a cluster with no secret", () => {
     expect(unsigned()).toEqual([]);
   });
 });
+
+describe("the messages that carry the commands", () => {
+  it("reach the adapter as Courier's own, the WebSocket handlers' and the SSE handlers' alike", async () => {
+    const bus = createMemoryBus();
+    const pubsub = bus.replica("replica-0");
+    const publish = vi.spyOn(pubsub, "publish");
+    const [handler] = replicas(1, bus, { pubsub }) as [WSHandler];
+    const streams = createHandler({ pubsub });
+
+    await handler.connections.requireAuth({ meta: { userId: "u1" } }, { timeoutMs: 1_000 });
+    await handler.connections.disconnect({ meta: { userId: "u1" } });
+    await streams.sseConnections.disconnect({ meta: { userId: "u1" } });
+
+    expect(publish.mock.calls.map(([channel, , options]) => [channel, options])).toEqual([
+      [CONTROL_CHANNEL, { control: true }],
+      [CONTROL_CHANNEL, { control: true }],
+      [SSE_CONTROL_CHANNEL, { control: true }],
+    ]);
+  });
+});

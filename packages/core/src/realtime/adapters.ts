@@ -106,13 +106,26 @@ export interface PubSubStats {
   readonly state: AdapterState;
   /** Channels a handler asked for, and those the server confirmed */
   readonly channels: { readonly wanted: number; readonly confirmed: number };
-  /** Messages published while it was not ready, waiting to be sent */
+  /** Messages sent to the server that it has not answered yet */
+  readonly inFlight: { readonly messages: number; readonly bytes: number };
+  /** Messages waiting to be sent: published while it was not ready, or past what may go unanswered */
   readonly queued: { readonly messages: number; readonly bytes: number };
-  /** Messages it let go of unsent: its queue was full, or they waited too long */
+  /** Messages it let go of: its queue was full, they waited too long, or the server refused them */
   readonly dropped: number;
   /** Messages it sent, and messages of other replicas it delivered */
   readonly published: number;
   readonly delivered: number;
+}
+
+/** How a message is published. */
+export interface PublishOptions {
+  /**
+   * A command of Courier's for the connections the replicas hold — to close
+   * them, to ask them for their credentials again — rather than an event:
+   * while the adapter holds messages back, it goes before the events held
+   * with it, and none of them takes its place
+   */
+  readonly control?: boolean | undefined;
 }
 
 /**
@@ -124,9 +137,12 @@ export interface PubSubStats {
  * - a subscription is a wish it keeps: made while its server is away, or
  *   refused, it is made again once the server answers, and every one is
  *   made again after each reconnect;
- * - a message published while it is not ready waits in a queue bounded by
- *   count, bytes and age; past them the oldest are dropped, counted and
- *   reported, never silently;
+ * - what it has sent and the server has yet to answer is bounded, and a
+ *   message published past that bound, or while it is not ready, waits in
+ *   a queue bounded by count, bytes and age; past them the oldest are
+ *   dropped, counted and reported, never silently;
+ * - a `control` message goes before the events waiting with it, and is
+ *   never dropped to make room for one;
  * - `disconnect()` settles within its deadline, whatever the server does.
  */
 export interface PubSubAdapter extends AdapterLifecycle {
@@ -134,15 +150,14 @@ export interface PubSubAdapter extends AdapterLifecycle {
   /** Hear each change of state; returns the function that stops hearing it */
   onStateChange(listener: (state: AdapterState) => void): () => void;
   /**
-   * Publish a message to all subscribers across replicas, or queue it while
-   * the adapter is not ready. Implementations wrap the payload in
-   * {@link PubSubEnvelope} with their origin. It settles once the server has
-   * answered, or once the message is queued: a server that stops answering
-   * while the adapter is ready holds it as long as the client it publishes
-   * through lets a command wait. It never rejects because the server is
-   * away; it rejects once the adapter is stopped.
+   * Publish a message to all subscribers across replicas, or queue it.
+   * Implementations wrap the payload in {@link PubSubEnvelope} with their
+   * origin. It settles once the server has answered, once the message is
+   * queued, or once it has waited as long as the adapter keeps a message —
+   * which the server may take still. It never rejects because the server
+   * is away or slow; it rejects once the adapter is stopped.
    */
-  publish(topic: string, message: unknown): Promise<void>;
+  publish(topic: string, message: unknown, options?: PublishOptions): Promise<void>;
   /**
    * Subscribe to a topic: resolves at once, the adapter making the
    * subscription as soon as and as often as its server needs it. The

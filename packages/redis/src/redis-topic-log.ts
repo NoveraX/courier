@@ -21,7 +21,10 @@ export interface LogOutlet {
   readonly prefix: string;
   /** The adapter's origin, which its envelopes carry */
   readonly origin: string;
-  /** Run a command at once, or keep it while Redis is away, in order with what is published */
+  /**
+   * Run a command at once, or keep it while Redis is away or slow to
+   * answer, in order with what is published
+   */
   dispatch(command: () => Promise<unknown>, bytes: number): Promise<void>;
 }
 

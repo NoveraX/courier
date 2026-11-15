@@ -339,3 +339,36 @@ describe.skipIf(!available)(
     });
   },
 );
+
+describe.skipIf(!available)(
+  "createRedisPubSub while Redis does not answer, its connections up",
+  { timeout: 20_000 },
+  () => {
+    it("holds no more unanswered than its bounds, settles a publish past them at once, and sends the rest in order once Redis answers", async () => {
+      const outage = await relay();
+      const a = createRedisPubSub({
+        publisher: redis.client(outage),
+        subscriber: redis.client(outage),
+        prefix: redis.prefix,
+        queue: { maxMessages: 3, maxAgeMs: 60_000 },
+      });
+      adapters.push(a);
+      const b = replica();
+      const heard = await listen(b.adapter);
+      await Promise.all([a.connect(), b.adapter.connect()]);
+      await expect.poll(() => b.adapter.stats().channels.confirmed).toBe(1);
+
+      outage.hold();
+      const sent = [1, 2, 3].map((n) => a.publish("room", n));
+      const queued = [4, 5, 6].map((n) => a.publish("room", n));
+
+      expect(await within(Promise.all(queued), 500)).not.toBe("still waiting");
+      expect(await within(Promise.all(sent), 200)).toBe("still waiting");
+      expect(a.stats()).toMatchObject({ inFlight: { messages: 3 }, queued: { messages: 3 } });
+      outage.release();
+
+      await expect.poll(() => heard, { timeout: 5_000 }).toEqual([1, 2, 3, 4, 5, 6]);
+      await expect.poll(() => a.stats().inFlight).toEqual({ messages: 0, bytes: 0 });
+    });
+  },
+);

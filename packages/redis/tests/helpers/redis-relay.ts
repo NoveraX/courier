@@ -1,5 +1,5 @@
 import { createConnection, createServer, type Socket } from "node:net";
-import { Transform } from "node:stream";
+import { Transform, type TransformCallback } from "node:stream";
 
 /** How the relay carries what a client sends. */
 export interface RelayOptions {
@@ -26,6 +26,13 @@ export interface RedisRelay {
   set(mode: RelayMode): void;
   /** End every connection it carries or holds, as a restart of Redis does */
   cut(): void;
+  /**
+   * Keep what the clients it carries send from Redis, their connections up,
+   * as a Redis that stops answering: until `release`, which sends it on in
+   * the order it came
+   */
+  hold(): void;
+  release(): void;
   close(): Promise<void>;
 }
 
@@ -47,6 +54,7 @@ export interface RedisRelay {
  */
 export async function startRelay(target: URL, options: RelayOptions = {}): Promise<RedisRelay> {
   const open = new Set<Socket>();
+  const gates = new Set<Gate>();
   let mode: RelayMode = "up";
   const keep = (socket: Socket): void => {
     open.add(socket);
@@ -62,8 +70,12 @@ export async function startRelay(target: URL, options: RelayOptions = {}): Promi
     if (mode === "silent") return;
     const upstream = createConnection({ port: Number(target.port || 6379), host: target.hostname });
     keep(upstream);
+    const gate = new Gate();
+    gate.on("error", () => undefined);
+    gates.add(gate);
+    client.on("close", () => gates.delete(gate));
     const sent = options.holdMs ? client.pipe(heldFor(options.holdMs)) : client;
-    sent.pipe(upstream).pipe(client);
+    sent.pipe(gate).pipe(upstream).pipe(client);
     client.on("close", () => upstream.destroy());
     upstream.on("close", () => client.destroy());
   });
@@ -79,11 +91,38 @@ export async function startRelay(target: URL, options: RelayOptions = {}): Promi
       mode = next;
     },
     cut,
+    hold: () => {
+      for (const gate of gates) gate.hold();
+    },
+    release: () => {
+      for (const gate of gates) gate.release();
+    },
     close: async () => {
       cut();
       await new Promise<void>((resolve) => server.close(() => resolve()));
     },
   };
+}
+
+/* Passes on what a client sends, or keeps it, in order, until it is let go. */
+class Gate extends Transform {
+  #kept: unknown[] | undefined;
+
+  hold(): void {
+    this.#kept ??= [];
+  }
+
+  release(): void {
+    const kept = this.#kept ?? [];
+    this.#kept = undefined;
+    for (const chunk of kept) this.push(chunk);
+  }
+
+  override _transform(chunk: unknown, _encoding: BufferEncoding, done: TransformCallback): void {
+    if (this.#kept) this.#kept.push(chunk);
+    else this.push(chunk);
+    done();
+  }
 }
 
 /* Each piece waits `ms` before it goes on, one after another in the order they came. */

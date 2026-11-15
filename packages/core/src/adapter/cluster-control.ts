@@ -129,7 +129,9 @@ export function createClusterControl(options: ClusterControlOptions): ClusterCon
       const unsigned = { v: CLUSTER_MESSAGE_VERSION, id: randomId(), at, cmd } as const;
       /* Acted on here as it is sent: published back to this replica, it is a replay. */
       replay.admit(unsigned.id, at);
-      await sending(signed(unsigned), (message) => pubsub.publish(channel, message));
+      await sending(signed(unsigned), (message) =>
+        pubsub.publish(channel, message, { control: true }),
+      );
     },
     destroy: () => channels.destroy(),
   };

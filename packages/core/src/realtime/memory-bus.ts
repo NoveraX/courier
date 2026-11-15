@@ -168,6 +168,7 @@ function memoryReplica(
       return {
         state,
         channels: { wanted: held, confirmed: held },
+        inFlight: { messages: 0, bytes: 0 },
         queued: { messages: 0, bytes: 0 },
         dropped: 0,
         published,

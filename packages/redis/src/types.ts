@@ -36,11 +36,12 @@ export interface RedisPresenceConfig {
 export interface RedisPubSubConfig {
   /**
    * Redis instance used for PUBLISH commands.
-   * Must be a separate connection from `subscriber`. Give it a
-   * `commandTimeout`: while Redis is reached, a publish waits for its
-   * answer, and one that stops answering with its connection up holds it —
-   * and a broadcast, `disconnect` and `requireAuth` with it — as long as
-   * the client lets a command wait.
+   * Must be a separate connection from `subscriber`, and given no
+   * `commandTimeout`: the adapter bounds, by `queue`, what Redis has yet
+   * to answer and how long a publish waits for it, and ioredis holds a
+   * command it timed out until Redis answers — the adapter would take it
+   * for answered, send Redis more than its bounds, and count as dropped
+   * what Redis may deliver still.
    */
   publisher: Redis;
   /**
@@ -57,9 +58,15 @@ export interface RedisPubSubConfig {
    */
   prefix?: string | undefined;
   /**
-   * How much it holds while Redis is away. What is published then waits,
-   * in order, and is sent once Redis is back; past any of these bounds the
-   * oldest messages are dropped, counted in `stats().dropped` and logged.
+   * How much it holds. It sends Redis as many messages as these bounds
+   * hold unanswered — the last sent may take it past `maxBytes` — and what
+   * is published past them, or while Redis is away, waits in a queue of
+   * the same bounds, in order, and is sent as Redis answers or is back,
+   * Courier's commands to the replicas — `disconnect`, `requireAuth` —
+   * before the events. Past any of them the oldest are
+   * dropped — events first, and never a command for one — counted in
+   * `stats().dropped` and logged. A publish waits for Redis's answer
+   * `maxAgeMs` at most.
    * @default { maxMessages: 1000, maxBytes: 1048576, maxAgeMs: 5000 }
    */
   queue?: Partial<OutboundLimits> | undefined;

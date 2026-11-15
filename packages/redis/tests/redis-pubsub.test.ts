@@ -399,3 +399,107 @@ describe("createRedisPubSub", () => {
     expect([pub.connect, sub.connect].map((connect) => connect.mock.calls.length)).toEqual([1, 1]);
   });
 });
+
+/* A publisher whose Redis answers each PUBLISH only when `answer` is called, the oldest first. */
+function slowClient() {
+  const client = createClient("ready");
+  const unanswered: Array<() => void> = [];
+  client.publish.mockImplementation(
+    () => new Promise<number>((resolve) => unanswered.push(() => resolve(1))),
+  );
+  return Object.assign(client, {
+    answer(count = 1) {
+      for (const reply of unanswered.splice(0, count)) reply();
+    },
+  });
+}
+
+/* What reached Redis, by the message each PUBLISH carried, in the order it was sent. */
+const sentPayloads = (publisher: Client): unknown[] =>
+  publisher.publish.mock.calls.map(([, payload]) => JSON.parse(payload).payload);
+
+describe("createRedisPubSub while Redis is slow to answer", () => {
+  it("sends Redis no more than its bounds hold unanswered, and the rest in order as it answers", async () => {
+    const pub = slowClient();
+    const pubsub = adapterOn(pub, createClient(), { queue: { maxMessages: 3 } });
+
+    for (const message of [1, 2, 3, 4, 5]) void pubsub.publish("room", message);
+
+    expect(sentPayloads(pub)).toEqual([1, 2, 3]);
+    expect(pubsub.stats()).toMatchObject({ inFlight: { messages: 3 }, queued: { messages: 2 } });
+    pub.answer();
+    await expect.poll(() => sentPayloads(pub)).toEqual([1, 2, 3, 4]);
+    pub.answer(2);
+    await expect.poll(() => sentPayloads(pub)).toEqual([1, 2, 3, 4, 5]);
+    pub.answer(2);
+    await expect
+      .poll(() => pubsub.stats())
+      .toMatchObject({
+        inFlight: { messages: 0, bytes: 0 },
+        queued: { messages: 0 },
+        published: 5,
+        dropped: 0,
+      });
+  });
+
+  it("sends a message larger than its bytes bound once nothing else holds them", async () => {
+    const pub = slowClient();
+    const pubsub = adapterOn(pub, createClient(), { queue: { maxBytes: 200 } });
+
+    void pubsub.publish("room", "x".repeat(500));
+    void pubsub.publish("room", "after");
+
+    expect(sentPayloads(pub)).toEqual(["x".repeat(500)]);
+    pub.answer();
+    await expect.poll(() => sentPayloads(pub)).toEqual(["x".repeat(500), "after"]);
+  });
+
+  it("settles a publish past its bounds once queued, and one within them at the answer or maxAgeMs", async () => {
+    vi.useFakeTimers();
+    const pub = slowClient();
+    const pubsub = adapterOn(pub, createClient(), { queue: { maxMessages: 1, maxAgeMs: 1_000 } });
+    const settled: string[] = [];
+
+    void pubsub.publish("room", "sent").then(() => settled.push("sent"));
+    void pubsub.publish("room", "queued").then(() => settled.push("queued"));
+    await vi.advanceTimersByTimeAsync(999);
+    expect(settled).toEqual(["queued"]);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(settled).toEqual(["queued", "sent"]);
+    expect(pubsub.stats().inFlight.messages).toBe(1);
+    pub.answer();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(sentPayloads(pub)).toEqual(["sent", "queued"]);
+  });
+
+  it("sends Courier's commands it holds before the events, and lets no event take their place", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const pub = createClient("reconnecting");
+    const pubsub = adapterOn(pub, createClient(), { queue: { maxMessages: 3 } });
+
+    await pubsub.publish("room", "event 1");
+    await pubsub.publish("control", "command", { control: true });
+    for (const message of ["event 2", "event 3", "event 4"]) await pubsub.publish("room", message);
+    pub.become("ready");
+
+    expect(sentPayloads(pub)).toEqual(["command", "event 3", "event 4"]);
+    expect(pubsub.stats().dropped).toBe(2);
+  });
+
+  it("lets an event go where commands hold the room, and the oldest command for a command", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const pub = createClient("reconnecting");
+    const pubsub = adapterOn(pub, createClient(), { queue: { maxMessages: 2 } });
+
+    for (const command of ["command 1", "command 2"]) {
+      await pubsub.publish("control", command, { control: true });
+    }
+    await pubsub.publish("room", "event");
+    await pubsub.publish("control", "command 3", { control: true });
+    pub.become("ready");
+
+    expect(sentPayloads(pub)).toEqual(["command 2", "command 3"]);
+    expect(pubsub.stats().dropped).toBe(2);
+  });
+});

@@ -109,6 +109,33 @@ describe("createRedisPubSub", () => {
     expect(sub.subscribe.mock.calls).toEqual([["room"], ["lobby"]]);
   });
 
+  it("settles a subscription to a channel it is letting go of once Redis has answered the SUBSCRIBE after its UNSUBSCRIBE", async () => {
+    vi.useFakeTimers();
+    const sub = createClient();
+    const unsubscribed = Promise.withResolvers<number>();
+    const subscribedAgain = Promise.withResolvers<number>();
+    sub.unsubscribe.mockImplementationOnce(() => unsubscribed.promise);
+    const pubsub = adapterOn(createClient(), sub);
+    const stop = await pubsub.subscribe("room", () => undefined);
+    sub.subscribe.mockImplementationOnce(() => subscribedAgain.promise);
+    const settled: string[] = [];
+
+    stop();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(sub.unsubscribe.mock.calls).toEqual([["room"]]);
+    void pubsub.subscribe("room", () => undefined).then(() => settled.push("room"));
+    await vi.advanceTimersByTimeAsync(SUBSCRIBE_TIMEOUT_MS / 2);
+    expect(settled).toEqual([]);
+
+    unsubscribed.resolve(0);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(sub.subscribe.mock.calls).toEqual([["room"], ["room"]]);
+    expect(settled).toEqual([]);
+    subscribedAgain.resolve(1);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(settled).toEqual(["room"]);
+  });
+
   it("subscribes, once Redis is ready, what it was asked for while Redis was away", async () => {
     const sub = createClient("connecting");
     const pubsub = adapterOn(createClient("connecting"), sub);
@@ -135,6 +162,34 @@ describe("createRedisPubSub", () => {
 
     await expect.poll(() => sub.subscribe.mock.calls).toEqual([["a"], ["a"]]);
     await expect.poll(() => pubsub.stats().channels.confirmed).toBe(1);
+  });
+
+  it("is ready again after a reconnect once Redis has answered the SUBSCRIBEs it makes again, and at their deadline at the latest", async () => {
+    vi.useFakeTimers();
+    const sub = createClient();
+    const pubsub = adapterOn(createClient(), sub);
+    await pubsub.subscribe("room", () => undefined);
+    const states: string[] = [];
+    pubsub.onStateChange((state) => states.push(state));
+    const answer = Promise.withResolvers<number>();
+    sub.subscribe
+      .mockImplementationOnce(() => answer.promise)
+      .mockImplementationOnce(() => new Promise<number>(() => undefined));
+
+    sub.become("close");
+    sub.become("ready");
+    await vi.advanceTimersByTimeAsync(SUBSCRIBE_TIMEOUT_MS - 1);
+    expect(states).toEqual(["degraded"]);
+    answer.resolve(1);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(states).toEqual(["degraded", "ready"]);
+
+    sub.become("close");
+    sub.become("ready");
+    await vi.advanceTimersByTimeAsync(SUBSCRIBE_TIMEOUT_MS - 1);
+    expect(states).toEqual(["degraded", "ready", "degraded"]);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(states).toEqual(["degraded", "ready", "degraded", "ready"]);
   });
 
   it("tries a SUBSCRIBE Redis refused again, after a pause that grows, until it is taken", async () => {

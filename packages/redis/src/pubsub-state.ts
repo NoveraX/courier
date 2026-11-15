@@ -11,31 +11,38 @@ export interface PubSubStateTracker {
   onChange(listener: (state: AdapterState) => void): () => void;
   /** Resolve once ready; reject when not ready within `timeoutMs`, or stopped first */
   whenReady(timeoutMs: number): Promise<void>;
+  /** Look again at what the state stands on: the clients, and the subscriptions being made again */
+  refresh(): void;
   /** Stopped for good: the clients are no longer listened to */
   stop(): void;
 }
 
 /**
- * Follow the state of an adapter that needs every one of its connections:
- * `connecting` until all are first ready, `ready` while they are,
- * `degraded` while any is not after that, and `stopped` once stopped. A
- * listener that throws does not keep the others from hearing.
+ * Follow the state of an adapter that needs every one of its connections,
+ * and the subscriptions it makes on them: `connecting` until it is first
+ * ready, `ready` while every connection is and no subscription is being
+ * made again, `degraded` while that is not so after it was ready, and
+ * `stopped` once stopped. A listener that throws does not keep the others
+ * from hearing.
  *
  * @param clients - The adapter's connections
  * @param report - Told of a listener that threw
+ * @param restoring - Whether subscriptions are being made again on a connection that is back; `refresh()` once they are
  * @returns The tracker
  * @example
  * ```ts
- * const state = trackPubSubState([publisher, subscriber], report);
+ * const state = trackPubSubState([publisher, subscriber], report, () => subscriptions.restoring);
  * state.onChange((next) => next === "ready" && flush());
  * ```
  */
 export function trackPubSubState(
   clients: readonly Pick<Redis, "status" | "on" | "off">[],
   report: (error: Error) => void,
+  restoring: () => boolean = () => false,
 ): PubSubStateTracker {
   const listeners = new Set<(state: AdapterState) => void>();
-  const allReady = (): boolean => clients.every((client) => client.status === "ready");
+  const allReady = (): boolean =>
+    clients.every((client) => client.status === "ready") && !restoring();
   let state: AdapterState = allReady() ? "ready" : "connecting";
   let wasReady = state === "ready";
 
@@ -89,6 +96,7 @@ export function trackPubSubState(
         });
       });
     },
+    refresh: update,
     stop() {
       if (state === "stopped") return;
       for (const client of clients) for (const event of STATUS_EVENTS) client.off(event, update);

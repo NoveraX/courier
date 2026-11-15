@@ -1,28 +1,36 @@
-/** Who waits for Redis to answer the SUBSCRIBE of a channel on a subscriber connection. */
+/** Who waits for Redis to answer the SUBSCRIBE of channels on a subscriber connection. */
 export interface SubscribeAnswers {
-  /** Wait for Redis to answer a channel, `timeoutMs` at most */
-  wait(channel: string, timeoutMs: number): Promise<void>;
-  /** Redis answered a channel, taking it or refusing it: who waits for it waits no more */
+  /** Wait for Redis to answer each of `channels`, `timeoutMs` at most */
+  wait(channels: readonly string[], timeoutMs: number): Promise<void>;
+  /** Redis answered a channel, taking it or refusing it, or no handler wants it now: who waits for it waits no more */
   answered(channel: string): void;
   /** No answer on the connection is to come — it was lost, or the adapter stopped: no one waits */
   answeredAll(): void;
 }
 
 /**
- * Keep who waits for Redis to answer each channel's SUBSCRIBE, each for a
- * bounded time: a caller is let go of at the answer, as the connection is
- * lost, or at its deadline, whichever comes first.
+ * Keep who waits for Redis to answer the SUBSCRIBE of channels, each for a
+ * bounded time: a wait is over once each of its channels is answered, as
+ * the connection is lost, or at its deadline, whichever comes first.
  *
  * @returns The waits, none yet
  * @example
  * ```ts
  * const answers = createSubscribeAnswers();
- * const taken = answers.wait("room", 2_000);
- * answers.answered("room"); // taken settles
+ * const taken = answers.wait(["room", "lobby"], 2_000);
+ * answers.answered("room");
+ * answers.answered("lobby"); // taken settles
  * ```
  */
 export function createSubscribeAnswers(): SubscribeAnswers {
   const waiting = new Map<string, Set<() => void>>();
+
+  function forget(channel: string, settle: () => void): void {
+    const waits = waiting.get(channel);
+    if (!waits) return;
+    waits.delete(settle);
+    if (waits.size === 0) waiting.delete(channel);
+  }
 
   function answered(channel: string): void {
     const waits = waiting.get(channel);
@@ -32,19 +40,27 @@ export function createSubscribeAnswers(): SubscribeAnswers {
   }
 
   return {
-    wait(channel, timeoutMs) {
+    wait(channels, timeoutMs) {
       return new Promise<void>((resolve) => {
-        const waits = waiting.get(channel) ?? new Set<() => void>();
-        waiting.set(channel, waits);
-        const deadline = setTimeout(() => settle(), timeoutMs);
+        /* The channels of this wait still unanswered, each with what it is told at the answer. */
+        const left = new Map<string, () => void>();
+        const deadline = setTimeout(done, timeoutMs);
         if (typeof deadline === "object" && "unref" in deadline) deadline.unref();
-        function settle(): void {
+        function done(): void {
           clearTimeout(deadline);
-          waits.delete(settle);
-          if (waits.size === 0 && waiting.get(channel) === waits) waiting.delete(channel);
+          for (const [channel, settle] of left) forget(channel, settle);
+          left.clear();
           resolve();
         }
-        waits.add(settle);
+        for (const channel of new Set(channels)) {
+          const settle = (): void => {
+            left.delete(channel);
+            if (left.size === 0) done();
+          };
+          left.set(channel, settle);
+          waiting.set(channel, (waiting.get(channel) ?? new Set<() => void>()).add(settle));
+        }
+        if (left.size === 0) done();
       });
     },
     answered,

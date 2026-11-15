@@ -2,14 +2,16 @@
  * What a subscriber connection holds of its channels, as far as the
  * replies tell: those Redis confirmed on it, and those it may hold with no
  * reply on it to say so — held as a connection was lost, which ioredis
- * subscribes again on the next, or whose SUBSCRIBE was answered only after
- * a reconnect.
+ * subscribes again on the next, whose SUBSCRIBE was answered only after a
+ * reconnect, or whose UNSUBSCRIBE Redis has yet to answer.
  */
 export interface HeldChannels {
-  /** Those Redis confirmed on this connection */
+  /** Those Redis confirmed on this connection, and no UNSUBSCRIBE has gone out for since */
   readonly confirmed: ReadonlySet<string>;
   /** A SUBSCRIBE was answered: on this connection, or after a reconnect, when the channel may be held */
   subscribed(channel: string, onThisConnection: boolean): void;
+  /** An UNSUBSCRIBE went out: Redis may let go of the channel at any moment, so it is confirmed no more */
+  leaving(channel: string): void;
   /** An UNSUBSCRIBE was answered on this connection: the channel is held no more */
   unsubscribed(channel: string): void;
   /** The connection was lost: none is confirmed, and each it held may be held on the next */
@@ -44,6 +46,9 @@ export function createHeldChannels(): HeldChannels {
       }
       confirmed.add(channel);
       maybe.delete(channel);
+    },
+    leaving(channel) {
+      if (confirmed.delete(channel)) maybe.add(channel);
     },
     unsubscribed(channel) {
       confirmed.delete(channel);

@@ -96,8 +96,10 @@ export interface TopicLog {
 
 /**
  * Where a pub/sub adapter stands: `connecting` until it first reaches its
- * server, `ready` while it does, `degraded` once it lost it and is getting
- * it back, `stopped` for good after `disconnect()`.
+ * server, `ready` while it does — once the server has answered the
+ * subscriptions made as it reached it, within a deadline — `degraded`
+ * once it lost it and is getting it back, `stopped` for good after
+ * `disconnect()`.
  */
 export type AdapterState = "connecting" | "ready" | "degraded" | "stopped";
 
@@ -137,6 +139,10 @@ export interface PublishOptions {
  * - a subscription is a wish it keeps: made while its server is away, or
  *   refused, it is made again once the server answers, and every one is
  *   made again after each reconnect;
+ * - it is `ready` once the server has answered the subscriptions it makes
+ *   as it reaches it, the first time or after a reconnect — within a
+ *   deadline — so a handler that catches up as it turns ready misses
+ *   nothing published after;
  * - `subscribe()` settles once the server has taken the subscription, so
  *   what is published after reaches it — at once while the server is away,
  *   and within a deadline while it is slow to answer or refuses it;

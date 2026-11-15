@@ -94,10 +94,15 @@ function serverSession(
     fetchInit: incoming.fetchInit,
     carries,
     options: session,
-    /* The answer may start or renew this visitor's session, so the call's reads are this
-       request's alone; and while the call carries the user's credentials, a redirect off the
-       API's origin is answered with as it came. */
-    sendsWith: session && { servedFor: incoming.key, ...(carries && { withinOrigin: true }) },
+    /* Each request of the call goes to the origin the session was checked for. The answer may
+       start or renew this visitor's session, so the call's reads are this request's alone; and
+       while the call carries the user's credentials, a redirect off the API's origin is
+       answered with as it came. */
+    sendsWith: session && {
+      sessionTarget: target,
+      servedFor: incoming.key,
+      ...(carries && { withinOrigin: true }),
+    },
     refusal,
     toResponse: served.toResponse,
     primeFrom: refusal === undefined ? primeFrom : undefined,

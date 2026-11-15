@@ -20,6 +20,7 @@ import type { SessionOptions } from "./types";
  * that finds no token is to ask for it first, where the API names where it
  * comes from. Nothing else is added: a page cannot set `Cookie` or
  * `Origin`, and a header it need not send would cost the call a preflight.
+ * The call's requests go only to the origin the session was checked for.
  *
  * @param target - The call, as the session reads it
  * @param session - The API's session
@@ -107,6 +108,7 @@ function startBrowserCall(
       primeFrom: unknownToken ? session.csrf?.from : undefined,
       partition: sessionPartition(credentials),
       renewsPartition: target.unsafeMethod,
+      sendsWith: { sessionTarget: target },
     };
   };
 }

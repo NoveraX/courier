@@ -27,7 +27,7 @@ The proxy forwards the browser's headers on a short list and those named in `all
 
 ### Only to the API's origin
 
-A call that carries the user's credentials from a server follows a redirect only while it stays on the API's origin; a redirect anywhere else is answered with as it came, an upload's included. A session goes over plain HTTP only to the local machine or a private network, unless it sets `allowHttp`. The address `csrf.from` names is a path on the API's own origin, and an endpoint's path always stays under its API's `baseURL`.
+A call that takes the user's session sends each of its requests to its API's origin, that of the call's `prefixUrl` or of the API's `baseURL`: a request that an endpoint's absolute URL, or a `.via()` closure, would take to another host is refused with `ConfigurationError` `SESSION_OTHER_ORIGIN` before it is sent, on a server, in a page and in an app alike. Give such a host an API of its own, or the endpoint `{ session: false }`. A call that carries the user's credentials from a server follows a redirect only while it stays on the API's origin; a redirect anywhere else is answered with as it came, an upload's included. A session goes over plain HTTP only to the local machine or a private network, unless it sets `allowHttp`. The address `csrf.from` names is a path on the API's own origin.
 
 ### Streams and channels
 

@@ -64,6 +64,52 @@ describe.each([
     },
   );
 
+  it("sends no session to another host an endpoint's address or a closure names", async () => {
+    become();
+    vi.stubGlobal("fetch", sent);
+    const caller = createCaller(
+      defineApi({
+        name: "accounts",
+        baseURL: "https://api.example.com/v1",
+        session: { bearer: "access_token" },
+        endpoints: {
+          geocode: endpoint.get("https://maps.example.net/geocode"),
+          nearby: endpoint.via((http) => http.get("https://maps.example.net/nearby")),
+        },
+      }),
+    );
+
+    const refused = await Promise.all(
+      [caller.geocode(), caller.nearby()].map((call) => call.catch((error: unknown) => error)),
+    );
+
+    expect(refused).toMatchObject([
+      { code: "SESSION_OTHER_ORIGIN" },
+      { code: "SESSION_OTHER_ORIGIN" },
+    ]);
+    expect(String(refused[1])).toContain(
+      "accounts.nearby would send its API's session to https://maps.example.net, and a session goes to its API's origin alone, https://api.example.com",
+    );
+    expect(sent).not.toHaveBeenCalled();
+  });
+
+  it("sends it to an absolute address on its API's origin", async () => {
+    become();
+    vi.stubGlobal("fetch", sent);
+    const caller = createCaller(
+      defineApi({
+        name: "accounts",
+        baseURL: "https://api.example.com/v1",
+        session: { bearer: "access_token" },
+        endpoints: { me: endpoint.get("https://api.example.com/me") },
+      }),
+    );
+
+    await caller.me();
+
+    expect(sent).toHaveBeenCalledExactlyOnceWith("https://api.example.com/me", expect.anything());
+  });
+
   it("sends it where the API's session allows plain HTTP", async () => {
     become();
     vi.stubGlobal("fetch", sent);

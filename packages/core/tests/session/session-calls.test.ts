@@ -289,4 +289,86 @@ describe("a session that cannot travel safely", () => {
     await expect(sent).rejects.toThrow(/plain HTTP across the public internet/);
     expect(upstream.seen).toHaveLength(0);
   });
+
+  it("is refused for another host an endpoint's address or a closure names, before anything is sent", async () => {
+    const elsewhere = await startUpstream((_req, res) => sendJson(res, 200, { ok: true }));
+    try {
+      const caller = createCaller(
+        defineApi({
+          name: "accounts",
+          baseURL: upstream.url,
+          session: { cookies: ["sid"], bearer: "access_token" },
+          endpoints: {
+            geocode: endpoint.get(`${elsewhere.url}/geocode`),
+            nearby: endpoint.via((http) => http.get(`${elsewhere.url}/nearby`)),
+          },
+        }),
+      );
+      serving = userRequest("GET", { cookie: "sid=a1; access_token=t1" }).incoming;
+
+      const refused = await Promise.all(
+        [caller.geocode(), caller.nearby()].map((call) => call.catch((error: unknown) => error)),
+      );
+
+      expect(refused).toMatchObject([
+        { code: "SESSION_OTHER_ORIGIN" },
+        { code: "SESSION_OTHER_ORIGIN" },
+      ]);
+      expect(String(refused[0])).toContain(
+        `accounts.geocode would send its API's session to ${elsewhere.url}, and a session goes to its API's origin alone, ${upstream.url}`,
+      );
+      expect(elsewhere.seen).toHaveLength(0);
+    } finally {
+      await elsewhere.close();
+    }
+  });
+
+  it("is refused for an absolute address when its API names no address of its own", async () => {
+    const caller = createCaller(
+      defineApi({
+        name: "accounts",
+        session: { cookies: ["sid"] },
+        endpoints: { me: endpoint.get(`${upstream.url}/me`) },
+      }),
+    );
+    serving = userRequest("GET", { cookie: "sid=a1" }).incoming;
+
+    await expect(caller.me()).rejects.toMatchObject({
+      code: "SESSION_OTHER_ORIGIN",
+      message: expect.stringContaining(
+        `accounts.me would send its API's session to ${upstream.url}, and a session goes to its API's origin alone, which no baseURL names. Give the API the baseURL of that host`,
+      ),
+    });
+    expect(upstream.seen).toHaveLength(0);
+  });
+
+  it("goes to an absolute address on its API's origin, and leaves another host to an endpoint that takes none", async () => {
+    const elsewhere = await startUpstream((_req, res) => sendJson(res, 200, { ok: true }));
+    try {
+      const caller = createCaller(
+        defineApi({
+          name: "accounts",
+          baseURL: `${upstream.url}/v1`,
+          session: { cookies: ["sid"] },
+          endpoints: {
+            me: endpoint.get(`${upstream.url}/me`),
+            geocode: endpoint.get(`${elsewhere.url}/geocode`, { session: false }),
+          },
+        }),
+      );
+      serving = userRequest("GET", { cookie: "sid=a1" }).incoming;
+
+      await caller.me();
+      await caller.geocode();
+
+      expect(upstream.seen.map((seen) => [seen.url, seen.headers.cookie])).toEqual([
+        ["/me", "sid=a1"],
+      ]);
+      expect(elsewhere.seen.map((seen) => [seen.url, seen.headers.cookie])).toEqual([
+        ["/geocode", undefined],
+      ]);
+    } finally {
+      await elsewhere.close();
+    }
+  });
 });

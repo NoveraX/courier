@@ -258,6 +258,12 @@ export type ConfigurationErrorCode =
    */
   | "SESSION_INSECURE_TRANSPORT"
   /**
+   * A call that takes an API's `session` would send a request to another
+   * origin than the API's — an endpoint whose path is an absolute URL, or a
+   * `.via()` closure, names another host — where the session must not go.
+   */
+  | "SESSION_OTHER_ORIGIN"
+  /**
    * A call names the request it serves in its context — `req`, `headers` or
    * `incoming` — where nothing reads one: only a server's caller does, or a
    * caller in a process whose server registered a request context.

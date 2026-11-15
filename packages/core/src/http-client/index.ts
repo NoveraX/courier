@@ -1,3 +1,4 @@
+import { sessionTransport } from "../session/one-user-transport";
 import type { EndpointHold } from "../utils/cancel-previous";
 import type { CoreFetchInit } from "../utils/fetch";
 import { coreFetch, withSearchParams } from "../utils/fetch";
@@ -107,7 +108,13 @@ export class HttpClient {
     options: RequestOptions = {},
   ): Promise<Response> {
     const own = ownFields(options);
-    const { prefixUrl: overridePrefixUrl, withinOrigin, fetch: send, ...fetchOptions } = own;
+    const {
+      prefixUrl: overridePrefixUrl,
+      withinOrigin,
+      fetch: send,
+      sessionTarget,
+      ...fetchOptions
+    } = own;
 
     const effectivePrefixUrl = overridePrefixUrl !== undefined ? overridePrefixUrl : this.prefixUrl;
     let fullUrl = url;
@@ -115,6 +122,12 @@ export class HttpClient {
       const base = effectivePrefixUrl.endsWith("/") ? effectivePrefixUrl : `${effectivePrefixUrl}/`;
       const path = url.startsWith("/") ? url.slice(1) : url;
       fullUrl = `${base}${path}`;
+    }
+    /* A call that takes the user's session sends it nowhere but where the session was checked
+       to go. A request built on that address stays there; one an absolute path or a closure's
+       own prefix starts elsewhere is weighed by its origin, and refused off it. */
+    if (sessionTarget && effectivePrefixUrl !== (sessionTarget.url ?? "")) {
+      (await sessionTransport()).assertSessionOrigin(sessionTarget, fullUrl);
     }
 
     this.onBeforeFetch?.(method, withSearchParams(fullUrl, fetchOptions.searchParams));

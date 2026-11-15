@@ -4,12 +4,24 @@ import type * as Transport from "./transport";
 
 let transport: Promise<typeof Transport> | undefined;
 
-/* Loaded with the first call that might carry the session over plain HTTP: over HTTPS, and to a
-   path on the page's own origin, nothing more is asked of where a call goes. A load that failed is
-   tried again by the next call: Node and React Native fetch the module anew, while a browser may
-   answer with the failure it kept for the module's address, and a module that threw as it ran
-   throws again everywhere, as an ES module that failed so is kept. */
-function transportPart(): Promise<typeof Transport> {
+/**
+ * The checks of where a session may go, loaded with the first call that
+ * needs them: one that might carry the session over plain HTTP, or that
+ * sends a request somewhere other than the address its session was checked
+ * for. Over HTTPS, to a path on the page's own origin and to the API's own
+ * address, nothing more is asked of where a call goes. A load that failed
+ * is tried again by the next call: Node and React Native fetch the module
+ * anew, while a browser may answer with the failure it kept for the
+ * module's address, and a module that threw as it ran throws again
+ * everywhere, as an ES module that failed so is kept.
+ *
+ * @returns The checks
+ * @example
+ * ```ts
+ * (await sessionTransport()).assertSessionOrigin(target, "https://api.example.com/v1/me");
+ * ```
+ */
+export function sessionTransport(): Promise<typeof Transport> {
   transport ??= import("./transport").catch((cause: unknown) => {
     transport = undefined;
     throw cause;
@@ -44,7 +56,7 @@ export function overSecureTransport(
   const url = target.url;
   const secure = url === undefined || /^(?:https:|wss:|\/[^/\\\t\n\r])/i.test(url);
   if (secure || !session.carries || session.options?.allowHttp === true) return session;
-  return transportPart().then(({ assertSecureTransport }) => {
+  return sessionTransport().then(({ assertSecureTransport }) => {
     assertSecureTransport(target);
     return session;
   });

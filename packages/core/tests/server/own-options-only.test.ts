@@ -195,6 +195,7 @@ const EVERY_KEY = [
     sensitiveVariables: 0,
     servedFor: 0,
     session: 0,
+    sessionTarget: 0,
     signal: 0,
     stream: 0,
     studioRequestId: 0,

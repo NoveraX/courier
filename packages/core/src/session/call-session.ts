@@ -61,6 +61,12 @@ export interface CallSession {
 /** What a session sends its call with over the options the call gave itself. */
 export interface SessionSendOptions {
   /**
+   * Where the session was checked to go — the call's `prefixUrl`, or its
+   * API's `baseURL` — and the endpoint, as a refusal names it: a request of
+   * the call to another origin is refused before it is sent
+   */
+  readonly sessionTarget: Pick<SessionTarget, "url" | "name">;
+  /**
    * Follow redirects only while they stay on the API's origin: a server's
    * call that carries the user's credentials
    */

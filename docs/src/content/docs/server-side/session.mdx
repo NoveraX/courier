@@ -1,4 +1,4 @@
-export const metadata = { title: "User Sessions", description: "Carry the user's session, and the request's own headers, to your API — from a page the server renders, through the proxy, and from the browser.", mode: "both", updated: "2026-11-11" }
+export const metadata = { title: "User Sessions", description: "Carry the user's session, and the request's own headers, to your API — from a page the server renders, through the proxy, and from the browser.", mode: "both", updated: "2026-11-15" }
 
 ## The problem it solves
 
@@ -169,7 +169,7 @@ What Next.js does differently — a Server Action, the Pages Router, a page buil
 - `Referer` set to your application's origin, where `csrf` is set: Django and Laravel Sanctum take a call for one of your pages only when it names one.
 - The headers `forward` names.
 
-A session travels only over HTTPS, or to a private host — the local machine, a private network, a cluster's `http://api:8080` — and its redirects stay on the API's origin, so the credentials never reach a host the API sent the call on to.
+A session travels only over HTTPS, or to a private host — the local machine, a private network, a cluster's `http://api:8080` — and only to the API's origin: a request that an endpoint's absolute URL, or a `.via()` closure, would take to another host is refused with `SESSION_OTHER_ORIGIN` before it is sent. Its redirects stay on that origin too, so the credentials never reach a host the API sent the call on to. Give a host of another origin an API of its own, or the endpoint `{ session: false }`.
 
 ## When there is no token yet
 
@@ -278,6 +278,8 @@ A channel repeats no double-submit token: the server checks a socket's origin as
 A session that could not work as written is refused with a `ConfigurationError` before any call, whatever `NODE_ENV` says, on every way a server calls the API with a request: as its sources are registered, as a handler is made with them — the proxy route's, a socket's, the MCP server's — as the server's caller or a [Server Action](/docs/server-side/actions) is made, as `ensureCsrfToken` gives a page its token, and at the first call the server lends a request's session to, whichever caller made it. The codes are listed under [`session`](/docs/api/define#session).
 
 A page and a React Native app check, as each call goes, that it would not carry the session over plain HTTP across the public internet: such a call is refused with `SESSION_INSECURE_TRANSPORT` before anything is sent, unless `allowHttp` is set. An address on the machine or on a private network is not across the internet, and the call goes. A page's definitions check none of the rest.
+
+Every caller, a server's, a page's and an app's, checks each request of a call that takes the session as it goes: one sent to another origin than the API's is refused with `SESSION_OTHER_ORIGIN` before it is sent.
 
 A call of an API that keeps a session or forwards headers, whose context names the request it serves, cannot go without the server's part. Made with the caller of `@noverax/courier/client` in a process where nothing lent it — no handler made, no sources registered, no server's caller made — it is refused with `ConfigurationError` `SERVER_CAPABILITY_MISSING`, naming the endpoint, rather than sent without the user's credentials. Make server code's caller with `createCaller` from `@noverax/courier/server`, or register the framework's request context with `registerRequestContext`. The refusal says so, and adds what else it finds: code built for a page, or another copy of the core of another version in the process, which `npm ls @noverax/courier`, `pnpm why @noverax/courier` or `yarn why @noverax/courier` shows.
 

@@ -1,3 +1,4 @@
+import type { SessionSendOptions } from "../session/call-session";
 import { ownField } from "../utils/own";
 import { resolveTransport } from "./resolve-transport";
 import type { PlatformFetch } from "./source-transport";
@@ -5,7 +6,11 @@ import { TRANSPORT_KEYS } from "./transport-options";
 import type { FetchOptions, GroupOptions } from "./types";
 
 /** A request's options, with the `fetch` its group or its call sends it with in place of the source's. */
-export type RequestOptions = Partial<FetchOptions> & { fetch?: PlatformFetch | undefined };
+export type RequestOptions = Partial<FetchOptions> & {
+  fetch?: PlatformFetch | undefined;
+  /** Where the session of the call the request is made for may go, when it takes one */
+  sessionTarget?: SessionSendOptions["sessionTarget"] | undefined;
+};
 
 /**
  * A request's options with its group's and its call's transport laid over

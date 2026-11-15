@@ -179,6 +179,7 @@ SessionOptions.csrf: csrf?: CsrfOptions | undefined;
 SessionOptions.relay: relay?: boolean | undefined;
 SessionSendOptions: interface SessionSendOptions
 SessionSendOptions.servedFor: readonly servedFor?: object | undefined;
+SessionSendOptions.sessionTarget: readonly sessionTarget: Pick<SessionTarget, "url" | "name">;
 SessionSendOptions.withinOrigin: readonly withinOrigin?: true | undefined;
 SessionTarget: interface SessionTarget
 SessionTarget.api: readonly api?: object | undefined;

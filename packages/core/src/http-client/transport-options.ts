@@ -45,7 +45,10 @@ export type TransportOptions = {
    * Node — an `Agent` holding a client certificate or an authority of its
    * own, a `ProxyAgent`, an `EnvHttpProxyAgent` — handed to `fetch` and to
    * the `WebSocket`. Take `fetch` and `webSocket` from the same undici:
-   * Node's own refuses a dispatcher of another major version.
+   * Node's own refuses a dispatcher of another major version. Take it at
+   * the runtime's major or newer: a body goes as the runtime's own `fetch`
+   * needs it, and an older undici keeps a copy of each body it may send
+   * again — unless `redirect` is `"error"` — for as long as it sends it.
    */
   dispatcher?: SourceDispatcher | undefined;
   /** Bun: the proxy requests and sockets go through, `http://proxy.corp:3128`. */

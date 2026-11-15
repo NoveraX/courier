@@ -35,9 +35,11 @@ export function fetchCopies(version: string | undefined): FetchCopies {
 }
 
 /**
- * What this runtime's own `fetch` copies. Its undici is read off
- * `globalThis.process`, as code an edge runtime may take reads Node's APIs:
- * Next.js refuses to build `process.versions` into a middleware, even after
- * `typeof process` is checked.
+ * What this runtime's own `fetch` copies — and a source's own, taken to copy
+ * no more: nothing tells which undici, if any, that one is built on, and one
+ * older than the runtime's copies what the runtime's does not. Its undici is
+ * read off `globalThis.process`, as code an edge runtime may take reads
+ * Node's APIs: Next.js refuses to build `process.versions` into a
+ * middleware, even after `typeof process` is checked.
  */
 export const FETCH_COPIES: FetchCopies = fetchCopies(globalThis.process?.versions?.undici);

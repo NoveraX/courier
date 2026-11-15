@@ -1,4 +1,4 @@
-export const metadata = { title: "Proxies & Certificates", description: "Reach APIs through a corporate proxy, trust an internal certificate authority and present a client certificate — for the whole process from the environment it starts with, for one API, one group of its endpoints or one call — a bank's mutual TLS step by step, and how Studio, the MCP server and create-courier take the same settings.", mode: "both", updated: "2026-11-07" }
+export const metadata = { title: "Proxies & Certificates", description: "Reach APIs through a corporate proxy, trust an internal certificate authority and present a client certificate — for the whole process from the environment it starts with, for one API, one group of its endpoints or one call — a bank's mutual TLS step by step, and how Studio, the MCP server and create-courier take the same settings.", mode: "both", updated: "2026-11-15" }
 
 ## Where they are set
 
@@ -86,7 +86,7 @@ export const payments = defineApi({
 
 The dispatcher reaches everything the API sends: its calls and uploads, its streams, its channels' sockets, and what a [proxy route](/docs/proxy-mode/api-route) relays to it for the browser — except where a group or a call sets its own. Two APIs with dispatchers of their own never share a socket, though they reach the same host.
 
-`fetch` and `webSocket` are what hand it on. Node's own refuse a dispatcher from another major version of undici with `UND_ERR_INVALID_ARG` — Node 24 is built on undici 7, while `npm install undici` installs 8 — so all three come from the same `undici`.
+`fetch` and `webSocket` are what hand it on. Node's own refuse a dispatcher from another major version of undici with `UND_ERR_INVALID_ARG` — Node 24 is built on undici 7, while `npm install undici` installs 8 — so all three come from the same `undici`, of the runtime's major or newer. Courier sends a body as the runtime's own `fetch` needs it, and an older undici's keeps a copy of each body it may send again for as long as it sends it: `undici@7` on Node 26 holds every upload twice. Where an older one has to stay, `redirect: "error"` on the API keeps it from copying, a redirect then failing the call.
 
 Through a proxy of its own:
 

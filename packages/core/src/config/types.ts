@@ -245,7 +245,10 @@ export interface CourierServerConfig {
   totalUploadDiskBytes?: number | undefined;
   /** Where each upload's own folder is made, removed once its call is done — `os.tmpdir()` unless set. */
   uploadDirectory?: string | undefined;
-  /** The most fields and files one upload may hold — default 1000. */
+  /**
+   * The most parts one upload may hold: its fields and files, and the
+   * call's options the client writes first — default 1000.
+   */
   maxUploadParts?: number | undefined;
   /** The longest pause between two pieces of a request body, in milliseconds — default 30 seconds. */
   bodyIdleTimeoutMs?: number | undefined;

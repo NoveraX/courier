@@ -148,7 +148,7 @@ The command exits with status 1 when the server cannot start — the port is tak
 | `uploadMode` | `"auto"` | Where an upload is kept while its call runs: `"auto"` holds up to `uploadMemoryBytes` of its files in memory and writes the rest to `uploadDirectory`, removed once the call is done; `"memory"` never writes one to disk; `"stream"` keeps none of it, sending it on to the upstream as it arrives |
 | `uploadMemoryBytes` | 1 MB | How much of one upload's files stays in memory |
 | `uploadDirectory` | `os.tmpdir()` | Where each upload's own folder is made; point it at a disk where `/tmp` is a `tmpfs` |
-| `maxUploadParts` | 1000 | Most fields and files one upload may hold |
+| `maxUploadParts` | 1000 | Most parts one upload may hold: its fields and files, and the call's options the client writes first |
 | `bodyIdleTimeoutMs` | 30 seconds | Longest pause between two pieces of a request body; then 408 |
 | `bodyTimeoutMs` | 5 minutes | Longest a request body may take to arrive; then 408 |
 | `pubsub` | `undefined` | Pub/Sub adapter the replicas share (e.g. Redis): WS broadcasts and commands, and `sseConnections.disconnect()`, reach every replica |

@@ -92,7 +92,7 @@ A webhook is a call made to your app by its sender, and [`defineWebhook`](/docs/
 | Requests no browser sent, Studio's Playground in development aside | Served | `browsersOnly` |
 | A JSON body to the proxy | 1 MB | `maxBodyBytes` |
 | An upload to the proxy | 10 MB | `maxUploadBytes` |
-| Fields and files in one upload | 1000 | `maxUploadParts` |
+| Parts of one upload: its fields, its files and the call's options | 1000 | `maxUploadParts` |
 | What every upload keeps in memory at once | 64 MB | `totalUploadMemoryBytes` |
 | What every upload keeps on disk at once | 1 GB | `totalUploadDiskBytes` |
 | An upload's text fields, together | 1 MB | `maxBodyBytes` |

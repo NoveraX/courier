@@ -1,4 +1,4 @@
-export const metadata = { title: "courier.config.ts", description: "Every field of courier.config.ts: the sources, the API imports Studio keeps in sync, Studio, the standalone server, the runtime and what agents may call.", mode: "both", updated: "2026-11-08" }
+export const metadata = { title: "courier.config.ts", description: "Every field of courier.config.ts: the sources, the API imports Studio keeps in sync, Studio, the standalone server, the runtime and what agents may call.", mode: "both", updated: "2026-11-15" }
 
 ## Overview
 
@@ -78,7 +78,7 @@ What the [standalone server](/docs/deployment/standalone-server) reads when its 
 | `totalUploadMemoryBytes` | 64 MB | How much every upload together keeps in memory at once |
 | `totalUploadDiskBytes` | 1 GB | How much every upload together keeps on disk at once |
 | `uploadDirectory` | `os.tmpdir()` | Where each upload's own folder is made, removed once its call is done |
-| `maxUploadParts` | 1000 | The most fields and files one upload may hold |
+| `maxUploadParts` | 1000 | The most parts one upload may hold: its fields and files, and the call's options the client writes first |
 | `bodyIdleTimeoutMs` | 30 seconds | The longest pause between two pieces of a request body, then `408` |
 | `bodyTimeoutMs` | 5 minutes | The longest a request body may take to arrive, then `408` |
 

@@ -39,7 +39,7 @@ A record of API source definitions created with `defineApi()`. Given, the handle
 | `totalUploadMemoryBytes` | 64 MB | How much every upload together keeps in memory at once, files and text fields: past it a file goes to disk, or an upload that must stay in memory is refused |
 | `totalUploadDiskBytes` | 1 GB | How much every upload together keeps on disk at once: past it an upload is refused |
 | `uploadDirectory` | `os.tmpdir()` | Where each upload's own folder is made, removed once its call is done |
-| `maxUploadParts` | 1000 | Most fields and files one upload may hold |
+| `maxUploadParts` | 1000 | Most parts one upload may hold: its fields and files, and the call's options the client writes first |
 | `bodyIdleTimeoutMs` | 30 seconds | Longest pause between two pieces of a request body |
 | `bodyTimeoutMs` | 5 minutes | Longest a request body may take to arrive |
 | `sseHeaders` | — | Extra response headers on every SSE stream |
@@ -60,7 +60,7 @@ The handler reads a body as it arrives and refuses it, with the status and `code
 | Runs past its `Content-Length`, or names one that is not a length | `400` | `BODY_MALFORMED` |
 | Is compressed (`Content-Encoding`) | `415` | `BODY_ENCODING_UNSUPPORTED` |
 | Sends nothing for `bodyIdleTimeoutMs`, or is still arriving `bodyTimeoutMs` after it began | `408` | `BODY_TIMEOUT` |
-| An upload of more than `maxUploadParts`, fields and files together | `413` | `UPLOAD_TOO_MANY_PARTS` |
+| An upload of more than `maxUploadParts` parts, the call's options among them | `413` | `UPLOAD_TOO_MANY_PARTS` |
 | An upload whose text fields together take more than `maxBodyBytes` | `413` | `UPLOAD_FIELDS_TOO_LARGE` |
 | An upload with a part whose headers take more than 8 KB | `413` | `UPLOAD_PART_HEADERS_TOO_LARGE` |
 | An upload that does not parse as `multipart/form-data` — see [what the proxy takes](/docs/proxy-mode/uploads#what-the-proxy-takes) | `400` | `BODY_MALFORMED` |

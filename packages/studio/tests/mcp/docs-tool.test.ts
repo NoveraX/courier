@@ -56,7 +56,9 @@ describe("Studio's docs tool", () => {
         courier: "0.4.0",
         matches: true,
         folder: join("node_modules", "@noverax", "courier-docs", "docs"),
-        read: expect.stringContaining("<page>.md in that folder"),
+        read: expect.stringMatching(
+          /<page>\.md in that folder.* npx --no-install @noverax\/courier-docs mcp, /,
+        ),
         index: INDEX,
         offset: 0,
         totalChars: INDEX.length,

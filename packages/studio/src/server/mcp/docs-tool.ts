@@ -14,7 +14,7 @@ const MANIFEST_BYTES = 1024 * 1024;
 
 const READ =
   "Read a page as a file: <page>.md in that folder, as index.md links them — a link to /docs/<page> in a page names <page>.md there. " +
-  `Or serve them as tools to the agent: npx ${DOCS} mcp.`;
+  `Or serve them as tools to the agent: npx --no-install ${DOCS} mcp, which runs the project's copy and never fetches one.`;
 
 /* A path with its links resolved, as the paths require.resolve finds are; itself when it is not there. */
 function real(path: string): string {

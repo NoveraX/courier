@@ -164,7 +164,7 @@ Without `.topic()`, the key is all of a subscriber's variables: subscribers shar
 
 `.topic()` names what subscribers share a topic by. It reads the variables as the schema produced them, and returns what JSON can carry. In the channel above, everyone in room `r1` is on one topic, so a broadcast reaches all of them, while each keeps its own `nick` in `v` and `ctx.variables`. A key that throws ends that subscription with code `5000`.
 
-On one connection, subscriptions whose key is equal are one subscription: the newer subscribe replaces the older, whose `onLeave` runs, and both of the client's channels receive what is sent on the topic. Two browsers, or two tabs, are two connections.
+On one connection, subscriptions whose key is equal are one subscription. Channels of one caller called with equal variables share it: the first one's subscribe opens it and the server runs it once, so a channel called once it runs hears what is sent from then on, not the snapshot `onJoin` or the generator sent before. Keep what a channel shows where every component that shows it reads it, or read the snapshot with a query. Channels whose variables differ but whose key is equal subscribe each: the newer subscribe replaces the older, whose `onLeave` runs, both channels receive what is sent on the topic, and after a reconnect the subscription is made again with the newer one's variables. Two browsers, or two tabs, are two connections.
 
 `.topic()` is named before `.implement()`. A channel another process serves has its topics decided there, so naming it before `.connect()` or `.via()` throws `ConfigurationError("TOPIC_ON_REMOTE_CHANNEL")`.
 

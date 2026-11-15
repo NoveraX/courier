@@ -12,6 +12,8 @@ export interface Subscription {
   confirmed: boolean;
   /** Id of the subscribe the server has yet to confirm */
   awaiting?: string | undefined;
+  /** Id of its latest subscribe: an end the server sends under another is an earlier subscribe's */
+  id?: string | undefined;
   /** Where the topic's sequence stands for it, once the server said: what it resumes from */
   position?: { seq: number; epoch: string } | undefined;
   /** The server could not vouch for the sequence before it confirmed the subscription */
@@ -63,7 +65,8 @@ export function liveSubscription(s: Subscription): Subscription {
 }
 
 /**
- * Hand `from`'s subscribers over to `into`.
+ * Hand `from`'s subscribers over to `into`, and its variables: the server
+ * replaced the older subscribe with `from`'s, which a reconnect makes again.
  *
  * @param from - The subscription merged away
  * @param into - The subscription that takes over
@@ -74,5 +77,6 @@ export function liveSubscription(s: Subscription): Subscription {
 export function mergeSubscription(from: Subscription, into: Subscription): void {
   for (const subscriber of from.subscribers) into.subscribers.add(subscriber);
   from.subscribers.clear();
+  into.variables = from.variables;
   from.mergedInto = into;
 }

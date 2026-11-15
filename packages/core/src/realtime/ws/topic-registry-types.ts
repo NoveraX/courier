@@ -70,8 +70,12 @@ export interface TopicRegistry {
   dispatch(topic: string, payload: unknown): void;
   /** Tell a topic's subscribers of an error on it; the subscription goes on. */
   fail(topic: string, error: RealtimeError): void;
-  /** End a topic for its subscribers and forget it, so a reconnect does not renew it. */
-  end(topic: string, error: RealtimeError | undefined): void;
+  /**
+   * End a topic for its subscribers and forget it, so a reconnect does not
+   * renew it; with the `id` of the subscribe the end answers, only while
+   * that is the subscription's latest.
+   */
+  end(topic: string, error: RealtimeError | undefined, id?: string): void;
   /** End every topic, as `end` does. */
   endAll(error: RealtimeError | undefined): void;
   /** Get all currently subscribed topics, as the server knows them. */

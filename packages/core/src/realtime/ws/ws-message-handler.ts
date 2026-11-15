@@ -55,7 +55,7 @@ export function dispatchIncomingMessage(ctx: MessageDispatchContext, frame: Serv
       confirmSubscription(ctx, frame);
       return;
     case "complete":
-      ctx.topics.end(frame.topic, failureOf(frame.error));
+      ctx.topics.end(frame.topic, failureOf(frame.error), frame.id);
       return;
     case "data":
       if (frame.topic !== undefined && counts(ctx, frame.topic, frame.seq)) {

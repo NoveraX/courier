@@ -50,7 +50,9 @@ export function createTopicRegistry(options: TopicRegistryOptions = {}): TopicRe
     if (s.awaiting !== undefined) byId.delete(s.awaiting);
     s.awaiting = id;
     s.confirmed = false;
-    if (id !== undefined) byId.set(id, s);
+    if (id === undefined) return;
+    byId.set(id, s);
+    s.id = id;
   }
 
   function forget(s: Subscription): void {
@@ -60,9 +62,10 @@ export function createTopicRegistry(options: TopicRegistryOptions = {}): TopicRe
     options.onForget?.(s);
   }
 
-  function end(topic: string, error: RealtimeError | undefined): void {
+  function end(topic: string, error: RealtimeError | undefined, id?: string): void {
     const s = resolve(topic);
-    if (!s) return;
+    /* The end of a subscribe made before this subscription's latest: one it left, or one it renewed. */
+    if (!s || (id !== undefined && id !== s.id)) return;
     forget(s);
     const ended = [...s.subscribers];
     s.subscribers.clear();

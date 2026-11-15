@@ -64,7 +64,13 @@ export type ServerFrame =
       readonly recovered?: boolean | undefined;
     }
   | { readonly type: "unsubscribed"; readonly topic: string }
-  | { readonly type: "complete"; readonly topic: string; readonly error?: FrameError | undefined }
+  /** The subscription the subscribe with `id` made ended, failed when there is an `error` */
+  | {
+      readonly type: "complete";
+      readonly topic: string;
+      readonly id?: string | undefined;
+      readonly error?: FrameError | undefined;
+    }
   /** An event of the topic, numbered `seq`; or, without one, a frame for this connection alone */
   | {
       readonly type: "data";

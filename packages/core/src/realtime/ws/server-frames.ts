@@ -58,10 +58,11 @@ const READERS: Readonly<Record<string, Reader>> = {
   },
   unsubscribed: (f) => (isString(f.topic) ? { type: "unsubscribed", topic: f.topic } : undefined),
   complete: (f) =>
-    isString(f.topic)
+    isString(f.topic) && (f.id === undefined || isString(f.id))
       ? optional(f.error, isFrameError, (error) => ({
           type: "complete",
           topic: f.topic as string,
+          id: f.id as string | undefined,
           error,
         }))
       : undefined,

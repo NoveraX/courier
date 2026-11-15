@@ -6,6 +6,7 @@ import type { HandlerConfig } from "./handler-config";
 import { parseJsonEnvelope } from "./parse-envelope";
 import { readBodyText } from "./read-body-text";
 import { readUpload } from "./read-upload";
+import type { RecordDefaults } from "./record-defaults";
 
 export type { EnvelopeResult } from "./envelope-result";
 
@@ -22,7 +23,7 @@ export type { EnvelopeResult } from "./envelope-result";
  *
  * @param request - The proxy request
  * @param config - The handler's limits
- * @param defaults - The fields a record upload sent on as it arrives is written with ahead of its own
+ * @param defaults - What a record upload sent on as it arrives is written with besides its own fields
  * @returns The envelope, or why it is refused
  *
  * @example
@@ -34,7 +35,7 @@ export type { EnvelopeResult } from "./envelope-result";
 export async function readEnvelope(
   request: Request,
   config?: HandlerConfig,
-  defaults?: Readonly<Record<string, unknown>>,
+  defaults?: RecordDefaults,
 ): Promise<EnvelopeResult> {
   const contentType = request.headers.get("content-type") ?? "";
   /* Media types are case-insensitive (RFC 9110). */

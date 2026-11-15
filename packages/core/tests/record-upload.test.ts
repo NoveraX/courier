@@ -281,6 +281,41 @@ describe("a source's defaultBody", () => {
   });
 });
 
+describe("an endpoint's .defaults()", () => {
+  const record = () => ({ title: "Dune", cover: cover() });
+
+  it.each([
+    [
+      "that sends its variables",
+      endpoint
+        .post("save")
+        .variables<Record<string, unknown>>()
+        .defaults({ shelf: "new", title: "untitled" }),
+    ],
+    [
+      "whose closure sends them as a form",
+      endpoint
+        .variables<Record<string, unknown>>()
+        .via((http, fields) => http.post("save", undefined, { body: multipartBody(fields) }))
+        .defaults({ shelf: "new" }),
+    ],
+  ])(
+    "fill in the record the upstream gets, kept or sent on, as directly, for an endpoint %s",
+    async (_, save) => {
+      const api = await apiWith({ save }, { defaultBody: { apiVersion: "v2" } });
+
+      await directly(api).save?.(record());
+      await throughProxy(api, "save", record());
+      await throughProxy(api, "save", record(), { uploadMode: "stream" });
+
+      expect(got[0]?.parts).toContainEqual(["shelf", undefined, undefined, "new"]);
+      expect(got[0]?.parts).toContainEqual(["title", undefined, undefined, "Dune"]);
+      expect(got[1]?.parts).toEqual(got[0]?.parts);
+      expect(got[2]?.parts).toEqual(got[0]?.parts);
+    },
+  );
+});
+
 describe("a BigInt", () => {
   it("is refused on a page as in a direct call, where it sits, JSON or form alike", async () => {
     const api = await apiWith({ save: endpoint.post("save").variables<Record<string, unknown>>() });

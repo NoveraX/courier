@@ -7,17 +7,28 @@ import type { ProxyRouting } from "./read-routing";
 /* Whether an endpoint's closure names its own body, read once from the closure. */
 const NAMES_ITS_BODY = new WeakMap<object, boolean>();
 
+/** What a record upload sent on as it arrives is written with besides its own fields. */
+export interface RecordDefaults {
+  /** Its source's `defaultBody`, under the form. */
+  readonly body?: Readonly<Record<string, unknown>> | undefined;
+  /** Its endpoint's `.defaults()`, filled into the record where it leaves a variable out. */
+  readonly variables?: Readonly<Record<string, unknown>> | undefined;
+}
+
 /**
- * The fields a record upload sent on as it arrives is written with ahead of
- * its own: its source's `defaultBody`, which a direct call merges under a
- * record it builds the body from, and which a record kept gets as the call
- * builds its body. An endpoint whose closure names its own body takes none,
- * as it takes none from a direct call; nor does an upload kept, a form, or
- * an endpoint the server answers itself.
+ * What a record upload sent on as it arrives is written with, as a direct
+ * call writes it: its endpoint's `.defaults()`, filled into the record
+ * where it leaves a variable out, as they are into a direct call's
+ * variables, and its source's `defaultBody` under the form, which a direct
+ * call merges under a record it builds the body from. An endpoint whose
+ * closure names its own body takes no `defaultBody`, as it takes none from
+ * a direct call. An upload kept, whose call is given both as any call is, a
+ * form, which takes neither, and an endpoint the server answers itself are
+ * written with nothing.
  *
  * @param config - The handler's upload mode, and the sources it serves
  * @param routing - The endpoint the call names
- * @returns The fields, or `undefined` for none
+ * @returns The defaults, or `undefined` for none
  * @example
  * ```ts
  * const read = await readEnvelope(request, config, recordDefaults(config, routing));
@@ -26,17 +37,25 @@ const NAMES_ITS_BODY = new WeakMap<object, boolean>();
 export function recordDefaults(
   config: HandlerConfig | undefined,
   routing: ProxyRouting,
-): Readonly<Record<string, unknown>> | undefined {
+): RecordDefaults | undefined {
   if (config?.uploadMode !== "stream") return undefined;
   const sources = config.sources ?? getSources();
   const source =
     sources && Object.hasOwn(sources, routing.source) ? sources[routing.source] : undefined;
-  const defaults = source?.options?.defaultBody;
-  if (source === undefined || defaults === undefined || Object.keys(defaults).length === 0) {
-    return undefined;
-  }
-  const { endpoint, served } = resolveEndpoint(source, routing.group, routing.method);
-  return endpoint === undefined || served || namesItsBody(endpoint) ? undefined : defaults;
+  if (source === undefined) return undefined;
+  const { endpoint, schema, served } = resolveEndpoint(source, routing.group, routing.method);
+  if (endpoint === undefined || served) return undefined;
+  const defaultBody = someOf(source.options?.defaultBody);
+  const body = defaultBody === undefined || namesItsBody(endpoint) ? undefined : defaultBody;
+  const variables = someOf(schema?.defaults);
+  return body === undefined && variables === undefined ? undefined : { body, variables };
+}
+
+/* Fields, where there are any. */
+function someOf(
+  fields: Readonly<Record<string, unknown>> | undefined,
+): Readonly<Record<string, unknown>> | undefined {
+  return fields === undefined || Object.keys(fields).length === 0 ? undefined : fields;
 }
 
 function namesItsBody(probe: (...args: never[]) => unknown): boolean {

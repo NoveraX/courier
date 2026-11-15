@@ -16,6 +16,7 @@ import { streamedRecord } from "./multipart/streamed-record";
 import { UPLOAD_ROOM, UploadHold } from "./multipart/upload-hold";
 import { requestBodyStream } from "./read-body";
 import type { BodyDeadline } from "./read-chunk";
+import type { RecordDefaults } from "./record-defaults";
 import { parseWireOptionsJson } from "./wire-options";
 
 /** An upload read as far as its call needs before it runs, and what lets go of it. */
@@ -48,7 +49,7 @@ interface HeldUpload {
  * @param contentType - Its `Content-Type`, which names the boundary
  * @param config - The handler's limits and how it holds uploads
  * @param record - Whether the body is a record upload, `multipart/vnd.courier.variables`
- * @param defaults - The fields such an upload sent on as it arrives is written with ahead of its own
+ * @param defaults - What such an upload sent on as it arrives is written with besides its own fields
  * @returns The envelope and the `release` that lets go of what the upload
  *   holds, or why it is refused
  *
@@ -62,7 +63,7 @@ export async function readUpload(
   contentType: string,
   config: HandlerConfig | undefined,
   record = false,
-  defaults?: Readonly<Record<string, unknown>>,
+  defaults?: RecordDefaults,
 ): Promise<EnvelopeResult> {
   let boundary: string;
   try {
@@ -146,7 +147,7 @@ async function sentOn(
   due: BodyDeadline,
   config: HandlerConfig | undefined,
   record: boolean,
-  defaults: Readonly<Record<string, unknown>> | undefined,
+  defaults: RecordDefaults | undefined,
 ): Promise<HeldUpload> {
   /* A record's text is held while its form is sent on, so it is taken out of the room every
      upload shares, as a kept form's text is; a form's text goes on as it arrives. */

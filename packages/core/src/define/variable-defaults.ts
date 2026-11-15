@@ -64,6 +64,14 @@ export function variableDefaults(
  */
 export function withVariableDefaults(
   defaults: Readonly<Record<string, unknown>> | undefined,
+  variables: Readonly<Record<string, unknown>>,
+): Record<string, unknown>;
+export function withVariableDefaults(
+  defaults: Readonly<Record<string, unknown>> | undefined,
+  variables: unknown,
+): unknown;
+export function withVariableDefaults(
+  defaults: Readonly<Record<string, unknown>> | undefined,
   variables: unknown,
 ): unknown {
   if (defaults === undefined) return variables;

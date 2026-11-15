@@ -514,31 +514,46 @@ describe("an upload sent on as it arrives", () => {
   });
 
   it("is sent whole to an upstream that takes each piece within the call's timeout, however long the whole takes", async () => {
-    /* It stops after each of its first reads, for far less than the timeout and far longer
-       together, and then reads the rest as it comes. */
-    let stops = 40;
-    const slowly = (req: IncomingMessage, res: ServerResponse): void => {
-      req.on("data", () => {
-        if (stops-- <= 0) return;
-        req.pause();
-        setTimeout(() => req.resume(), 20);
-      });
-      readsAll(req, res);
-    };
-    const size = 16 * 1024 * 1024;
+    /* The API's fetch takes the upload a piece at a time, each 20 ms after the one before: every
+       wait far less than the timeout, the whole far longer. A socket takes the pieces as the
+       kernel's buffers empty, in lumps no test can time. It stops as fetch does once the call's
+       signal is aborted. */
     const timeout = 300;
-    const { handlePost, arrivals } = await proxyTo(
-      slowly,
-      { maxUploadBytes: 2 * size },
-      endpoint.post("upload").timeout(timeout),
-    );
+    let received = 0;
+    const takenSlowly = async (_url: string, init: object): Promise<Response> => {
+      const { body, signal } = init as RequestInit & { body: ReadableStream<Uint8Array> };
+      const reader = body.getReader();
+      for (let read = await reader.read(); !read.done; read = await reader.read()) {
+        received += read.value.length;
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        signal?.throwIfAborted();
+      }
+      return Response.json({});
+    };
+    const api = defineApi({
+      baseURL: "http://upstream.test",
+      fetch: takenSlowly,
+      groups: {
+        files: defineGroup({
+          prefix: "files",
+          expose: true,
+          endpoints: { upload: endpoint.post("upload").timeout(timeout) },
+        }),
+      },
+    });
+    const size = 2 * 1024 * 1024;
+    const { handlePost } = createHandler({
+      sources: { api },
+      uploadMode: "stream",
+      maxUploadBytes: 2 * size,
+    });
     const started = performance.now();
 
     const response = await handlePost(largeUpload(size));
 
     expect(response.status).toBe(200);
     expect(performance.now() - started).toBeGreaterThan(timeout);
-    expect((await arrivals[0])?.complete).toBe(true);
+    expect(received).toBeGreaterThan(size);
   });
 
   it("still times out an upstream that leaves the upload, sent whole, unanswered", async () => {

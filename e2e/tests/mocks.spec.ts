@@ -149,15 +149,18 @@ test("takes uploads as the Uploads card says, and shows a slow one in the log as
 }) => {
   await openMocks(page, "Network");
   const uploads = page.getByRole("region", { name: "Uploads" });
+  /* The card sends its conditions whole as each one changes, one after
+     another: the size limit, set last, is in force only once the speed and
+     the file types are. */
   await uploads
-    .getByRole("group", { name: "Size limit" })
-    .getByRole("button", { name: "1 MB" })
+    .getByRole("group", { name: "Upload speed" })
+    .getByRole("button", { name: "512 Kbps" })
     .click();
   await uploads.getByRole("textbox", { name: "File types" }).fill("image/*");
   await uploads.getByRole("textbox", { name: "File types" }).press("Enter");
   await uploads
-    .getByRole("group", { name: "Upload speed" })
-    .getByRole("button", { name: "512 Kbps" })
+    .getByRole("group", { name: "Size limit" })
+    .getByRole("button", { name: "1 MB" })
     .click();
 
   await expect

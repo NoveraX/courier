@@ -303,6 +303,15 @@ describe("Studio's MCP endpoint", () => {
     expect(unknown.isError).toBe(true);
   });
 
+  it("tells a client which tools reach past Studio: the replays alone", async () => {
+    const client = await modern();
+
+    const { tools } = await client.listTools();
+
+    const open = tools.filter((tool) => tool.annotations?.openWorldHint !== false);
+    expect(open.map((tool) => tool.name).sort()).toEqual(["replay", "replay_write"]);
+  });
+
   it("tells an agent where Courier's docs are, or how to install them", async () => {
     const client = await modern();
 

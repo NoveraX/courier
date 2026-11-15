@@ -45,6 +45,7 @@ export function auditTool(inputs: StudioAuditInputs): ServedTool {
       "Studio's audit of the requests it recorded, as its Audit page runs it: the score out of 100 and each finding on performance, reliability, security and best practices — errors first — with the endpoints it concerns, a few of the requests behind it (read one with request) and the suggested fix, often as code. Passed checks are left out unless asked for.",
     access: "read",
     idempotent: true,
+    openWorld: false,
     action: "read audit",
     inputSchema: {
       type: "object",

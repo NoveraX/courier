@@ -32,6 +32,7 @@ export function mocksTool(mocks: StudioMocks): ServedTool {
       "The mock servers Studio runs: each one's id, the source it serves, its status and address, its scenarios and the active one, and the network conditions set on it.",
     access: "read",
     idempotent: true,
+    openWorld: false,
     action: "read mocks",
     inputSchema: { type: "object", additionalProperties: false },
     outputSchema: {
@@ -80,6 +81,7 @@ export function mockScenarioTool(mocks: StudioMocks): ServedTool {
       "Switch a mock server to one of its scenarios, by the ids and names mocks lists. Its answers follow the scenario from the next request.",
     access: "write",
     idempotent: true,
+    openWorld: false,
     action: "switch a mock's scenario",
     inputSchema: {
       type: "object",

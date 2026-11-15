@@ -100,12 +100,16 @@ describe("the docs server", () => {
     expect(result.instructions).toContain("docs_search");
   });
 
-  it("offers three tools, each of which only reads", async () => {
+  it("offers three tools, each of which only reads, and reaches nothing past the docs", async () => {
     const server = docsServer(folder.dir);
     const listed = await call(server, await opened(server), "tools/list");
-    const tools = listed.tools as { name: string; annotations?: { readOnlyHint?: boolean } }[];
+    const tools = listed.tools as {
+      name: string;
+      annotations?: { readOnlyHint?: boolean; openWorldHint?: boolean };
+    }[];
     expect(tools.map((t) => t.name)).toEqual(["docs_search", "docs_read", "docs_list"]);
     expect(tools.every((t) => t.annotations?.readOnlyHint === true)).toBe(true);
+    expect(tools.every((t) => t.annotations?.openWorldHint === false)).toBe(true);
   });
 
   it("answers a search with the parts that match, as structured content", async () => {

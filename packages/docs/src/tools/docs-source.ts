@@ -46,13 +46,20 @@ export function docsSource(load: DocsLoader): DocsSource {
 }
 
 /**
- * A tool that only reads: the same call twice reads the same.
+ * A tool that only reads, and only the docs folder: the same call twice
+ * reads the same, and nothing past the folder is reached.
  *
  * @param tool - The tool, but for how it reads
  * @returns The tool
  */
 export function readTool(tool: Omit<ServedTool, "access" | "idempotent" | "action">): ServedTool {
-  return { ...tool, access: "read", idempotent: true, action: `read ${tool.name}` };
+  return {
+    ...tool,
+    access: "read",
+    idempotent: true,
+    openWorld: false,
+    action: `read ${tool.name}`,
+  };
 }
 
 /**

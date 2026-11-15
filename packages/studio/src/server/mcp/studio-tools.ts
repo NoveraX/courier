@@ -55,8 +55,15 @@ export function studioTools(deps: StudioToolDeps): ToolSet {
   ]);
 }
 
+/* A read of what Studio recorded: nothing past Studio is reached. */
 function readTool(tool: Omit<ServedTool, "access" | "idempotent" | "action">): ServedTool {
-  return { ...tool, access: "read", idempotent: true, action: `read ${tool.name}` };
+  return {
+    ...tool,
+    access: "read",
+    idempotent: true,
+    openWorld: false,
+    action: `read ${tool.name}`,
+  };
 }
 
 function requestsTool({ requestLog }: StudioToolDeps): ServedTool {

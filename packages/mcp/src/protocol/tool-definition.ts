@@ -76,7 +76,7 @@ export function toolDefinition(
       readOnlyHint: access === "read",
       destructiveHint: access === "destructive",
       idempotentHint: tool.idempotent,
-      openWorldHint: true,
+      openWorldHint: tool.openWorld ?? true,
     },
   };
 }

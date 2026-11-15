@@ -45,6 +45,12 @@ export interface ServedTool {
   readonly outputSchema?: JSONSchema | undefined;
   /** Whether making the same call twice does what making it once does. */
   readonly idempotent: boolean;
+  /**
+   * Whether it may reach past what the server holds — an API, the network —
+   * which a client is told as `openWorldHint`. True unless it says false, as
+   * a tool that works on the server's own files and state alone does.
+   */
+  readonly openWorld?: boolean | undefined;
   /** The call a person is asked to confirm, as it goes out: `POST shop.orders.cancel`. */
   readonly action: string;
   /** What is wrong with a call's arguments, found before a person is asked about it. */

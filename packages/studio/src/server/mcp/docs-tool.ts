@@ -112,6 +112,7 @@ export function docsTool(root: string): ServedTool {
     description: `Where Courier's documentation for the version this project installs is, as Markdown files to read before writing code that uses an @noverax/* package — with their index, ${PIECE_CHARS} characters at a time — or how to install it when the project has none.`,
     access: "read",
     idempotent: true,
+    openWorld: false,
     action: "read docs",
     inputSchema: {
       type: "object",

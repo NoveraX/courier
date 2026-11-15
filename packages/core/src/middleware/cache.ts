@@ -37,7 +37,8 @@ export interface CacheStore {
  *    `Cookie` and `Authorization`, kept as their SHA-256 digest; calls that
  *    send none share one. Without the API's `session` they are read at the
  *    cache's place in the chain, so it goes after the middleware that adds
- *    them: an answer sent with others than it read is not kept.
+ *    them. Placed before, it sees none: it keeps no answer sent with others,
+ *    but answers a signed-in user's call with what a guest's call fetched.
  *  - a function — returns the part of the key that identifies the caller.
  *    Read `ctx.request`, not `ctx.headers`: the latter has already been
  *    narrowed to what the allowlist forwards upstream.

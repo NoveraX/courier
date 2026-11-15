@@ -76,7 +76,7 @@ A webhook is a call made to your app by its sender, and [`defineWebhook`](/docs/
 
 ## Caches
 
-`cacheMiddleware({ scope: "public" })` never stores or serves an answer to a call that carries a session. `scope: "session"` keeps one partition per set of credentials a call sends, named by their SHA-256 digest so that no credential sits in a cache key, a Redis keyspace or a log line; without the API's `session` it reads them at its place in the chain, after the middleware that adds them, and keeps no answer sent with others. See [the cache middleware](/docs/middleware/built-in#cachemiddleware).
+`cacheMiddleware({ scope: "public" })` never stores or serves an answer to a call that carries a session. `scope: "session"` keeps one partition per set of credentials a call sends, named by their SHA-256 digest so that no credential sits in a cache key, a Redis keyspace or a log line; without the API's `session` it reads them at its place in the chain, so it goes after the middleware that adds them: placed before, it keeps no answer sent with others, but answers a signed-in user with what a guest's call fetched. See [the cache middleware](/docs/middleware/built-in#cachemiddleware).
 
 ## What Courier writes down
 

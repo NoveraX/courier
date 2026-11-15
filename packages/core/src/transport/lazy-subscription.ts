@@ -32,7 +32,8 @@ type Lazy = Subscription<unknown> & { send?: WSChannel<unknown, unknown>["send"]
  * once. One closed before then is never opened.
  *
  * A client that cannot be loaded ends it with a `ConnectionError` that
- * says so; what opening it throws ends it as it was thrown.
+ * says so; what opening it throws ends it as it was thrown. It ends once,
+ * on its close or on such a failure, whichever comes first.
  *
  * @param loading - The client, loading
  * @param open - Opens the subscription with the client, once it has loaded
@@ -96,6 +97,7 @@ function lazyOf<TClient>(
     tell("close", error ? { reason: "failed", error } : { reason: "closed" });
   };
   const fail = (error: unknown): void => {
+    if (closed) return;
     failure = error instanceof Error ? error : new ConnectionError(String(error));
     end(failure instanceof RealtimeError ? failure : new ConnectionError(failure.message));
   };
@@ -144,7 +146,7 @@ function lazyOf<TClient>(
       closed = true;
       waiting = [];
       if (real) real.close();
-      else end();
+      else if (!failure) end();
     },
     get status(): ConnectionStatus {
       return real?.status ?? (closed || failure ? "disconnected" : "connecting");

@@ -14,7 +14,7 @@ import type { SubscriptionSink } from "../src/realtime/subscription-driver";
 import { SubscriptionHandle } from "../src/realtime/subscription-handle";
 import type { ConnectionStatus } from "../src/realtime/types";
 import { lazySSEFactory, lazyWSChannelFactory } from "../src/transport/lazy-streams";
-import { lazyChannel, MAX_WAITING } from "../src/transport/lazy-subscription";
+import { lazyChannel, lazySubscription, MAX_WAITING } from "../src/transport/lazy-subscription";
 import type { SSEFactory, WSChannelFactory } from "../src/transport/types";
 
 /* A subscription the test runs by hand: what it is told, the test tells it. */
@@ -292,6 +292,48 @@ describe("what a subscription is before its client loads", () => {
     sub.close();
 
     expect(told).toEqual(["status disconnected", "close closed"]);
+  });
+
+  it.each([
+    [
+      "its client could not be loaded",
+      () =>
+        lazySubscription(
+          Promise.reject<SubscriptionHandle<unknown>>(new Error("chunk missing")),
+          (handle) => handle,
+        ),
+    ],
+    [
+      "opening it threw",
+      () =>
+        lazySubscription(Promise.resolve(), () => {
+          throw new ConnectionError("refused");
+        }),
+    ],
+  ])("ends once when %s, though it is closed after", async (_, make) => {
+    const sub = make();
+    const told: string[] = [];
+    sub.on("status", (status) => told.push(`status ${status}`));
+    sub.on("close", (info) => told.push(`close ${info.reason}`));
+    await expect.poll(() => told).toEqual(["status disconnected", "close failed"]);
+
+    sub.close();
+
+    expect(told).toEqual(["status disconnected", "close failed"]);
+  });
+
+  it("ends once when it is closed before its client turns out not to load", async () => {
+    const load = deferred<SubscriptionHandle<unknown>>();
+    const sub = lazySubscription(load.promise, (handle) => handle);
+    const told: string[] = [];
+    sub.on("error", () => told.push("error"));
+    sub.on("close", (info) => told.push(`close ${info.reason}`));
+
+    sub.close();
+    load.reject(new Error("chunk missing"));
+    await load.promise.catch(() => undefined);
+
+    expect(told).toEqual(["close closed"]);
   });
 
   it("tells the others when one listener throws, and logs it", async () => {

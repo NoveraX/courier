@@ -4,6 +4,7 @@ import { defineMiddleware } from "../middleware/define";
 import type * as RetryPolicies from "../middleware/retry-policies";
 import type { Middleware } from "../middleware/types";
 import { anySignal } from "./any-signal";
+import { failedLoad } from "./failed-load";
 import { ownField } from "./own";
 
 /* The policies' code, loaded with the first call whose endpoint has one. */
@@ -40,14 +41,14 @@ export function resolveMiddlewareChain(
 }
 
 function endpointPolicy(source: object, options: RetryOptions): Middleware {
-  /* Loaded with the first call that retries. A load that failed is tried again by the next call:
-     Node and React Native fetch the module anew, a browser may answer with the failure it kept,
-     and a module that threw as it ran throws again everywhere, as an ES module that failed so is
-     kept. */
+  /* Loaded with the first call that retries. A load that failed fails that call as `failedLoad`
+     says, and is tried again by the next: Node and React Native fetch the module anew, a browser
+     may answer with the failure it kept, and a module that threw as it ran throws again
+     everywhere, as an ES module that failed so is kept. */
   return defineMiddleware("retry", "wrap", async (ctx, next) => {
     retryPolicies ??= import("../middleware/retry-policies").catch((cause: unknown) => {
       retryPolicies = undefined;
-      throw cause;
+      throw failedLoad(cause);
     });
     return (await retryPolicies).endpointRetry(source, options)(ctx, next);
   });

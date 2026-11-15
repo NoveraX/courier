@@ -4,7 +4,9 @@ import { CourierError } from "./courier-error";
  * Thrown when a request got no answer: its host could not be resolved or
  * reached, the connection was refused, reset or closed before the answer
  * was whole, or the server's certificate was refused. An answer of any
- * status, however unwelcome, is an `HTTPError` instead.
+ * status, however unwelcome, is an `HTTPError` instead. A page's call fails
+ * with it too when a part of Courier the call needs did not arrive — a
+ * deployment took its file away — with what the browser said as its cause.
  *
  * Its message names the platform's code and nothing else — no host, no
  * address — so it is safe to show; what the platform said is its `cause`.

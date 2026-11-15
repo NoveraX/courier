@@ -11,7 +11,7 @@ import { buildPostPayload, buildRecordUploadPayload, isRecordUpload } from "./po
 import { proxyCancelPreviousOf } from "./proxy-cancel-previous";
 import { proxyRouting } from "./proxy-routing";
 import { resolveProxyPath } from "./resolve-path";
-import { sendFetch } from "./send-fetch";
+import { sendFetch, toldFailure } from "./send-fetch";
 import { splitProxyOptions } from "./split-options";
 import type { ProxyCallerDefaults, ProxyEndpointKind, UntypedCallerFn } from "./types";
 
@@ -118,9 +118,12 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
 
       /* Handed to fetch with no wait first: under `cancelPrevious` the older calls are cancelled
          as soon as this function first waits, and an identical newer read joins their request
-         only if it reached fetch by then. A record that holds a file waits for its encoding. */
+         only if it reached fetch by then. A record that holds a file waits for its encoding, and
+         an encoding that did not load fails the call as its sending would have. */
       const { contentType, ...payload } = isRecordUpload(variables)
-        ? await buildRecordUploadPayload(variables, call.server)
+        ? await buildRecordUploadPayload(variables, call.server).catch(async (error: unknown) => {
+            throw await toldFailure(error, signal, fetchCtx.onError);
+          })
         : buildPostPayload(variables, call.server);
       return sendFetch(
         "post",

@@ -32,12 +32,33 @@ export async function sendFetch(
     await ctx.onSuccess?.(data);
     return data;
   } catch (error) {
-    const failure = asProxyFailure(error, signalOf(options));
-    if (isRequestFailure(failure)) await ctx.onError?.(failure);
-    throw failure;
+    throw await toldFailure(error, signalOf(options), ctx.onError);
   } finally {
     if (response) studio?.proxyClientTiming(response, t0, tHeaders);
   }
+}
+
+/**
+ * What a proxy call that failed rejects with, as `asProxyFailure` makes it,
+ * once `onError` has been told of it where it is a request's failure.
+ *
+ * @param error - Whatever the call's sending rejected with
+ * @param signal - The call's signal
+ * @param onError - The caller's handler of a request's failure
+ * @returns The error to reject the call with
+ * @example
+ * ```ts
+ * throw await toldFailure(error, signal, onError);
+ * ```
+ */
+export async function toldFailure(
+  error: unknown,
+  signal: AbortSignal | undefined,
+  onError: ((error: RequestFailure) => void | Promise<void>) | undefined,
+): Promise<unknown> {
+  const failure = asProxyFailure(error, signal);
+  if (isRequestFailure(failure)) await onError?.(failure);
+  return failure;
 }
 
 function signalOf(options: Record<string, unknown>): AbortSignal | undefined {

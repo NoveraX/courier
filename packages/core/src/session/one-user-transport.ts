@@ -1,3 +1,4 @@
+import { failedLoad } from "../utils/failed-load";
 import type { CallSession } from "./call-session";
 import type { SessionTarget } from "./session-target";
 import type * as Transport from "./transport";
@@ -10,10 +11,11 @@ let transport: Promise<typeof Transport> | undefined;
  * sends a request somewhere other than the address its session was checked
  * for. Over HTTPS, to a path on the page's own origin and to the API's own
  * address, nothing more is asked of where a call goes. A load that failed
- * is tried again by the next call: Node and React Native fetch the module
- * anew, while a browser may answer with the failure it kept for the
- * module's address, and a module that threw as it ran throws again
- * everywhere, as an ES module that failed so is kept.
+ * fails that call as `failedLoad` says, and is tried again by the next
+ * call: Node and React Native fetch the module anew, while a browser may
+ * answer with the failure it kept for the module's address, and a module
+ * that threw as it ran throws again everywhere, as an ES module that failed
+ * so is kept.
  *
  * @returns The checks
  * @example
@@ -24,7 +26,7 @@ let transport: Promise<typeof Transport> | undefined;
 export function sessionTransport(): Promise<typeof Transport> {
   transport ??= import("./transport").catch((cause: unknown) => {
     transport = undefined;
-    throw cause;
+    throw failedLoad(cause);
   });
   return transport;
 }

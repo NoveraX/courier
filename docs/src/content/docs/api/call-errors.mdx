@@ -1,4 +1,4 @@
-export const metadata = { title: "NetworkError, TimeoutError & AbortError", description: "The errors a call rejects with when no answer came, its time ran out, or it was cancelled — with the platform's code, the scope of the time, the reason given, and the guards that tell them apart.", mode: "both", updated: "2026-11-13" }
+export const metadata = { title: "NetworkError, TimeoutError & AbortError", description: "The errors a call rejects with when no answer came, its time ran out, or it was cancelled — with the platform's code, the scope of the time, the reason given, and the guards that tell them apart.", mode: "both", updated: "2026-11-15" }
 
 A call that got no successful answer rejects with one of three errors, each telling what happened: an `HTTPError` holds an answer, a `NetworkError` says none came, a `TimeoutError` that the time ran out. None of them is ever the other dressed up: there is no `HTTPError` with status 0. A call that was cancelled rejects with an `AbortError`, which is no failure.
 
@@ -30,6 +30,8 @@ declare class NetworkError extends CourierError<"NETWORK_ERROR"> {
 ```
 
 Thrown when a request got no answer: its host could not be resolved or reached, the connection was refused, reset or closed before the answer was whole, or the server's certificate was refused. `cause` is what the platform rejected with — on Node, `TypeError: fetch failed` with the system's error under it, which Courier's log prints whole on the server.
+
+A page's call fails with it too when a part of Courier the call needs did not arrive. Courier loads some parts with the first call that needs them — the encoding of a record that holds a file, an endpoint's retry policy — and where the browser could not fetch one, because a deployment took its file away, say, the call reached no server: `cause` is what the browser said, and the next call asks for the part again. A call a server or an app makes straight to its API fails with what the platform said instead: there the code is on the device, so a part that does not load is a mistake in how it was deployed.
 
 - `systemCode` — the platform's code, where it gave one. A browser gives none: its `fetch` says only that it failed.
 - `message` — `"Network request failed (ECONNREFUSED)"`, or `"Network request failed"` without a code. It names no host and no address, so it is safe to show on a page.

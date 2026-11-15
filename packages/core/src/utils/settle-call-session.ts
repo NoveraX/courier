@@ -6,12 +6,13 @@ import type { CallRunner } from "./csrf-prime";
 import { buildErrorResponse } from "./execute-response";
 import type { FailureReport } from "./execute-studio";
 import type { CallTarget } from "./execute-target";
+import { failedLoad } from "./failed-load";
 
 const log = createLogger("Session");
 
 /* The token's request, loaded with the first write that asks for one first: a page whose writes
-   find their token, or that keeps none, never loads it. A load that failed is tried again by the
-   next such write. */
+   find their token, or that keeps none, never loads it. A load that failed fails that write as
+   `failedLoad` says, and is tried again by the next such write. */
 let primes: Promise<typeof CsrfPrime> | undefined;
 
 /** A call whose session is being settled. */
@@ -57,7 +58,7 @@ export async function settleCallSession(
   const { target, context, run } = call;
   primes ??= import("./csrf-prime").catch((cause: unknown) => {
     primes = undefined;
-    throw cause;
+    throw failedLoad(cause);
   });
   const settled = await toldIfFailed(
     primes.then(({ primeCsrfToken }) =>

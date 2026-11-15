@@ -23,7 +23,7 @@ In direct mode, the caller invokes `executeRequest` directly with the `api` obje
 
 ## Setting Up Callers
 
-### Direct mode — server-side<ModeBadge mode="direct" />
+### Direct mode — server-side
 
 ```ts title="lib/caller.ts" side="server"
 import { createCaller } from "@noverax/courier/server"
@@ -45,7 +45,7 @@ const user = await caller.users.getById({ id: "1" })
 Use direct mode whenever you have access to the `api` object: Server Components, Server Actions, API routes, CLI scripts, cron jobs, or any non-browser runtime.
 </Callout>
 
-### Proxy mode — browser-side<ModeBadge mode="proxy" />
+### Proxy mode — browser-side
 
 ```ts title="lib/caller.ts" side="page"
 import { createProxyCaller } from "@noverax/courier/client"

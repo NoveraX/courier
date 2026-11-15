@@ -6,11 +6,15 @@
  * line saying what runs there, and code fences exactly as written.
  */
 import { readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
 
 import { describe, expect, it } from "vitest"
 
+import { docPages } from "@/site/content/docs-files"
 import { jsxCells, jsxObjects, jsxRows, jsxText } from "@/site/content/jsx-literals"
 import { pageMarkdown } from "@/site/content/page-markdown"
+
+const DOCS = fileURLToPath(new URL("../../src/content/docs", import.meta.url))
 
 const PAGE = [
   'export const metadata = { title: "T", description: "D", mode: "proxy" }',
@@ -53,6 +57,17 @@ describe("a page as Markdown", () => {
   it("reads a callout as a quote under its title, and a mode badge as words", () => {
     expect(md).toContain("> **One instance**\n>\n> Create it once.\n>\n> Share it.")
     expect(md).toContain("## Setup (proxy mode)")
+  })
+
+  it("names a heading's mode once on every page, in its words or in its badge", () => {
+    const twice = /^#+ .*\b(direct|proxy) mode\b.*\(\1 mode\)/i
+    const headings = docPages(DOCS).flatMap((page) =>
+      pageMarkdown(page.source, page.title, page.description)
+        .split("\n")
+        .filter((line) => twice.test(line))
+        .map((line) => `${page.slug.join("/")}: ${line}`)
+    )
+    expect(headings).toEqual([])
   })
 
   it("gives each tab of tabbed code its own fence, escapes read", () => {

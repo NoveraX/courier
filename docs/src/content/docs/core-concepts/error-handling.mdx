@@ -61,7 +61,7 @@ try {
 
 ## Error Handling Patterns
 
-### Direct mode — try/catch<ModeBadge mode="direct" />
+### Direct mode — try/catch
 
 In Server Components and Server Actions, use standard try/catch to handle errors from `createCaller`:
 
@@ -98,7 +98,7 @@ async function showUser(id: string) {
 }
 ```
 
-### Proxy mode — React Query<ModeBadge mode="proxy" />
+### Proxy mode — React Query
 
 When using `createProxyQueryCaller`, React Query catches errors automatically and exposes them via the `error` property:
 

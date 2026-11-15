@@ -1,4 +1,3 @@
-import { ConnectionError } from "../realtime/realtime-error";
 import { lazyChannel, lazySubscription } from "./lazy-subscription";
 import type { SSEFactory, WSChannelFactory } from "./types";
 
@@ -69,22 +68,16 @@ export function lazyWSChannelFactory(
    at once as `lazy` makes it. */
 function lazyFactory<TOpened>(
   load: () => Promise<Factory<TOpened>>,
-  lazy: (opening: Promise<TOpened>) => TOpened,
+  lazy: (
+    loading: Promise<Factory<TOpened>>,
+    open: (create: Factory<TOpened>) => TOpened,
+  ) => TOpened,
   check?: Check,
 ): Factory<TOpened> {
   let loading: Promise<Factory<TOpened>> | undefined;
   return (group, method, variables, options) => {
     check?.(group, method, variables, options);
     loading ??= load();
-    return lazy(
-      loading.then(
-        (create) => create(group, method, variables, options),
-        /* Only a client that failed to load is reported as one; what the
-           loaded factory throws is passed on as it is. */
-        (error: unknown) => {
-          throw new ConnectionError(`The realtime client could not be loaded: ${String(error)}`);
-        },
-      ),
-    );
+    return lazy(loading, (create) => create(group, method, variables, options));
   };
 }

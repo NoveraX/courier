@@ -112,18 +112,18 @@ describe("a stream opened while its client loads", () => {
     await expect.poll(() => events).toEqual(["early"]);
   });
 
-  it("closes the loaded stream when it was closed before the client arrived", async () => {
-    const real = scripted();
+  it("never opens a stream closed before the client arrived", async () => {
+    const create = vi.fn<SSEFactory>();
     const load = deferred<SSEFactory>();
 
     const sub = lazySSEFactory(() => load.promise)("live", "ticks", undefined, {});
     sub.close();
-    load.resolve(() => real.handle);
+    load.resolve(create);
     await load.promise;
     const events: unknown[] = [];
     for await (const event of sub) events.push(event);
 
-    expect([real.handle.status, events, sub.status]).toEqual(["disconnected", [], "disconnected"]);
+    expect([create.mock.calls.length, events, sub.status]).toEqual([0, [], "disconnected"]);
   });
 
   it("fails with a ConnectionError when the client cannot be loaded", async () => {
@@ -161,18 +161,56 @@ describe("a channel opened while its client loads", () => {
     expect(accepted).toEqual([true, true]);
   });
 
-  it("drops what is sent once closed, and closes the channel that loads", async () => {
-    const real = channel();
+  it("drops what is sent once closed, and never opens the channel", async () => {
+    const create = vi.fn<WSChannelFactory>();
     const load = deferred<WSChannelFactory>();
 
     const ch = lazyWSChannelFactory(() => load.promise)("chat", "room", undefined, {});
     ch.close();
     const accepted = ch.send("late");
-    load.resolve(() => real.handle);
+    load.resolve(create);
     await load.promise;
     await Promise.resolve();
 
-    expect([accepted, real.sent, real.closed()]).toEqual([false, [], true]);
+    expect([accepted, create.mock.calls.length]).toEqual([false, 0]);
+  });
+
+  it("hears the open a channel tells as it is made, on a topic that runs already", async () => {
+    const opened: unknown[] = [];
+    const joining = () =>
+      new ChannelHandle<unknown, unknown>(
+        {
+          open: (to) => to.open({ resumed: false }),
+          reconnect: () => undefined,
+          close: () => undefined,
+        },
+        () => true,
+      );
+
+    const ch = lazyWSChannelFactory(async () => joining)("chat", "room", undefined, {});
+    ch.on("open", (info) => opened.push(info));
+
+    await expect.poll(() => opened).toEqual([{ first: true, resumed: false }]);
+    expect(ch.status).toBe("connected");
+  });
+
+  it("hears the error and the close a channel tells as it is made, on a connection that ended", async () => {
+    const told: unknown[] = [];
+    const ended = () =>
+      new ChannelHandle<unknown, unknown>(
+        {
+          open: (to) => to.end(new ForbiddenError("Refused for good")),
+          reconnect: () => undefined,
+          close: () => undefined,
+        },
+        () => true,
+      );
+
+    const ch = lazyWSChannelFactory(async () => ended)("chat", "room", undefined, {});
+    ch.on("error", (error) => told.push(error.code));
+    ch.on("close", (info) => told.push(info.reason));
+
+    await expect.poll(() => told).toEqual([4403, "failed"]);
   });
 
   it("tells a status the channel reached before it was followed", async () => {
@@ -280,7 +318,7 @@ describe("what a subscription is before its client loads", () => {
 describe("the error a channel whose client loads ends on", () => {
   it("is final as the loaded channel tells it, and one the channel goes on after is not", async () => {
     const loading = deferred<ChannelHandle<unknown, unknown>>();
-    const lazy = lazyChannel(loading.promise);
+    const lazy = lazyChannel(loading.promise, (handle) => handle);
     const finals: Array<[number, boolean]> = [];
     lazy.on("error", (error) => finals.push([error.code, isFinalError(error)]));
     const { handle, sink } = scriptedChannel();
@@ -297,7 +335,7 @@ describe("the error a channel whose client loads ends on", () => {
   });
 
   it("is final when the client cannot be loaded", async () => {
-    const lazy = lazyChannel(Promise.reject(new Error("chunk missing")));
+    const lazy = lazyChannel(Promise.reject(new Error("chunk missing")), (handle) => handle);
     const finals: Array<[RealtimeError, boolean]> = [];
     lazy.on("error", (error) => finals.push([error, isFinalError(error)]));
 

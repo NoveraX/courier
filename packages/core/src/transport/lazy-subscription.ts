@@ -24,36 +24,52 @@ type Lazy = Subscription<unknown> & { send?: WSChannel<unknown, unknown>["send"]
 /**
  * A subscription handed back at once for one whose client is still loading.
  * Kept small, as it is what a page carries before any stream opens: it
- * reports `connecting` and keeps its listeners, and once the real
- * subscription arrives hands them to it — from then on every event is the
- * real one's own. A status the real one reached before is said once.
+ * reports `connecting` and keeps its listeners, and once the client has
+ * loaded opens the real subscription and hands them to it as it does — so
+ * every event is the real one's own, those it tells as it is made too: its
+ * `open` on a topic that runs already, its `error` and `close` on a
+ * connection that has ended. A status it reached as it was made is said
+ * once. One closed before then is never opened.
  *
- * @param opening - The subscription being opened
+ * A client that cannot be loaded ends it with a `ConnectionError` that
+ * says so; what opening it throws ends it as it was thrown.
+ *
+ * @param loading - The client, loading
+ * @param open - Opens the subscription with the client, once it has loaded
  * @returns A subscription that becomes it
  * @example
  * ```ts
- * const sub = lazySubscription(import("../realtime/sse").then((m) => m.subscribeSSE(url)));
+ * const sub = lazySubscription(import("../realtime/sse"), (m) => m.subscribeSSE(url));
  * ```
  */
-export function lazySubscription(opening: Promise<Subscription<unknown>>): Subscription<unknown> {
-  return lazyOf(opening);
+export function lazySubscription<TClient>(
+  loading: Promise<TClient>,
+  open: (client: TClient) => Subscription<unknown>,
+): Subscription<unknown> {
+  return lazyOf(loading, open);
 }
 
 /**
  * A channel handed back at once for one whose client is still loading, as
  * {@link lazySubscription}; what is sent before it arrives waits for it.
  *
- * @param opening - The channel being opened
+ * @param loading - The client, loading
+ * @param open - Opens the channel with the client, once it has loaded
  * @returns A channel that becomes it
  */
-export function lazyChannel(
-  opening: Promise<WSChannel<unknown, unknown>>,
+export function lazyChannel<TClient>(
+  loading: Promise<TClient>,
+  open: (client: TClient) => WSChannel<unknown, unknown>,
 ): WSChannel<unknown, unknown> {
   /* Made to send, it has `send`. */
-  return lazyOf(opening, true) as WSChannel<unknown, unknown>;
+  return lazyOf(loading, open, true) as WSChannel<unknown, unknown>;
 }
 
-function lazyOf(opening: Promise<Subscription<unknown>>, sends?: boolean): Lazy {
+function lazyOf<TClient>(
+  loading: Promise<TClient>,
+  open: (client: TClient) => Subscription<unknown>,
+  sends?: boolean,
+): Lazy {
   let real: WSChannel<unknown, unknown> | undefined;
   let failure: Error | undefined;
   let closed = false;
@@ -79,19 +95,26 @@ function lazyOf(opening: Promise<Subscription<unknown>>, sends?: boolean): Lazy 
     tell("status", "disconnected");
     tell("close", error ? { reason: "failed", error } : { reason: "closed" });
   };
-  const loaded = opening.then(
-    (subscription) => {
-      /* A channel's opening gives a channel: the one shape `send` is read from. */
-      real = subscription as WSChannel<unknown, unknown>;
-      if (closed) return real.close();
+  const fail = (error: unknown): void => {
+    failure = error instanceof Error ? error : new ConnectionError(String(error));
+    end(failure instanceof RealtimeError ? failure : new ConnectionError(failure.message));
+  };
+  const loaded = loading.then(
+    (client) => {
+      if (closed) return;
+      try {
+        /* A channel's opening gives a channel: the one shape `send` is read from. */
+        real = open(client) as WSChannel<unknown, unknown>;
+      } catch (error) {
+        return fail(error);
+      }
+      /* Listening before this turn ends, they hear what it tells a microtask after it is made. */
       for (const entry of pending) entry[2] = real.on(entry[0], entry[1]);
       for (const data of waiting.splice(0)) real.send(data);
       if (real.status !== "connecting") tell("status", real.status);
     },
-    (error: unknown) => {
-      failure = error instanceof Error ? error : new ConnectionError(String(error));
-      end(failure instanceof RealtimeError ? failure : new ConnectionError(failure.message));
-    },
+    (error: unknown) =>
+      fail(new ConnectionError(`The realtime client could not be loaded: ${String(error)}`)),
   );
   const subscription: Lazy = {
     on(event, listener) {
@@ -111,8 +134,9 @@ function lazyOf(opening: Promise<Subscription<unknown>>, sends?: boolean): Lazy 
     },
     async *[Symbol.asyncIterator]() {
       await loaded;
+      if (closed) return;
       if (!real) throw failure;
-      if (!closed) yield* real;
+      yield* real;
     },
     reconnect: () => real?.reconnect(),
     close() {

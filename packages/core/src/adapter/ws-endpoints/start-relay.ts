@@ -89,10 +89,8 @@ export function startRelay(
   const sent = layerHeaders(sourceHeadersOf(opened.options), opened.headers);
   const options = upstreamOptions(target, opened.options, sent);
   /* The channel client loads with the first relayed channel. */
-  const upstream = lazyChannel(
-    import("../../realtime/ws-channel-client").then(({ executeWSChannel }) =>
-      executeWSChannel<unknown, unknown>(address.url, address.topic, variables, options),
-    ),
+  const upstream = lazyChannel(import("../../realtime/ws-channel-client"), ({ executeWSChannel }) =>
+    executeWSChannel<unknown, unknown>(address.url, address.topic, variables, options),
   );
   const tracked = ctx.subscriptionIds.get(topic);
   const unwatch =

@@ -1,4 +1,4 @@
-export const metadata = { title: "Middleware", description: "Intercept, transform, and observe every request with composable middleware functions.", mode: "both", updated: "2026-11-06" }
+export const metadata = { title: "Middleware", description: "Intercept, transform, and observe every request with composable middleware functions.", mode: "both", updated: "2026-11-16" }
 
 ## Overview
 
@@ -131,11 +131,11 @@ retryMiddleware({
   jitter: "full",                        // A random wait up to it (default: "full")
   maxDelay: 20_000,                      // The longest wait (default: 20000)
   deadline: 10_000,                      // All attempts and waits together (default: none)
-  retryOn: ["network", 429, 502, 503, 504], // Failures or a test (default: "network", 408, 425, 429, 500, 502, 503, 504)
+  retryOn: ["network", 429, 502, 503, 504], // Failures or a test (default: "network" but a refused certificate and undici's headersTimeout and bodyTimeout, and 408, 425, 429, 500, 502, 503, 504)
 })
 ```
 
-An answer's `Retry-After` is waited for as it asks, a timeout is not retried unless `retryOn` names it, and a budget shared by the policy's calls stops the retries while an upstream keeps failing. [Built-in Middleware](/docs/middleware/built-in#retrymiddleware) lists what is retried and why.
+An answer's `Retry-After` is waited for as it asks, a timeout is not retried unless `retryOn` names it, and a budget shared by the policy's calls stops the retries while an upstream keeps failing. A list in `retryOn` takes the default's place, its `"network"` every request that got no answer, a refused certificate among them. [Built-in Middleware](/docs/middleware/built-in#retrymiddleware) lists what is retried and why.
 
 ### rateLimitMiddleware
 

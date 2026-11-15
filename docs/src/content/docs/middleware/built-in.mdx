@@ -35,7 +35,7 @@ interface RetryOptions {
   maxDelay?: number
   /** The most time the attempts and the waits between them may take, in ms (default: none) */
   deadline?: number
-  /** Which failures deserve another attempt (default: "network" and 408, 425, 429, 500, 502, 503, 504) */
+  /** Which failures deserve another attempt (default: "network" but a refused certificate and undici's own headersTimeout and bodyTimeout, and 408, 425, 429, 500, 502, 503, 504) */
   retryOn?: readonly (number | "network" | "timeout")[] | ((failure: RetryFailure) => boolean)
   /** Retry endpoints that write as well as those that read (default: a write with an idempotency key, or one that never left) */
   mutations?: boolean
@@ -87,7 +87,7 @@ Where `retryOn` says nothing:
 | A response that fails its schema, a middleware that throws | never | whatever `retryOn` says |
 | A redirect an upload cannot follow — one its call refuses with `redirect: "error"`, one more than 20 hops in, one to another scheme — a `NetworkError` | never | the upstream would answer it with the same redirect, whatever `retryOn` says |
 
-Give `retryOn` the statuses of answers, `"network"` for a request that got no answer, `"timeout"` for one whose time ran out — or a test of why the attempt failed:
+Give `retryOn` the statuses of answers, `"network"` for a request that got no answer, `"timeout"` for one whose time ran out — or a test of why the attempt failed. A list takes the default's place: its `"network"` is every request that got no answer, a refused certificate and undici's own `headersTimeout` and `bodyTimeout` among them, so the default written out with one more status retries those too:
 
 ```ts title="lib/sources.ts"
 retryMiddleware({ retryOn: ["network", "timeout", 429, 502, 503, 504] })

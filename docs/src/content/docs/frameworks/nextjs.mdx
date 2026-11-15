@@ -354,6 +354,8 @@ Reading the request is what tells Next.js that a page belongs to one user and ha
 
 In every version, what Next.js stops a render with — a page found to be dynamic, a prerender postponed, a request read inside a cache — reaches Next.js as it came, and a build, a script or `generateStaticParams` finds no request and sends no session.
 
+The calls start from the user's cookies as `cookies()` holds them when the first call that carries the session is made — those a middleware set, and those a Server Action or a Route Handler set or deleted before it, included — and a cookie the request carried that nothing changed goes as it came. Each cookie the API sets or deletes then changes them for the calls still to come; one your code changes after that first call reaches the API with the browser's next request.
+
 The session cookies the API sets reach the browser from a Server Action and a Route Handler. Next.js lets no page set cookies while it renders, so a session the API renews during a render reaches that render's later calls only, and the log says so. Next.js also URL-encodes the value it writes, so a cookie whose value is not already URL-encoded is not handed over through it — relay it through the proxy route instead, which passes cookies on byte for byte.
 
 <Callout variant="info" title="Next.js does not tell a request's method">

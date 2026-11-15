@@ -1,4 +1,9 @@
-import { addressedOrigin, forwardedChain } from "@noverax/courier/internal";
+import {
+  addressedOrigin,
+  cookieHeaderAfter,
+  forwardedChain,
+  type SetCookie,
+} from "@noverax/courier/internal";
 import {
   createLogger,
   type IncomingRequest,
@@ -13,7 +18,15 @@ const log = createLogger("Next");
 /** The cookies `next/headers` hands a Server Action, a Route Handler or a page. */
 interface NextCookieStore {
   set(cookie: NextCookie): unknown;
-  getAll(): Array<{ name: string; value: string }>;
+  getAll(): HeldCookie[];
+}
+
+/** A cookie `cookies()` holds: one the request sent, its value decoded, or one set since. */
+interface HeldCookie {
+  name: string;
+  value: string;
+  expires?: Date | number | undefined;
+  maxAge?: number | undefined;
 }
 
 /** What `next/headers` exports, from Next.js 14, where both are synchronous, on. */
@@ -38,6 +51,13 @@ let nextHeaders: Promise<NextHeaders | undefined> | undefined;
  * an endpoint with `session: false` reads nothing. Where a page is being
  * built and no request exists, the calls carry nothing. What Next.js stops
  * a render with — a static page turning dynamic — passes through as it came.
+ *
+ * The calls start from the request's cookies as `cookies()` holds them when
+ * the first that carries the session is made — those a middleware or the
+ * request's code set or deleted before it included — a cookie Next.js holds
+ * as the browser sent it going byte for byte. Each cookie the API sets or
+ * deletes then changes them; one the request's code changes after that
+ * first call reaches the API with the browser's next request.
  *
  * Next.js lets a Server Action or a Route Handler set cookies, and not a
  * page while it renders: there a session the API renews reaches the calls
@@ -81,7 +101,7 @@ export async function nextIncomingRequest(): Promise<IncomingRequest | undefined
     key: headers,
     method: headers.has("next-action") ? "POST" : undefined,
     origin: addressedOrigin(headers),
-    headers: withMiddlewareCookies(headers, store),
+    headers: withCookiesHeld(headers, store),
     clientAddress: forwardedChain(undefined, headers.get("x-forwarded-for")),
     setCookie: (cookie) => setCookieIn(store, cookie),
     /* Next.js 14 keeps what a server's fetch answers in its data cache
@@ -116,19 +136,58 @@ async function headersOf(next: NextHeaders): Promise<Headers | undefined> {
   }
 }
 
-/* Next.js 16 gives a page the cookies its middleware set through `cookies()` alone, not the
-   request's `Cookie`: each one the browser did not send is added, the browser's own kept as sent. */
-function withMiddlewareCookies(headers: Headers, store: NextCookieStore): Headers {
+/* The request's cookies as `cookies()` holds them: the `Cookie` a Server Action and a Route Handler
+   read through `headers()` leaves out a middleware's cookies, and those the request's code set or
+   deleted. A cookie still held as Next.js read it from that header goes as the browser sent it,
+   byte for byte; one set since goes as Next.js writes it, URL-encoded; one deleted goes not, nor
+   one emptied, as the page a Server Action renders holds a deletion. */
+function withCookiesHeld(headers: Headers, store: NextCookieStore): Headers {
   const sent = headers.get("cookie");
-  const names = new Set((sent ?? "").split(";").map((pair) => pair.split("=", 1)[0]?.trim()));
-  const added = store
+  const read = readByNext(sent ?? "");
+  const changed = store
     .getAll()
-    .filter(({ name }) => !names.has(name))
-    .map(({ name, value }) => `${name}=${encodeURIComponent(value)}`);
-  if (added.length === 0) return headers;
+    .filter(({ name, value }) => read.get(name) !== value)
+    .map(setCookieOf);
+  if (changed.length === 0) return headers;
   const merged = new Headers(headers);
-  merged.set("cookie", [sent, ...added].filter(Boolean).join("; "));
+  merged.set("cookie", cookieHeaderAfter(sent, changed));
   return merged;
+}
+
+/* A `Cookie` header as Next.js reads it into `cookies()`: split at each `;` and the spaces after
+   it, a pair with no `=` read as `"true"`, each value URL-decoded — one that does not decode
+   passed over — and the last of a name winning. */
+function readByNext(header: string): Map<string, string> {
+  const read = new Map<string, string>();
+  for (const pair of header.split(/; */)) {
+    const at = pair.indexOf("=");
+    if (at === -1) {
+      if (pair !== "") read.set(pair, "true");
+      continue;
+    }
+    const value = decoded(pair.slice(at + 1));
+    if (value !== undefined) read.set(pair.slice(0, at), value);
+  }
+  return read;
+}
+
+function decoded(value: string): string | undefined {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return undefined;
+  }
+}
+
+/* A cookie `cookies()` holds changed, as the browser will send it after this response. */
+function setCookieOf({ name, value, expires, maxAge }: HeldCookie): SetCookie {
+  if (value === "") return { name, value, maxAge: 0 };
+  return {
+    name,
+    value: encodeURIComponent(value),
+    ...(maxAge !== undefined && { maxAge }),
+    ...(expires !== undefined && { expires: new Date(expires).toUTCString() }),
+  };
 }
 
 function setCookieIn(store: NextCookieStore, relayed: RelayedCookie): true | string {

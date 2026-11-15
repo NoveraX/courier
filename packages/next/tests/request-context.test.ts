@@ -13,9 +13,20 @@ const next = vi.hoisted(() => ({
 vi.mock("next/headers", () => next);
 
 import { courier, defineApi } from "@noverax/courier/define";
+import { RequestCookies } from "next/dist/compiled/@edge-runtime/cookies/index.js";
+import {
+  MutableRequestCookiesAdapter,
+  responseCookiesToRequestCookies,
+} from "next/dist/server/web/spec-extension/adapters/request-cookies.js";
 
 import { nextIncomingRequest, nextRequestContext } from "../src/request-context";
 import { createServerCaller } from "../src/server-caller";
+
+/* What `cookies()` gives a Server Action or a Route Handler, as Next.js makes it: the request's
+   cookies, which its code may set and delete. */
+function handlerCookies(cookie: string) {
+  return MutableRequestCookiesAdapter.wrap(new RequestCookies(new Headers({ cookie })));
+}
 
 /* Next.js's cookies: the ones the request sent, until a middleware or the code sets more. */
 const cookieStore = {
@@ -35,7 +46,7 @@ afterEach(() => {
 });
 
 describe("nextRequestContext", () => {
-  it("takes the cookies a middleware set, which Next.js 16 gives a page through cookies() alone", async () => {
+  it("takes the cookies a middleware set, which a Server Action's or a Route Handler's Cookie leaves out", async () => {
     cookieStore.getAll.mockReturnValueOnce([
       { name: "sid", value: "a1" },
       { name: "csrftoken", value: "t-fresh" },
@@ -44,6 +55,32 @@ describe("nextRequestContext", () => {
     const incoming = await nextIncomingRequest();
 
     expect(incoming?.headers.get("cookie")).toBe("sid=a1; csrftoken=t-fresh");
+  });
+
+  it("sends a cookie as the request's code set it, each other one byte for byte as the browser sent it", async () => {
+    const sent = "sid=OLD; pref=a%7Eb; dup=1; dup=2; bad=%E0%A4%A; b64=YWJj+ZGVm/==";
+    const cookies = handlerCookies(sent);
+    cookies.set("sid", "NEW one");
+    next.headers.mockResolvedValue(new Headers({ host: "app.example.com", cookie: sent }));
+    next.cookies.mockResolvedValue(cookies);
+
+    const incoming = await nextIncomingRequest();
+
+    expect(incoming?.headers.get("cookie")).toBe(
+      "pref=a%7Eb; dup=1; dup=2; bad=%E0%A4%A; b64=YWJj+ZGVm/==; sid=NEW%20one",
+    );
+  });
+
+  it("sends none the request's code deleted, in its handler as in the page it renders then", async () => {
+    const sent = "sid=OLD; theme=dark";
+    const cookies = handlerCookies(sent);
+    cookies.delete("sid");
+    next.headers.mockResolvedValue(new Headers({ host: "app.example.com", cookie: sent }));
+
+    next.cookies.mockResolvedValue(cookies);
+    expect((await nextIncomingRequest())?.headers.get("cookie")).toBe("theme=dark");
+    next.cookies.mockResolvedValue(responseCookiesToRequestCookies(cookies));
+    expect((await nextIncomingRequest())?.headers.get("cookie")).toBe("theme=dark");
   });
 
   it("reads a page's request: its origin, its cookies, the chain the proxy in front recorded", async () => {

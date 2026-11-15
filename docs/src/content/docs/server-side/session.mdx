@@ -163,7 +163,7 @@ What Next.js does differently — a Server Action, the Pages Router, a page buil
 
 ## What a call sends
 
-- The cookies `cookies` names, as the browser sent them, and the double-submit cookie — never the rest of your application's cookies.
+- The cookies `cookies` names, as the browser sent them, and the double-submit cookie — never the rest of your application's cookies. Next.js gives them as `cookies()` holds them, with those your code set or deleted before the first call: see [Next.js](/docs/frameworks/nextjs#the-users-session). On another framework, a cookie your code sets reaches the API with the browser's next request.
 - `Authorization: Bearer` with the `bearer` cookie's token, decoded where your framework's cookie API URL-encoded it.
 - The double-submit token on every verb a CSRF check guards — POST, PUT, PATCH, DELETE — and not on reads.
 - `Referer` set to your application's origin, where `csrf` is set: Django and Laravel Sanctum take a call for one of your pages only when it names one.

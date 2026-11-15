@@ -49,6 +49,14 @@ export interface SchemaNode {
    * refused.
    */
   checked?: boolean | undefined;
+  /**
+   * The schema takes values of other kinds too: it converts what it is
+   * given first — `z.coerce.number()` takes `"5"`, `z.preprocess()` takes
+   * whatever its function turns into one — or falls back on a value of its
+   * own, as `.catch()` and Valibot's `fallback` do. Its kind says what it
+   * gives, not all it takes.
+   */
+  lenient?: boolean | undefined;
 }
 
 /** The bounds, the format and the further checks a schema declares for its value. */
@@ -115,7 +123,7 @@ export function scalarNode(type: unknown): SchemaNode {
 }
 
 /**
- * A node with one of its flags set: optional, or nullable.
+ * A node with one of its flags set: optional, nullable, or lenient.
  *
  * @param node - The node, if read
  * @param flag - The flag to set
@@ -127,7 +135,7 @@ export function scalarNode(type: unknown): SchemaNode {
  */
 export function withFlag(
   node: SchemaNode | undefined,
-  flag: "optional" | "nullable",
+  flag: "optional" | "nullable" | "lenient",
 ): SchemaNode | undefined {
   return node && { ...node, [flag]: true };
 }

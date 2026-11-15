@@ -69,8 +69,14 @@ export const readJsonSchema: NodeReader = (schema) => {
   const values = member(schema, "enum");
   if (Array.isArray(values)) return nodeOf("enum", { values });
   if (type === "object") return objectOf(schema);
-  if (type === "array")
-    return nodeOf("array", { element: member(schema, "items"), ...limitsOf(schema) });
+  if (type === "array") {
+    /* A tuple's items differ by place, and its `items` holds those after its `prefixItems` alone. */
+    const tuple = member(schema, "prefixItems") !== undefined;
+    return nodeOf("array", {
+      element: tuple ? undefined : member(schema, "items"),
+      ...limitsOf(schema),
+    });
+  }
   const node = scalarNode(type);
   return node.checked ? node : { ...node, ...limitsOf(schema) };
 };

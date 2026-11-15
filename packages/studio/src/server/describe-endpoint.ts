@@ -1,5 +1,5 @@
 import type { ChainStep } from "@noverax/courier/internal";
-import type { extractSourceMap, SchemaField } from "@noverax/courier-studio-core";
+import type { extractSourceMap, SchemaField, SchemaOutline } from "@noverax/courier-studio-core";
 import type { AgentMark } from "./agent-marks";
 import type { PageMark } from "./page-marks";
 
@@ -30,6 +30,8 @@ export interface ScannedEndpointAnalysis {
   variablesStub?: Record<string, unknown>;
   /** The fields its variables schema declares, with their types and whether each is required. */
   variablesFields?: SchemaField[];
+  /** What its variables schema takes, for the Playground to check variables against before it sends them. */
+  variablesOutline?: SchemaOutline;
   /** What the endpoint's `.defaults()` fills in for a variable a call leaves out. */
   variablesDefaults?: Record<string, unknown>;
   /** A channel whose messages from the client have a schema. */
@@ -100,6 +102,7 @@ export function describeEndpoint(
       ...(endpoint.middleware?.length && { middleware: [...endpoint.middleware] }),
       ...(endpoint.variablesStub && { variablesStub: endpoint.variablesStub }),
       ...(endpoint.variablesFields && { variablesFields: endpoint.variablesFields }),
+      ...(endpoint.variablesOutline && { variablesOutline: endpoint.variablesOutline }),
       ...(endpoint.variablesDefaults && { variablesDefaults: endpoint.variablesDefaults }),
       ...(endpoint.hasReceiveSchema && { hasReceiveSchema: true as const }),
       ...(endpoint.served && { served: true as const }),

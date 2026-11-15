@@ -153,7 +153,7 @@ describe("the source catalogue", () => {
 });
 
 describe("an endpoint in the source catalogue", () => {
-  it("lists the fields an endpoint's variables schema declares, each with its type and whether it is required", async () => {
+  it("lists the fields an endpoint's variables schema declares, and what the schema takes", async () => {
     const config = [
       `import { courier, defineApi, defineGroup } from "@noverax/courier/define";`,
       `import { z } from "zod";`,
@@ -170,13 +170,21 @@ describe("an endpoint in the source catalogue", () => {
     const { sources } = buildSourceScan(loaded, importsSnapshotOf(undefined, root), root);
 
     const endpoints = sources[0]?.groups[0]?.endpoints ?? [];
-    expect(endpoints.find((e) => e.name === "create")?.analysis.variablesFields).toEqual([
+    const create = endpoints.find((e) => e.name === "create")?.analysis;
+    expect(create?.variablesFields).toEqual([
       { path: "sku", type: "string", required: true },
       { path: "qty", type: "number", required: false },
     ]);
-    expect(endpoints.find((e) => e.name === "list")?.analysis).not.toHaveProperty(
-      "variablesFields",
-    );
+    expect(create?.variablesOutline).toEqual({
+      type: "object",
+      fields: [
+        { name: "sku", required: true, outline: { type: "string" } },
+        { name: "qty", required: false, outline: { type: "number" } },
+      ],
+    });
+    const list = endpoints.find((e) => e.name === "list")?.analysis;
+    expect(list).not.toHaveProperty("variablesFields");
+    expect(list).not.toHaveProperty("variablesOutline");
   }, 30_000);
 
   it("says how a stream is carried and the middleware it runs through", async () => {

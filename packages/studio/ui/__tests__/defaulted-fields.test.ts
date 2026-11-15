@@ -15,6 +15,13 @@ const SCHEMA_FIELDS = [
   { path: "group", type: "string", required: true },
   { path: "groupBy", type: '"year" | "month"', required: true },
 ];
+const OUTLINE = {
+  type: "object",
+  fields: [
+    { name: "group", required: true, outline: { type: "string" } },
+    { name: "groupBy", required: true, outline: { type: "enum", values: ["year", "month"] } },
+  ],
+} as const;
 
 function endpoint(extra: Partial<CatalogEndpoint>): CatalogEndpoint {
   return {
@@ -69,13 +76,17 @@ describe("the Playground's variables", () => {
     expect(JSON.parse(variablesStubOf(def, 2))).toEqual({ id: "", limit: 5 });
   });
 
-  it("need no defaulted field to pass the check", () => {
-    const fields = fieldsWithDefaults(SCHEMA_FIELDS, { groupBy: "year" });
+  it("need no defaulted field to pass the check, and have a value given in its place checked", () => {
+    const def = { variablesOutline: OUTLINE, variablesDefaults: { groupBy: "year" } };
 
-    expect(variablesCheckOf('{ "group": "press" }', fields, "news").tone).toBe("ok");
-    expect(variablesCheckOf("{}", fields, "news")).toMatchObject({
+    expect(variablesCheckOf('{ "group": "press" }', def, "news").tone).toBe("ok");
+    expect(variablesCheckOf("{}", def, "news")).toMatchObject({
       tone: "warn",
       label: 'Missing required field "group"',
+    });
+    expect(variablesCheckOf('{ "group": "press", "groupBy": "week" }', def, "news")).toEqual({
+      tone: "warn",
+      label: '"groupBy" expects "year" | "month", got "week"',
     });
   });
 });

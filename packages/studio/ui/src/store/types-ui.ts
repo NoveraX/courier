@@ -1,6 +1,6 @@
 import type { ProxyPath } from "@noverax/courier";
 import type { ChainStep } from "@noverax/courier/internal";
-import type { SchemaField } from "@noverax/courier-studio-core";
+import type { SchemaField, SchemaOutline } from "@noverax/courier-studio-core";
 import type { AgentMark, PageMark } from "@/features/apis/types";
 import type { ProxyTiming, RequestStatus, RequestTiming } from "./types";
 
@@ -44,6 +44,8 @@ export interface CatalogEndpoint {
   variablesStub?: Record<string, unknown>;
   /** The fields the variables schema declares, with their types and whether each is required */
   variablesFields?: SchemaField[];
+  /** What the variables schema takes, which the Playground checks variables against before it sends them. */
+  variablesOutline?: SchemaOutline;
   /** What the endpoint's `.defaults()` fills in for a variable a call leaves out. */
   variablesDefaults?: Record<string, unknown>;
   origin: "scan" | "runtime" | "both";

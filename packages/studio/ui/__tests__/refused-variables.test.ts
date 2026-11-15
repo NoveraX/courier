@@ -63,6 +63,12 @@ const LIST: CatalogEndpoint = {
   hasResponseSchema: false,
   origin: "runtime",
   variablesFields: [{ path: "category", type: '"audio" | "desk"', required: false }],
+  variablesOutline: {
+    type: "object",
+    fields: [
+      { name: "category", required: false, outline: { type: "enum", values: ["audio", "desk"] } },
+    ],
+  },
 };
 
 describe("a call the input schema refused", () => {
@@ -115,7 +121,7 @@ describe("a call the input schema refused", () => {
       editorCheckOf(editors('{ "category": "desk" }'), LIST, "products.list", refusal),
     ).toEqual({
       tone: "ok",
-      label: "Valid · every field products.list requires is set",
+      label: "Valid · matches the types and required fields of products.list",
     });
     expect(
       editorCheckOf({ ...editors(RUN.variables), tab: "headers" }, LIST, "products.list", refusal)

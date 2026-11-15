@@ -9,6 +9,7 @@ import type {
 
 import { areMarksWellFormed } from "./endpoint-mark-guards";
 import { isPlainObject } from "./is-plain-object";
+import { isSchemaOutline } from "./schema-outline-guard";
 
 const IMPORT_TYPES: ReadonlySet<unknown> = new Set(["url", "file", "raw"]);
 const CHECK_STATUSES: ReadonlySet<unknown> = new Set(["up-to-date", "updates-available", "error"]);
@@ -127,6 +128,7 @@ function isScannedEndpoint(item: unknown): item is ScannedEndpoint {
     (analysis.middleware === undefined || isListOf(analysis.middleware, isChainStep)) &&
     (analysis.variablesStub === undefined || isPlainObject(analysis.variablesStub)) &&
     (analysis.variablesFields === undefined || isListOf(analysis.variablesFields, isSchemaField)) &&
+    (analysis.variablesOutline === undefined || isSchemaOutline(analysis.variablesOutline)) &&
     (analysis.variablesDefaults === undefined || isPlainObject(analysis.variablesDefaults)) &&
     (analysis.hasReceiveSchema === undefined || analysis.hasReceiveSchema === true) &&
     (analysis.served === undefined || analysis.served === true) &&

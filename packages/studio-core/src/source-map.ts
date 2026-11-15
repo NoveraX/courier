@@ -6,7 +6,7 @@ import {
   middlewareChainOf,
 } from "@noverax/courier/internal";
 import type { SourceMap } from "./events";
-import { extractSchemaFields, extractSchemaStub } from "./schema-fields";
+import { extractSchemaFields, extractSchemaOutline, extractSchemaStub } from "./schema-fields";
 import { isEndpoint, probeEndpoint } from "./source-map-probe";
 
 const ENDPOINT_SCHEMA = Symbol.for("courier.endpoint.schema");
@@ -90,6 +90,7 @@ export function extractEndpoints(
 
     const variablesStub = schema?.variables ? extractSchemaStub(schema.variables) : undefined;
     const variablesFields = schema?.variables ? extractSchemaFields(schema.variables) : undefined;
+    const variablesOutline = schema?.variables ? extractSchemaOutline(schema.variables) : undefined;
 
     const transport = schema?.transport;
     const middleware = chainOf(name);
@@ -103,6 +104,7 @@ export function extractEndpoints(
       ...(httpMethod && { httpMethod }),
       ...(variablesStub && { variablesStub }),
       ...(variablesFields && { variablesFields }),
+      ...(variablesOutline && { variablesOutline }),
       ...(schema?.defaults && { variablesDefaults: { ...schema.defaults } }),
       ...(transport && transport !== "http" && { transport }),
       ...(transport === "ws" && schema?.receive ? { hasReceiveSchema: true } : {}),

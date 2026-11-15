@@ -1,6 +1,5 @@
 import type { RequestEntry, ValidationIssue } from "@/store/types";
 import type { CatalogEndpoint, PlaygroundHistoryEntry } from "@/store/types-ui";
-import { fieldsWithDefaults } from "./defaulted-fields";
 import { headersCheckOf, type InputCheck, refusedCheckOf, variablesCheckOf } from "./input-check";
 import { parseJsonc } from "./jsonc-helpers";
 
@@ -49,8 +48,8 @@ function sameVariables(text: string, sent: string): boolean {
 /**
  * What the status line under the open editor says: the headers' check, the
  * form's note, the refusal of the variables the input schema refused when
- * they were last sent, or the variables checked against the endpoint's
- * fields — a field its `.defaults()` fills in asked of no one.
+ * they were last sent, or the variables checked against what the
+ * endpoint's schema takes, with what its `.defaults()` fills in.
  *
  * @param editors - The editors, which one is open, and whether a form goes instead
  * @param def - The endpoint's definition
@@ -75,6 +74,5 @@ export function editorCheckOf(
   if (refused && sameVariables(editors.variables, refused.variables)) {
     return refusedCheckOf(refused.issues);
   }
-  const fields = fieldsWithDefaults(def.variablesFields, def.variablesDefaults);
-  return variablesCheckOf(editors.variables, fields, name);
+  return variablesCheckOf(editors.variables, def, name);
 }

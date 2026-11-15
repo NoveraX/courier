@@ -53,6 +53,7 @@ function endpointsOf(endpoints: readonly ScannedEndpoint[]): Record<string, Cata
       }),
       ...(analysis.variablesStub && { variablesStub: analysis.variablesStub }),
       ...(analysis.variablesFields && { variablesFields: analysis.variablesFields }),
+      ...(analysis.variablesOutline && { variablesOutline: analysis.variablesOutline }),
       ...(analysis.variablesDefaults && { variablesDefaults: analysis.variablesDefaults }),
       ...(analysis.hasReceiveSchema && { hasReceiveSchema: true }),
       ...(analysis.served && { served: true }),

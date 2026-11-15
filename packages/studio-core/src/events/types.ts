@@ -1,7 +1,7 @@
 import type { ProxyPath } from "@noverax/courier";
 import type { ChainStep } from "@noverax/courier/internal";
 
-import type { SchemaField } from "../schema-fields";
+import type { SchemaField, SchemaOutline } from "../schema-fields";
 
 /** All Studio event types */
 export type EventType =
@@ -107,6 +107,8 @@ export interface SourceMap {
             variablesStub?: Record<string, unknown>;
             /** The fields the variables schema declares, with their types and whether each is required */
             variablesFields?: SchemaField[];
+            /** What the variables schema takes, for the Playground to check variables against before it sends them */
+            variablesOutline?: SchemaOutline;
             /** What the endpoint's `.defaults()` fills in for a variable a call leaves out */
             variablesDefaults?: Record<string, unknown>;
             /** Transport mode — only present for non-HTTP endpoints */

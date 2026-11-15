@@ -73,5 +73,5 @@ export { isSafeHttpOrigin } from "./lib/is-safe-http-origin";
 export { playgroundRequestId } from "./lib/playground-request-id";
 export { applyStoreReport, readStoreReport } from "./mock-store";
 export { type AnswerShape, answerShapeOf, type ShapeType } from "./runtime/answer-shape";
-export type { SchemaField } from "./schema-fields";
+export type { OutlineField, OutlineValue, SchemaField, SchemaOutline } from "./schema-fields";
 export { extractSourceMap } from "./source-map";

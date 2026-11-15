@@ -14,7 +14,10 @@ const users = defineGroup({
   prefix: "users",
   endpoints: {
     list: endpoint.get("").response(z.array(UserSchema)),
-    get: endpoint.get(":id").variables<{ id: string }>().response(UserSchema),
+    get: endpoint
+      .get(":id")
+      .variables(z.object({ id: z.string() }))
+      .response(UserSchema),
   },
 });
 

@@ -123,6 +123,19 @@ test("keeps the lines ⌘/ comments out selected, their marks with them", async 
   await expect.poll(selected).toBe('  // "a": 1,\n  // "b": 2');
 });
 
+test("says a value of another type than its schema takes, before the call is sent", async ({
+  page,
+}) => {
+  const editor = await variablesOf(page);
+  const status = page.getByRole("region", { name: "Request" }).getByRole("status");
+
+  await expect(status).toHaveText("Valid · matches the types and required fields of users.get");
+  await editor.fill('{ "id": 1 }');
+  await expect(status).toHaveText('"id" expects string, got number');
+  await editor.fill("{}");
+  await expect(status).toHaveText('Missing required field "id"');
+});
+
 test("records the call on the Timeline", async ({ page }) => {
   await page.goto(studio.link);
 

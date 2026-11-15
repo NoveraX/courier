@@ -58,6 +58,7 @@ export {
   subGroupsOf,
 } from "../define/group-tree";
 export { routesOf } from "../define/routes-of";
+export { withVariableDefaults } from "../define/variable-defaults";
 export { discoverAppOrigin } from "../discover-app-origin";
 export { readLogFormat } from "../logger/log-format";
 export { createRefusalLog } from "../logger/refusal-log";

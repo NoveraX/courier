@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  *
  * The Playground in the new shell: the endpoint the address names, its
- * variables checked against the fields its schema declares, the URL with
+ * variables checked against what its schema takes, the URL with
  * its parameters, where it is served and the proxy route, a send and its
  * answer as the inspector shows it, a send the input schema refused, the
  * headers a proxy did not forward,
@@ -35,6 +35,13 @@ const FIELDS = [
   { path: "name", type: "string", required: true },
   { path: "tags", type: "string[]", required: false },
 ];
+const OUTLINE = {
+  type: "object",
+  fields: [
+    { name: "name", required: true, outline: { type: "string" } },
+    { name: "tags", required: false, outline: { type: "array", items: { type: "string" } } },
+  ],
+} as const;
 
 /* The fixture's `users.create`, with the variables schema the scan read. */
 const SOURCE: ScannedSource = {
@@ -50,6 +57,7 @@ const SOURCE: ScannedSource = {
               hasVariablesType: true,
               variablesStub: { name: "" },
               variablesFields: FIELDS,
+              variablesOutline: OUTLINE,
             },
           }
         : e,
@@ -104,9 +112,17 @@ describe("the Playground", () => {
         .getAllByText(/required|optional/)
         .map((n) => n.textContent),
     ).toEqual(["required", "optional"]);
-    expect(status().textContent).toBe("Valid · every field users.create requires is set");
+    expect(status().textContent).toBe(
+      "Valid · matches the types and required fields of users.create",
+    );
     await settle(() => fireEvent.change(editor(), { target: { value: "{}" } }));
     expect(status().textContent).toBe('Missing required field "name"');
+    await settle(() => fireEvent.change(editor(), { target: { value: '{ "name": 1 }' } }));
+    expect(status().textContent).toBe('"name" expects string, got number');
+    await settle(() =>
+      fireEvent.change(editor(), { target: { value: '{ "name": "Ada", "tags": ["a", 2] }' } }),
+    );
+    expect(status().textContent).toBe('"tags[1]" expects string, got number');
     await settle(() => fireEvent.change(editor(), { target: { value: "{ nope" } }));
     expect(status().textContent).toMatch(/^Invalid JSON · /);
   });
@@ -228,7 +244,9 @@ describe("the Playground", () => {
       "Refused by the input schema · name — Expected string, received number",
     );
     await settle(() => fireEvent.change(editor(), { target: { value: '{ "name": "Ada" }' } }));
-    expect(status().textContent).toBe("Valid · every field users.create requires is set");
+    expect(status().textContent).toBe(
+      "Valid · matches the types and required fields of users.create",
+    );
   });
 
   it("lists the headers it wrote that the proxy did not forward, and how to carry them", async () => {

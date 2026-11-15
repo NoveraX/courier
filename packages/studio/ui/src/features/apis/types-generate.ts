@@ -7,7 +7,7 @@
 
 import type { ProxyPath } from "@noverax/courier";
 import type { ChainStep } from "@noverax/courier/internal";
-import type { SchemaField } from "@noverax/courier-studio-core";
+import type { SchemaField, SchemaOutline } from "@noverax/courier-studio-core";
 
 import type { AuthDraft } from "@/features/apis/import-auth-draft";
 import type { PlanConsent } from "@/features/apis/types-file-plan";
@@ -104,6 +104,8 @@ export interface EndpointAnalysis {
   variablesStub?: Record<string, unknown>;
   /** The fields its variables schema declares, with their types and whether each is required. */
   variablesFields?: SchemaField[];
+  /** What its variables schema takes, for the Playground to check variables against before it sends them. */
+  variablesOutline?: SchemaOutline;
   /** What the endpoint's `.defaults()` fills in for a variable a call leaves out. */
   variablesDefaults?: Record<string, unknown>;
   /** A channel whose messages from the client have a schema. */

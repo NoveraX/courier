@@ -1,4 +1,4 @@
-export const metadata = { title: "Inspector and Playground", description: "What Studio's views show of a call: a search through its whole answer, why a request got no answer and what usually fixes it, a stream that cannot connect, the variables the Playground starts with, what Cancel does, and variables the input schema refused.", mode: "both", updated: "2026-11-06" }
+export const metadata = { title: "Inspector and Playground", description: "What Studio's views show of a call: a search through its whole answer, why a request got no answer and what usually fixes it, a stream that cannot connect, the variables the Playground starts with and how it checks them before a send, what Cancel does, and variables the input schema refused.", mode: "both", updated: "2026-11-15" }
 
 What Studio's inspector and Playground show of a call, beyond its answer — how to find in a body of any size, why a call failed, how a stream stands, and what the Playground starts with and does.
 
@@ -17,6 +17,10 @@ A stream whose connection cannot be made says so, rather than standing open and 
 ## The Playground's first variables
 
 The Playground starts an endpoint with variables its schema takes, read from the schema itself — Zod, Valibot, or any schema with a `toJsonSchema()` such as ArkType's: a number at zero or at the bound nearest it, a string of its least length, an enum's or a literal's first value, the first option of a union its schema takes, a sample of a known string format — an email, a URL, a UUID, a date and a time, an IP address — and a nested object filled in the same way, three levels down. A field whose schema checks more than Studio reads — a pattern, a refinement, a `Date`, which JSON does not hold — is left out when it may be, and starts as the nearest value of its kind when it is required. A variable the endpoint's `.defaults()` fills in starts at its default.
+
+## Variables checked before a send
+
+The line under the variables checks them against what the endpoint's schema takes before they are sent, read from the schema as the first variables are: each value's type, the values an enum or a literal allows, a field the schema requires, and the form of a union a value is meant as — the one of its type, or the one a field such as `kind` names. It says where the first part that does not fit sits and what is wanted there — `"orderId" expects string, got number`, `"items[1].sku" expects string, got number`, `Missing required field "shipping.method"` — and that the variables match once nothing is out of place. A variable the endpoint's `.defaults()` fills in counts as set, and a value given in its place is checked. A part that converts what it is given or falls back on a value of its own — `z.coerce`, `.catch()`, `z.preprocess()`, Valibot's `fallback` — takes any value, and so does one of a type JSON has none for, a `Date` or a `bigint`. Bounds, formats and refinements are the schema's to check when the call is sent, and a refusal reads as [below](#variables-the-schema-refused).
 
 ## Cancel
 

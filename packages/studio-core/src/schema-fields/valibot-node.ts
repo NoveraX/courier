@@ -1,6 +1,6 @@
 import { member } from "../member";
 import { ownFieldsOf } from "./own-fields";
-import type { NodeReader } from "./schema-node";
+import type { NodeReader, SchemaNode } from "./schema-node";
 import { fieldsOf, listOf, nodeOf, scalarNode, valuesOf, withFlag } from "./schema-node";
 import { valibotLimits } from "./valibot-limits";
 
@@ -19,6 +19,12 @@ export const readValibot: NodeReader = (schema) => {
   if (member(schema, "kind") !== "schema") return undefined;
   const own = ownFieldsOf(schema);
   if (own !== undefined) return readValibot(own.fields);
+  const node = readValibotType(schema);
+  /* `fallback(schema, value)` gives its value for whatever the schema refuses. */
+  return member(schema, "fallback") === undefined ? node : withFlag(node, "lenient");
+};
+
+function readValibotType(schema: unknown): SchemaNode | undefined {
   const type = member(schema, "type");
   const wrapped = () => readValibot(member(schema, "wrapped"));
   switch (type) {
@@ -55,4 +61,4 @@ export const readValibot: NodeReader = (schema) => {
     default:
       return scalarNode(type);
   }
-};
+}

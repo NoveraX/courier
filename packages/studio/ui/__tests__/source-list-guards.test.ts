@@ -1,7 +1,8 @@
 /**
  * A declared source reaches the UI with what the Playground needs to send
- * to it — each stream's transport, its variables and the proxy routes —
- * and a source whose fields have the wrong shape is left out.
+ * to it — each stream's transport, its variables, what their schema takes,
+ * and the proxy routes — and a source whose fields have the wrong shape is
+ * left out.
  */
 import { describe, expect, it } from "vitest";
 
@@ -16,8 +17,23 @@ function withTicks(analysis: Record<string, unknown>): unknown {
   return { ...API, groups: [{ ...live, endpoints: [ticks] }] };
 }
 
+const OUTLINE = {
+  type: "object",
+  fields: [
+    { name: "count", required: true, outline: { type: "number" } },
+    {
+      name: "every",
+      required: false,
+      outline: { type: "union", options: [{ type: "enum", values: ["1s", 5] }, { type: "null" }] },
+    },
+    { name: "symbols", required: false, outline: { type: "array", items: { type: "string" } } },
+    { name: "since", required: true },
+    { name: "meta", required: false, outline: { type: "object" } },
+  ],
+};
+
 describe("a declared source from Studio", () => {
-  it("is shown with its transports, variable stubs and fields, and proxy routes", () => {
+  it("is shown with its transports, variable stubs, fields and outline, and proxy routes", () => {
     expect(
       isScannedSource(withTicks({ variablesStub: { count: 0 }, hasReceiveSchema: true })),
     ).toBe(true);
@@ -26,6 +42,7 @@ describe("a declared source from Studio", () => {
         withTicks({ variablesFields: [{ path: "count", type: "number", required: true }] }),
       ),
     ).toBe(true);
+    expect(isScannedSource(withTicks({ variablesOutline: OUTLINE }))).toBe(true);
   });
 
   it("keeps a stream the app serves itself", () => {
@@ -63,5 +80,29 @@ describe("a declared source from Studio", () => {
     ).toBe(false);
     expect(isScannedSource({ ...API, proxyPath: { http: 1 } })).toBe(false);
     expect(isScannedSource({ ...API, proxyPath: { ftp: "/files" } })).toBe(false);
+  });
+
+  it("is left out when its variables' outline has the wrong shape, or nests past any Studio writes", () => {
+    const deep = Array.from({ length: 100 }).reduce<unknown>(
+      (items) => ({ type: "array", items }),
+      { type: "string" },
+    );
+    const outlines = [
+      { type: "date" },
+      { type: "enum", values: ["a", {}] },
+      { type: "enum", values: [Number.NaN] },
+      { type: "object", fields: [{ name: "count", outline: { type: "number" } }] },
+      { type: "object", fields: { count: { type: "number" } } },
+      { type: "array", items: "string" },
+      { type: "union", options: [{ type: "string" }, { type: "tuple" }] },
+      deep,
+    ];
+
+    for (const variablesOutline of outlines) {
+      expect(
+        isScannedSource(withTicks({ variablesOutline })),
+        JSON.stringify(variablesOutline),
+      ).toBe(false);
+    }
   });
 });

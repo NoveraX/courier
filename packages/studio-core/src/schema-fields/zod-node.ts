@@ -28,6 +28,12 @@ export const readZodV4: NodeReader = (schema) => {
   if (def === undefined) return undefined;
   const own = ownFieldsOf(schema);
   if (own !== undefined) return withProtoField(readZodV4(own.fields), own.proto);
+  const node = readZodV4Def(def);
+  /* `z.coerce.number()` converts what it is given before it checks it. */
+  return member(def, "coerce") === true ? withFlag(node, "lenient") : node;
+};
+
+function readZodV4Def(def: unknown): SchemaNode | undefined {
   const type = member(def, "type");
   const inner = () => readZodV4(member(def, "innerType"));
   switch (type) {
@@ -42,8 +48,9 @@ export const readZodV4: NodeReader = (schema) => {
       return node && { ...node, optional: false };
     }
     case "readonly":
-    case "catch":
       return inner();
+    case "catch":
+      return withFlag(inner(), "lenient");
     case "pipe":
       return readZodV4(member(def, "in"));
     case "lazy":
@@ -67,7 +74,7 @@ export const readZodV4: NodeReader = (schema) => {
     default:
       return scalarNode(type);
   }
-};
+}
 
 /**
  * Reads a Zod v3 schema from its definition, `schema._def`.
@@ -83,6 +90,12 @@ export const readZodV3: NodeReader = (schema) => {
   const def = member(schema, "_def");
   const name = member(def, "typeName");
   if (typeof name !== "string") return undefined;
+  const node = readZodV3Def(def, name);
+  /* `z.coerce.number()` converts what it is given before it checks it. */
+  return member(def, "coerce") === true ? withFlag(node, "lenient") : node;
+};
+
+function readZodV3Def(def: unknown, name: string): SchemaNode | undefined {
   const inner = (key: string) => readZodV3(member(def, key));
   switch (name) {
     case "ZodOptional":
@@ -91,12 +104,17 @@ export const readZodV3: NodeReader = (schema) => {
     case "ZodNullable":
       return withFlag(inner("innerType"), "nullable");
     case "ZodReadonly":
-    case "ZodCatch":
       return inner("innerType");
+    case "ZodCatch":
+      return withFlag(inner("innerType"), "lenient");
     case "ZodBranded":
       return inner("type");
-    case "ZodEffects":
-      return refined(inner("schema"), member(member(def, "effect"), "type") === "refinement");
+    case "ZodEffects": {
+      /* A preprocess takes whatever its function turns into a value of the schema. */
+      const effect = member(member(def, "effect"), "type");
+      if (effect === "preprocess") return withFlag(inner("schema"), "lenient");
+      return refined(inner("schema"), effect === "refinement");
+    }
     case "ZodPipeline":
       return inner("in");
     case "ZodLazy":
@@ -123,4 +141,4 @@ export const readZodV3: NodeReader = (schema) => {
     default:
       return scalarNode(name.replace(/^Zod/, "").toLowerCase());
   }
-};
+}

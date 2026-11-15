@@ -1,3 +1,4 @@
+import { cookieHeaderAfter, parseSetCookie, type SetCookie } from "@noverax/courier/internal";
 import { webIncomingRequest, withIncomingRequest } from "@noverax/courier/node";
 import type { IncomingRequest, RelayedCookie } from "@noverax/courier/server";
 
@@ -16,11 +17,18 @@ interface AstroCookieOptions {
   encode: (value: string) => string;
 }
 
+/** The parts of Astro's `cookies` the session uses. */
+interface AstroCookies {
+  set(name: string, value: string, options: AstroCookieOptions): void;
+  /** The `Set-Cookie` headers of the cookies set or deleted while the request is served */
+  headers(): Iterable<string>;
+}
+
 /** The parts of Astro's middleware context the session reads. */
 export interface AstroRequestContext {
   request: Request;
   url: URL;
-  cookies: { set(name: string, value: string, options: AstroCookieOptions): void };
+  cookies: AstroCookies;
   readonly clientAddress: string;
 }
 
@@ -52,7 +60,10 @@ export function requestContext(): (
 }
 
 /**
- * An Astro request as the session reads it.
+ * An Astro request as the session reads it. Each call sends the request's
+ * cookies as `cookies` holds them when it is made: one the request's code
+ * set goes as Astro writes it to the browser, one it deleted goes not, and
+ * each other goes byte for byte as the browser sent it.
  *
  * @param context - The middleware's context
  * @returns The request, for `withIncomingRequest`
@@ -67,8 +78,21 @@ export function astroIncomingRequest(context: AstroRequestContext): IncomingRequ
       origin: context.url.origin,
       peerAddress: astroClientAddress(context),
     }),
+    cookieHeader: () => cookiesHeld(context),
     setCookie: (relayed) => setCookieIn(context, relayed),
   };
+}
+
+/* The request's cookies as `cookies` holds them: those it came with, and each set or deleted since
+   as Astro writes it to the browser, a deletion as a cookie long expired. */
+function cookiesHeld(context: AstroRequestContext): string {
+  const sent = context.request.headers.get("cookie") ?? "";
+  const written: SetCookie[] = [];
+  for (const header of context.cookies.headers()) {
+    const cookie = parseSetCookie(header);
+    if (cookie !== undefined) written.push(cookie);
+  }
+  return written.length === 0 ? sent : cookieHeaderAfter(sent, written);
 }
 
 function setCookieIn(context: AstroRequestContext, { cookie }: RelayedCookie): true | string {

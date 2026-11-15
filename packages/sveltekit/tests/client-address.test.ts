@@ -73,7 +73,7 @@ describe("a page SvelteKit renders", () => {
         headers: { "x-forwarded-for": "6.6.6.6, 198.51.100.4" },
       }),
       url: new URL("http://localhost:5173/"),
-      cookies: { set: () => undefined },
+      cookies: { getAll: () => [], set: () => undefined },
       getClientAddress: () => "10.0.0.2",
     };
 

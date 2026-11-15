@@ -1,4 +1,4 @@
-export const metadata = { title: "Astro", description: "Serve Courier's proxy from an Astro API route rendered on demand, with @noverax/courier-astro.", mode: "proxy", updated: "2026-11-07" }
+export const metadata = { title: "Astro", description: "Serve Courier's proxy from an Astro API route rendered on demand, with @noverax/courier-astro.", mode: "proxy", updated: "2026-11-15" }
 
 `@noverax/courier-astro` serves the proxy that `createProxyCaller` and `createProxyQueryCaller` call: one route answers every endpoint, reads over `GET` and writes over `POST`, and streams server-sent events.
 
@@ -115,7 +115,7 @@ import { requestContext } from "@noverax/courier-astro/request-context"
 export const onRequest = requestContext()
 ```
 
-Put it in a `sequence` when the application has middleware of its own. The session cookies the API sets reach the browser through Astro's `cookies`, as a page's own do. The request is kept in `AsyncLocalStorage`, which Node provides, and Cloudflare with the `nodejs_compat` flag; the main entry imports none of it. A page built ahead of time has no request, and its calls carry no one's session.
+Put it in a `sequence` when the application has middleware of its own. The session cookies the API sets reach the browser through Astro's `cookies`, as a page's own do. Each call sends the session cookies as `cookies` holds them when it is made: one your code set goes as Astro writes it to the browser, one it deleted goes not, and one the API set goes as the API wrote it until your code changes it again. The request is kept in `AsyncLocalStorage`, which Node provides, and Cloudflare with the `nodejs_compat` flag; the main entry imports none of it. A page built ahead of time has no request, and its calls carry no one's session.
 
 Astro reads the host a request was sent to only from a domain it is told to trust, and otherwise takes every request for `http://localhost`, where its own origin check refuses the application's forms and the session cannot tell your pages from another site's. Name your domains in `security.allowedDomains`:
 

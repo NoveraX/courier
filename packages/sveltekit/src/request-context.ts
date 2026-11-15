@@ -1,4 +1,4 @@
-import { forwardedChain } from "@noverax/courier/internal";
+import { cookieHeaderAfter, forwardedChain, type SetCookie } from "@noverax/courier/internal";
 import {
   createLogger,
   type IncomingRequest,
@@ -24,11 +24,17 @@ interface SvelteKitCookieOptions {
   encode: (value: string) => string;
 }
 
+/** The parts of SvelteKit's `cookies` the session uses. */
+interface SvelteKitCookies {
+  getAll(options: { decode(value: string): string }): Array<{ name: string; value: string }>;
+  set(name: string, value: string, options: SvelteKitCookieOptions): void;
+}
+
 /** The parts of SvelteKit's `RequestEvent` the session reads. */
 export interface SvelteKitServerEvent {
   request: Request;
   url: URL;
-  cookies: { set(name: string, value: string, options: SvelteKitCookieOptions): void };
+  cookies: SvelteKitCookies;
   getClientAddress(): string;
 }
 
@@ -78,7 +84,11 @@ function eventNow(getRequestEvent: () => SvelteKitServerEvent): IncomingRequest 
  * A SvelteKit request event, as the session reads it: its origin is the one
  * SvelteKit addresses the app by, its user's address the one the adapter
  * vouches for, and the cookies the API sets go to `cookies.set()` exactly
- * as the API wrote them.
+ * as the API wrote them. Each call sends the request's cookies as `cookies`
+ * holds them when it is made: one the request's code set goes URL-encoded,
+ * as SvelteKit's own `encode` writes it — also when `cookies.set()` was
+ * given another, which `cookies` does not tell — one it deleted goes not,
+ * and each other goes byte for byte as the browser sent it.
  *
  * @param event - The request event
  * @returns The request, as the session reads it
@@ -93,6 +103,7 @@ export function svelteKitIncomingRequest(event: SvelteKitServerEvent): IncomingR
     method: event.request.method,
     origin: event.url.origin,
     headers: event.request.headers,
+    cookieHeader: () => cookiesHeld(event),
     get clientAddress() {
       return forwardedChain(
         svelteKitClientAddress(event),
@@ -101,6 +112,24 @@ export function svelteKitIncomingRequest(event: SvelteKitServerEvent): IncomingR
     },
     setCookie: (relayed) => setCookieIn(event, relayed),
   };
+}
+
+/* The request's cookies as `cookies` holds them. `getAll` gives a cookie the request came with as
+   its `decode` makes it, and one set since as it was set: a cookie two decoders give back the same
+   was set since. SvelteKit deletes a cookie by setting it empty. */
+function cookiesHeld(event: SvelteKitServerEvent): string {
+  const sent = event.request.headers.get("cookie") ?? "";
+  const read = new Map(
+    event.cookies.getAll({ decode: () => "0" }).map(({ name, value }) => [name, value]),
+  );
+  const changed: SetCookie[] = [];
+  for (const { name, value } of event.cookies.getAll({ decode: () => "1" })) {
+    if (read.get(name) !== value) continue;
+    changed.push(
+      value === "" ? { name, value, maxAge: 0 } : { name, value: encodeURIComponent(value) },
+    );
+  }
+  return changed.length === 0 ? sent : cookieHeaderAfter(sent, changed);
 }
 
 function setCookieIn(event: SvelteKitServerEvent, { cookie }: RelayedCookie): true | string {

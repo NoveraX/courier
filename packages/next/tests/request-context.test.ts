@@ -54,7 +54,7 @@ describe("nextRequestContext", () => {
 
     const incoming = await nextIncomingRequest();
 
-    expect(incoming?.headers.get("cookie")).toBe("sid=a1; csrftoken=t-fresh");
+    expect(incoming?.cookieHeader?.()).toBe("sid=a1; csrftoken=t-fresh");
   });
 
   it("sends a cookie as the request's code set it, each other one byte for byte as the browser sent it", async () => {
@@ -66,9 +66,23 @@ describe("nextRequestContext", () => {
 
     const incoming = await nextIncomingRequest();
 
-    expect(incoming?.headers.get("cookie")).toBe(
+    expect(incoming?.cookieHeader?.()).toBe(
       "pref=a%7Eb; dup=1; dup=2; bad=%E0%A4%A; b64=YWJj+ZGVm/==; sid=NEW%20one",
     );
+  });
+
+  it("holds them as the request's code leaves them each time it is asked", async () => {
+    const sent = "sid=OLD; theme=dark";
+    const cookies = handlerCookies(sent);
+    next.headers.mockResolvedValue(new Headers({ host: "app.example.com", cookie: sent }));
+    next.cookies.mockResolvedValue(cookies);
+    const incoming = await nextIncomingRequest();
+
+    cookies.set("sid", "NEW");
+    expect(incoming?.cookieHeader?.()).toBe("theme=dark; sid=NEW");
+    cookies.delete("theme");
+
+    expect(incoming?.cookieHeader?.()).toBe("sid=NEW");
   });
 
   it("sends none the request's code deleted, in its handler as in the page it renders then", async () => {
@@ -78,9 +92,9 @@ describe("nextRequestContext", () => {
     next.headers.mockResolvedValue(new Headers({ host: "app.example.com", cookie: sent }));
 
     next.cookies.mockResolvedValue(cookies);
-    expect((await nextIncomingRequest())?.headers.get("cookie")).toBe("theme=dark");
+    expect((await nextIncomingRequest())?.cookieHeader?.()).toBe("theme=dark");
     next.cookies.mockResolvedValue(responseCookiesToRequestCookies(cookies));
-    expect((await nextIncomingRequest())?.headers.get("cookie")).toBe("theme=dark");
+    expect((await nextIncomingRequest())?.cookieHeader?.()).toBe("theme=dark");
   });
 
   it("reads a page's request: its origin, its cookies, the chain the proxy in front recorded", async () => {
@@ -102,7 +116,7 @@ describe("nextRequestContext", () => {
       clientAddress: "198.51.100.4, 203.0.113.9",
       fetchInit: { cache: "no-store" },
     });
-    expect(incoming?.headers.get("cookie")).toBe("sid=a1");
+    expect(incoming?.cookieHeader?.()).toBe("sid=a1");
   });
 
   it("reads a Server Action's request as a POST", async () => {

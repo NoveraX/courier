@@ -202,7 +202,7 @@ import { requestContextHandle } from "@noverax/courier-sveltekit/handle"
 export const handle = requestContextHandle()
 ```
 
-The session cookies the API sets go to `cookies.set()` exactly as the API wrote them, a `load` function's included.
+The session cookies the API sets go to `cookies.set()` exactly as the API wrote them, a `load` function's included, and each call sends the session cookies as `cookies` holds them when it is made, those your code set or deleted since included.
 
 <br />
 

@@ -10,7 +10,11 @@ import { createCaller } from "@noverax/courier";
 import { courier, defineApi } from "@noverax/courier/define";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { type AstroRequestContext, requestContext } from "../src/request-context";
+import {
+  type AstroRequestContext,
+  astroIncomingRequest,
+  requestContext,
+} from "../src/request-context";
 
 let upstream: Server;
 let api: ReturnType<typeof accounts>;
@@ -54,20 +58,67 @@ afterAll(async () => {
   await new Promise<void>((resolve) => upstream.close(() => resolve()));
 });
 
-/* What Astro hands a middleware, as far as the session reads it. */
-function contextFor(cookie: string, set = vi.fn()): AstroRequestContext {
-  const request = new Request("http://localhost:4321/account", { headers: { cookie } });
+/* `cookies` as Astro makes it: each cookie set or deleted is held as the `Set-Cookie` it writes,
+   its value URL-encoded unless the call encodes it, a deletion as `deleted`, long expired. */
+function astroCookies(set: (name: string, value: string, options?: object) => void) {
+  const written = new Map<string, string>();
   return {
+    set(name: string, value: string, options?: { encode?: (value: string) => string }) {
+      set(name, value, options);
+      written.set(name, `${name}=${(options?.encode ?? encodeURIComponent)(value)}; Path=/`);
+    },
+    delete(name: string) {
+      written.set(name, `${name}=deleted; Expires=Thu, 01 Jan 1970 00:00:00 GMT`);
+    },
+    headers: () => written.values(),
+  };
+}
+
+/* What Astro hands a middleware, as far as the session reads it. */
+function contextFor(cookie: string, set = vi.fn()) {
+  const request = new Request("http://localhost:4321/account", { headers: { cookie } });
+  const cookies = astroCookies(set);
+  const context: AstroRequestContext = {
     request,
     url: new URL(request.url),
-    cookies: { set },
+    cookies,
     get clientAddress() {
       return "127.0.0.1";
     },
   };
+  return Object.assign(context, { cookies });
 }
 
+describe("astroIncomingRequest", () => {
+  it("holds the cookies as the request's code leaves them each time it is asked", () => {
+    const context = contextFor("sid=OLD; pref=a%7Eb; b64=YWJj+ZGVm/==; theme=dark");
+    const incoming = astroIncomingRequest(context);
+
+    context.cookies.set("sid", "NEW one");
+    context.cookies.delete("theme");
+
+    expect(incoming.cookieHeader?.()).toBe("pref=a%7Eb; b64=YWJj+ZGVm/==; sid=NEW%20one");
+  });
+});
+
 describe("requestContext", () => {
+  it("sends each call the cookies as the request's code leaves them, and the API's as it wrote it", async () => {
+    const context = contextFor("sid=ada");
+
+    const seen = await requestContext()(context, async () => {
+      const first = await api.me();
+      await api.renew();
+      const renewed = await api.me();
+      context.cookies.set("sid", "mine");
+      const mine = await api.me();
+      context.cookies.delete("sid");
+      const none = await api.me();
+      return Response.json([first, renewed, mine, none].map((answer) => answer.cookie));
+    }).then((response) => response.json());
+
+    expect(seen).toEqual(["sid=ada", "sid=re%20newed", "sid=mine", null]);
+  });
+
   it("serves each of many concurrent requests with its own session", async () => {
     const middleware = requestContext();
     const users = Array.from({ length: 20 }, (_, at) => `user${at}`);

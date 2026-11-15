@@ -51,6 +51,16 @@ export interface IncomingRequest {
   readonly origin?: string | undefined;
   /** The request's headers */
   readonly headers: HeaderReader;
+  /**
+   * The request's cookies as the framework holds them when asked — the
+   * browser's, and those the request's code has set or deleted since — as a
+   * `Cookie` header carries them, each value as the browser sends it once
+   * the response has set it. Asked as each call reads the session, and as
+   * each cookie the API sets is handed on, so a change the code makes
+   * between two calls reaches the second. Absent, the request's cookies are
+   * the `Cookie` of `headers` for as long as it is served.
+   */
+  readonly cookieHeader?: (() => string) | undefined;
   /** The user's address, as the framework vouches for it */
   readonly clientAddress?: string | undefined;
   /**

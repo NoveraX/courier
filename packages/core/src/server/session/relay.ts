@@ -40,11 +40,10 @@ export function relayCookies(
   for (const header of setCookiesOf(upstream)) {
     const cookie = parseSetCookie(header);
     if (cookie === undefined || !kept(cookie.name)) continue;
-    keepCookie(incoming, cookie);
     const relayed = options.relay === false ? undefined : relayedFor(cookie, incoming);
-    if (relayed === undefined) continue;
-    if (toResponse) forResponse.push(relayed.header);
-    else handOver(incoming.setCookie?.(relayed), cookie.name);
+    if (relayed !== undefined && toResponse) forResponse.push(relayed.header);
+    else if (relayed !== undefined) handOver(incoming.setCookie?.(relayed), cookie.name);
+    keepCookie(incoming, cookie);
   }
   return forResponse;
 }

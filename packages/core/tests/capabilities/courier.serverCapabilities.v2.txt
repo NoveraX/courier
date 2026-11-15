@@ -102,6 +102,7 @@ InProcessRoute.transport: transport(served: IncomingRequest | undefined): (url: 
 InProcessRoute.url: readonly url: string;
 IncomingRequest: interface IncomingRequest
 IncomingRequest.clientAddress: readonly clientAddress?: string | undefined;
+IncomingRequest.cookieHeader: readonly cookieHeader?: (() => string) | undefined;
 IncomingRequest.fetchInit: readonly fetchInit?: Readonly<RequestInit> | undefined;
 IncomingRequest.headers: readonly headers: HeaderReader;
 IncomingRequest.key: readonly key: object;

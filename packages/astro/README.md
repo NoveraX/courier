@@ -154,7 +154,7 @@ import { requestContext } from "@noverax/courier-astro/request-context"
 export const onRequest = requestContext()
 ```
 
-The session cookies the API sets reach the browser through Astro's `cookies`. Name your domains in `security.allowedDomains`, or Astro takes every request for `http://localhost`. It needs `AsyncLocalStorage`: Node, or Cloudflare with `nodejs_compat`.
+The session cookies the API sets reach the browser through Astro's `cookies`, and each call sends the session cookies as `cookies` holds them when it is made, those your code set or deleted since included. Name your domains in `security.allowedDomains`, or Astro takes every request for `http://localhost`. It needs `AsyncLocalStorage`: Node, or Cloudflare with `nodejs_compat`.
 
 <br />
 

@@ -2,10 +2,18 @@ import { cookieJarOf } from "../../session/cookie-header";
 import type { IncomingRequest } from "../../session/incoming-request";
 import { isDeletion, type SetCookie } from "../../session/set-cookie";
 
+/** A cookie the API set or deleted, as the calls made for the request still send it. */
+interface KeptCookie {
+  /** The value it set; `undefined` for one it deleted */
+  readonly value: string | undefined;
+  /** What the request held of the cookie once it was handed on */
+  readonly held: string | undefined;
+}
+
 /** What the calls made for one request share while it is served. */
 interface RequestState {
-  /** Its cookies as the API has left them so far, read from its `Cookie` header first */
-  jar?: Map<string, string>;
+  /** The cookies the API has set or deleted for it so far, by name */
+  kept?: Map<string, KeptCookie>;
   /** The id its calls are made under, when they forward one */
   requestId?: string;
 }
@@ -28,10 +36,12 @@ function stateOf(incoming: IncomingRequest): RequestState {
 }
 
 /**
- * The cookies of the request being served as the calls made for it see them:
- * the ones its `Cookie` header brought, changed by every cookie the API has
- * set or deleted since. A session the API renews in one call is the one the
- * next call sends, before the browser has even received it.
+ * The cookies of the request being served as a call made for it sees them:
+ * the request's own, as its framework holds them when the call is made,
+ * with each the API has set or deleted since. A session the API renews in
+ * one call is the one the next call sends, before the browser has even
+ * received it — unless the request's code changes that cookie after it was
+ * handed on, which makes the code's change the later one.
  *
  * @param incoming - The request being served
  * @returns Its cookies by name
@@ -41,17 +51,21 @@ function stateOf(incoming: IncomingRequest): RequestState {
  * ```
  */
 export function cookieJarFor(incoming: IncomingRequest): ReadonlyMap<string, string> {
-  return jarOf(incoming);
-}
-
-function jarOf(incoming: IncomingRequest): Map<string, string> {
-  const state = stateOf(incoming);
-  state.jar ??= cookieJarOf(incoming.headers.get("cookie"));
-  return state.jar;
+  const jar = heldCookies(incoming);
+  for (const [name, { value, held }] of stateOf(incoming).kept ?? []) {
+    /* The request holds the cookie as it did once the API's was handed on: nothing changed it since. */
+    if (jar.get(name) !== held) continue;
+    if (value === undefined) jar.delete(name);
+    else jar.set(name, value);
+  }
+  return jar;
 }
 
 /**
  * Record a cookie the API set, or deleted, for the rest of the request.
+ * Recorded once it has been handed on, as the request then holds it: a
+ * framework that holds what it was handed holds the API's cookie, and one
+ * that holds it otherwise later is holding a change the request's code made.
  *
  * @param incoming - The request being served
  * @param cookie - The cookie, as the API set it
@@ -61,9 +75,18 @@ function jarOf(incoming: IncomingRequest): Map<string, string> {
  * ```
  */
 export function keepCookie(incoming: IncomingRequest, cookie: SetCookie): void {
-  const jar = jarOf(incoming);
-  if (isDeletion(cookie)) jar.delete(cookie.name);
-  else jar.set(cookie.name, cookie.value);
+  const state = stateOf(incoming);
+  state.kept ??= new Map();
+  state.kept.set(cookie.name, {
+    value: isDeletion(cookie) ? undefined : cookie.value,
+    held: heldCookies(incoming).get(cookie.name),
+  });
+}
+
+/* The request's cookies as its framework holds them now, or as it brought them. */
+function heldCookies(incoming: IncomingRequest): Map<string, string> {
+  const { cookieHeader } = incoming;
+  return cookieJarOf(cookieHeader === undefined ? incoming.headers.get("cookie") : cookieHeader());
 }
 
 /**

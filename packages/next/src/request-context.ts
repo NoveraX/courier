@@ -52,12 +52,11 @@ let nextHeaders: Promise<NextHeaders | undefined> | undefined;
  * built and no request exists, the calls carry nothing. What Next.js stops
  * a render with — a static page turning dynamic — passes through as it came.
  *
- * The calls start from the request's cookies as `cookies()` holds them when
- * the first that carries the session is made — those a middleware or the
- * request's code set or deleted before it included — a cookie Next.js holds
- * as the browser sent it going byte for byte. Each cookie the API sets or
- * deletes then changes them; one the request's code changes after that
- * first call reaches the API with the browser's next request.
+ * Each call sends the request's cookies as `cookies()` holds them when it
+ * is made — those a middleware or the request's code set or deleted
+ * included — a cookie Next.js holds as the browser sent it going byte for
+ * byte. A cookie the API sets or deletes goes as the API wrote it with the
+ * calls that follow, until the request's code changes it again.
  *
  * Next.js lets a Server Action or a Route Handler set cookies, and not a
  * page while it renders: there a session the API renews reaches the calls
@@ -101,7 +100,8 @@ export async function nextIncomingRequest(): Promise<IncomingRequest | undefined
     key: headers,
     method: headers.has("next-action") ? "POST" : undefined,
     origin: addressedOrigin(headers),
-    headers: withCookiesHeld(headers, store),
+    headers,
+    cookieHeader: () => cookiesHeld(headers, store),
     clientAddress: forwardedChain(undefined, headers.get("x-forwarded-for")),
     setCookie: (cookie) => setCookieIn(store, cookie),
     /* Next.js 14 keeps what a server's fetch answers in its data cache
@@ -141,17 +141,14 @@ async function headersOf(next: NextHeaders): Promise<Headers | undefined> {
    deleted. A cookie still held as Next.js read it from that header goes as the browser sent it,
    byte for byte; one set since goes as Next.js writes it, URL-encoded; one deleted goes not, nor
    one emptied, as the page a Server Action renders holds a deletion. */
-function withCookiesHeld(headers: Headers, store: NextCookieStore): Headers {
-  const sent = headers.get("cookie");
-  const read = readByNext(sent ?? "");
+function cookiesHeld(headers: Headers, store: NextCookieStore): string {
+  const sent = headers.get("cookie") ?? "";
+  const read = readByNext(sent);
   const changed = store
     .getAll()
     .filter(({ name, value }) => read.get(name) !== value)
     .map(setCookieOf);
-  if (changed.length === 0) return headers;
-  const merged = new Headers(headers);
-  merged.set("cookie", cookieHeaderAfter(sent, changed));
-  return merged;
+  return changed.length === 0 ? sent : cookieHeaderAfter(sent, changed);
 }
 
 /* A `Cookie` header as Next.js reads it into `cookies()`: split at each `;` and the spaces after

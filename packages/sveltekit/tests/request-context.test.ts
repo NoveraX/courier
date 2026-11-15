@@ -17,13 +17,44 @@ import {
   svelteKitRequestContext,
 } from "../src/request-context";
 
-function eventFor(headers: Record<string, string>, method = "GET"): SvelteKitServerEvent {
+/* The options SvelteKit's `cookies.set()` takes: a path, and whatever else the call names. */
+type CookieOptions = { path: string } & Partial<
+  Parameters<SvelteKitServerEvent["cookies"]["set"]>[2]
+>;
+
+/* `cookies` as SvelteKit makes it: `getAll` reads the request's `Cookie` through `decode`, the
+   first of a name winning, and gives each cookie set since as it was set; `delete` sets one empty. */
+function svelteKitCookies(header: string) {
+  const set = new Map<string, string>();
   return {
+    getAll({ decode }: { decode(value: string): string }) {
+      const read = new Map<string, string>();
+      for (const pair of header.split(";")) {
+        const at = pair.indexOf("=");
+        const name = pair.slice(0, at).trim();
+        if (at > 0 && !read.has(name)) read.set(name, decode(pair.slice(at + 1).trim()));
+      }
+      for (const [name, value] of set) read.set(name, value);
+      return [...read].map(([name, value]) => ({ name, value }));
+    },
+    set: vi.fn((name: string, value: string, _options: CookieOptions) => {
+      set.set(name, value);
+    }),
+    delete(name: string) {
+      set.set(name, "");
+    },
+  };
+}
+
+function eventFor(headers: Record<string, string>, method = "GET") {
+  const cookies = svelteKitCookies(headers.cookie ?? "");
+  const event: SvelteKitServerEvent = {
     request: new Request("https://app.example.com/account", { method, headers }),
     url: new URL("https://app.example.com/account"),
-    cookies: { set: vi.fn() },
+    cookies,
     getClientAddress: () => "203.0.113.9",
   };
+  return Object.assign(event, { cookies });
 }
 
 let api: Server;
@@ -67,6 +98,16 @@ describe("svelteKitIncomingRequest", () => {
     expect(incoming.clientAddress).toBe("203.0.113.9");
   });
 
+  it("holds the cookies as the request's code leaves them each time it is asked", () => {
+    const event = eventFor({ cookie: "sid=OLD; pref=a%7Eb; b64=YWJj+ZGVm/==; theme=dark" });
+    const incoming = svelteKitIncomingRequest(event);
+
+    event.cookies.set("sid", "NEW one", { path: "/" });
+    event.cookies.delete("theme");
+
+    expect(incoming.cookieHeader?.()).toBe("pref=a%7Eb; b64=YWJj+ZGVm/==; sid=NEW%20one");
+  });
+
   it("gives no address for a page being prerendered", () => {
     const event = eventFor({});
     event.getClientAddress = () => {
@@ -78,9 +119,9 @@ describe("svelteKitIncomingRequest", () => {
 
   it("says why a cookie cannot be set once the response was generated", () => {
     const event = eventFor({});
-    event.cookies.set = () => {
+    event.cookies.set.mockImplementation(() => {
       throw new Error("Cannot use `cookies.set(...)` after the response has been generated");
-    };
+    });
     const incoming = svelteKitIncomingRequest(event);
 
     const result = incoming.setCookie?.({
@@ -122,8 +163,24 @@ describe("svelteKitRequestContext", () => {
       "s%3Arenewed",
       expect.objectContaining({ path: "/", secure: true, httpOnly: true, sameSite: "lax" }),
     );
-    const options = vi.mocked(event.cookies.set).mock.calls[0]?.[2];
-    expect(options?.encode("s%3Arenewed")).toBe("s%3Arenewed");
+    const options = event.cookies.set.mock.calls[0]?.[2];
+    expect(options?.encode?.("s%3Arenewed")).toBe("s%3Arenewed");
+  });
+});
+
+describe("the cookies of a request SvelteKit serves", () => {
+  it("reach each call as the request's code leaves them, and the API's as the API wrote it", async () => {
+    const event = eventFor({ cookie: "sid=a1; theme=dark" });
+    const remove = registerRequestContext(svelteKitRequestContext(() => event));
+    const from = seen.length;
+
+    await client().me();
+    await client().me();
+    event.cookies.set("sid", "mine", { path: "/" });
+    await client().me();
+    remove();
+
+    expect(seen.slice(from)).toEqual(["sid=a1", "sid=s%3Arenewed", "sid=mine"]);
   });
 });
 

@@ -1,4 +1,4 @@
-export const metadata = { title: "SvelteKit", description: "Serve Courier's proxy from a SvelteKit endpoint, with @noverax/courier-sveltekit.", mode: "proxy", updated: "2026-11-07" }
+export const metadata = { title: "SvelteKit", description: "Serve Courier's proxy from a SvelteKit endpoint, with @noverax/courier-sveltekit.", mode: "proxy", updated: "2026-11-15" }
 
 `@noverax/courier-sveltekit` serves the proxy that `createProxyCaller` and `createProxyQueryCaller` call: one route answers every endpoint, reads over `GET` and writes over `POST`, and streams server-sent events.
 
@@ -106,7 +106,7 @@ import { requestContextHandle } from "@noverax/courier-sveltekit/handle"
 export const handle = requestContextHandle()
 ```
 
-`getRequestEvent` follows the request through every `await` where the platform has `AsyncLocalStorage`, and only until the first one where it has none. The `handle` hook needs `AsyncLocalStorage` itself — Node, Bun, Deno, Cloudflare with `nodejs_als`. Either way the session cookies the API sets go to `cookies.set()` exactly as the API wrote them, a `load` function's included. See [User Sessions](/docs/server-side/session).
+`getRequestEvent` follows the request through every `await` where the platform has `AsyncLocalStorage`, and only until the first one where it has none. The `handle` hook needs `AsyncLocalStorage` itself — Node, Bun, Deno, Cloudflare with `nodejs_als`. Either way the session cookies the API sets go to `cookies.set()` exactly as the API wrote them, a `load` function's included. Each call sends the session cookies as `cookies` holds them when it is made: one your code set goes URL-encoded, as SvelteKit's own `encode` writes it — also when `cookies.set()` was given another, which `cookies` does not tell — one it deleted goes not, and one the API set goes as the API wrote it until your code changes it again. See [User Sessions](/docs/server-side/session).
 
 ## Cancelled calls
 

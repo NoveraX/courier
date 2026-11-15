@@ -267,6 +267,72 @@ describe("the cookies the API sets", () => {
   });
 });
 
+/* A request whose framework holds its cookies, which the request's code may change as it is
+   served: a cookie handed to it is held in the framework's own encoding, as SvelteKit's is. */
+function heldRequest(cookies: Record<string, string>): {
+  incoming: IncomingRequest;
+  store: Map<string, string>;
+} {
+  const store = new Map(Object.entries(cookies));
+  const header = (): string => [...store].map(([name, value]) => `${name}=${value}`).join("; ");
+  const incoming: IncomingRequest = {
+    key: {},
+    method: "GET",
+    origin: "https://app.example.com",
+    headers: new Headers({ cookie: header() }),
+    cookieHeader: header,
+    setCookie: ({ cookie }) => {
+      if (cookie.maxAge === 0) store.delete(cookie.name);
+      else store.set(cookie.name, encodeURIComponent(cookie.value));
+      return true;
+    },
+  };
+  return { incoming, store };
+}
+
+describe("the cookies the request's code changes", () => {
+  it("reach the calls made after it changed them", async () => {
+    const { incoming, store } = heldRequest({ sid: "a1" });
+    serving = incoming;
+
+    await client.me();
+    store.set("sid", "a2");
+    await client.me();
+
+    expect(upstream.seen.map((seen) => seen.headers.cookie)).toEqual(["sid=a1", "sid=a2"]);
+  });
+
+  it("leave a cookie the API set as the API wrote it, however the framework holds it", async () => {
+    const { incoming, store } = heldRequest({ sid: "old" });
+    serving = incoming;
+    answer = (res) => {
+      if (upstream.seen.length === 1) res.setHeader("set-cookie", "sid=a/b+c=; Path=/");
+      sendJson(res, 200, { ok: true });
+    };
+
+    await client.me();
+    await client.me();
+
+    expect(store.get("sid")).toBe("a%2Fb%2Bc%3D");
+    expect(upstream.seen[1]?.headers.cookie).toBe("sid=a/b+c=");
+  });
+
+  it("send none the request's code deleted after the API set it", async () => {
+    const { incoming, store } = heldRequest({ sid: "old" });
+    serving = incoming;
+    answer = (res) => {
+      if (upstream.seen.length === 1) res.setHeader("set-cookie", "sid=new; Path=/");
+      sendJson(res, 200, { ok: true });
+    };
+
+    await client.me();
+    store.delete("sid");
+    await client.me();
+
+    expect(upstream.seen[1]?.headers.cookie).toBeUndefined();
+  });
+});
+
 describe("a session that cannot travel safely", () => {
   it("is refused where the server takes the API up, over plain HTTP across the internet", () => {
     const remote = defineApi({

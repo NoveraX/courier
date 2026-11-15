@@ -1,6 +1,8 @@
 /**
  * A form body written as OpenAPI's encoding asks: Stripe and Twilio take
  * every write url-encoded, and sending their fields as JSON failed them all.
+ * Each value is written as JSON writes it, so a direct call sends what a call
+ * through the proxy does.
  */
 import { describe, expect, it } from "vitest";
 
@@ -75,6 +77,46 @@ describe("formBody", () => {
       "items[1][price]=p_2",
       "expand[0]=customer",
     ]);
+  });
+
+  it("writes a value as JSON writes it, as a call through the proxy carries it", () => {
+    class Money {
+      constructor(readonly amount: string) {}
+      toJSON() {
+        return this.amount;
+      }
+    }
+    const body = formBody(
+      {
+        price: new Money("1.50"),
+        prices: [new Money("2")],
+        meta: { at: new Date(0), cost: new Money("3") },
+        lost: new Date(Number.NaN),
+        ratio: Number.NaN,
+        callback: () => "the function's source",
+      },
+      { meta: { style: "deepObject", explode: true } },
+    );
+
+    expect(decoded(body)).toEqual([
+      "price=1.50",
+      "prices=2",
+      "meta[at]=1970-01-01T00:00:00.000Z",
+      "meta[cost]=3",
+      "lost=",
+      "ratio=",
+      "callback=",
+    ]);
+  });
+
+  it.each([
+    ["a file", new Blob(["x"])],
+    ["a Set", new Set(["a"])],
+    ["a BigInt", 12n],
+  ])("refuses %s, which the body cannot carry, rather than writing it empty", (_, value) => {
+    expect(() => formBody({ value })).toThrow(
+      expect.objectContaining({ code: "VARIABLE_NOT_ENCODABLE" }),
+    );
   });
 
   it("reads no encoding off the prototype", () => {

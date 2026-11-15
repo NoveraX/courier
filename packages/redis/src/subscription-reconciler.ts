@@ -1,6 +1,7 @@
 import type { LoggedPosition } from "@noverax/courier/realtime";
 import type { Redis } from "ioredis";
 
+import { createHeldChannels } from "./held-channels";
 import { retryDelay } from "./retry-delay";
 
 type Handler = (message: unknown, logged?: LoggedPosition) => void;
@@ -14,9 +15,9 @@ export interface SubscriptionReconciler {
   add(channel: string, handler: Handler): () => void;
   /** The handlers of a channel the adapter wants, `undefined` for any other */
   handlersOf(channel: string): ReadonlySet<Handler> | undefined;
-  /** The subscriber is ready: subscribe every channel wanted and not held */
+  /** The subscriber is ready: subscribe every channel wanted and not held, and let go of those no handler wants */
   connected(): void;
-  /** The subscriber lost its connection: it holds no channel now */
+  /** The subscriber lost its connection: none is confirmed now, and what it held may be held again on the next */
   disconnected(): void;
   /** Want nothing any more, unsubscribing what is held within `timeoutMs` */
   stop(timeoutMs: number): Promise<void>;
@@ -29,9 +30,12 @@ export interface SubscriptionReconciler {
  * outlives every connection: after each reconnect, and after a SUBSCRIBE
  * Redis refused, the channels wanted and not held are subscribed again —
  * a refusal tried again after a pause that grows with each failure — and
- * held ones no longer wanted are let go. Only the connection a reply came
- * on counts it as held, so a reply that arrives after a reconnect does not
- * pass for the new connection's.
+ * every channel the connection may hold and no handler wants is let go:
+ * one held, though let go of before Redis answered its SUBSCRIBE; one held
+ * as a connection was lost, which ioredis subscribes again on the next; one
+ * whose SUBSCRIBE is answered only on the next. Only the connection a reply
+ * came on counts a channel as confirmed, so a reply that arrives after a
+ * reconnect does not pass for the new connection's.
  *
  * @param subscriber - The connection subscriptions are made on
  * @param report - Told of each command Redis failed
@@ -49,7 +53,7 @@ export function createSubscriptionReconciler(
   random: () => number = Math.random,
 ): SubscriptionReconciler {
   const wanted = new Map<string, Set<Handler>>();
-  const confirmed = new Set<string>();
+  const holding = createHeldChannels();
   /* Each connection the subscriber makes is a generation of its own. */
   let generation = 0;
   let running = false;
@@ -74,21 +78,22 @@ export function createSubscriptionReconciler(
       again = true;
       return;
     }
-    const missing = [...wanted.keys()].filter((channel) => !confirmed.has(channel));
-    const stray = [...confirmed].filter((channel) => !wanted.has(channel));
+    const missing = [...wanted.keys()].filter((channel) => !holding.confirmed.has(channel));
+    const stray = holding.strayFrom(wanted);
     if (missing.length === 0 && stray.length === 0) return;
     running = true;
     const sentOn = generation;
     const sent = [
       ...batches(missing).map((batch) =>
         subscriber.subscribe(...batch).then(() => {
-          if (generation !== sentOn) return;
-          for (const channel of batch) if (wanted.has(channel)) confirmed.add(channel);
+          for (const channel of batch) holding.subscribed(channel, generation === sentOn);
+          /* Let go of before Redis answered: held all the same, until it is unsubscribed. */
+          if (batch.some((channel) => !wanted.has(channel))) soon();
         }),
       ),
       ...batches(stray).map((batch) =>
         subscriber.unsubscribe(...batch).then(() => {
-          if (generation === sentOn) for (const channel of batch) confirmed.delete(channel);
+          if (generation === sentOn) for (const channel of batch) holding.unsubscribed(channel);
         }),
       ),
     ];
@@ -145,14 +150,13 @@ export function createSubscriptionReconciler(
     },
     disconnected() {
       generation++;
-      confirmed.clear();
+      holding.lost();
     },
     async stop(timeoutMs) {
       stopped = true;
       clearTimeout(retry);
-      const held = [...confirmed];
+      const held = holding.takeAll();
       wanted.clear();
-      confirmed.clear();
       if (held.length === 0 || subscriber.status !== "ready") return;
       let deadline: ReturnType<typeof setTimeout> | undefined;
       await Promise.race([
@@ -167,7 +171,7 @@ export function createSubscriptionReconciler(
       return wanted.size;
     },
     get confirmed() {
-      return confirmed.size;
+      return holding.confirmed.size;
     },
   };
 }

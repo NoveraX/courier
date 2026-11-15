@@ -2,7 +2,9 @@
  * The Redis pub/sub adapter against stand-ins for its two ioredis clients,
  * whose status and events a test sets: what it does before Redis is ready,
  * when Redis comes and goes, when it refuses a SUBSCRIBE, and what it says
- * of it. The suite against a real Redis is redis-pubsub-outage.test.ts.
+ * of it; and that it lets go of every channel its connection may hold and
+ * no handler wants, however late Redis answered. The suite against a real
+ * Redis is redis-pubsub-outage.test.ts.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -139,6 +141,50 @@ describe("createRedisPubSub", () => {
 
     await expect.poll(() => sub.unsubscribe.mock.calls).toEqual([["room"]]);
     await expect.poll(() => pubsub.stats().channels).toEqual({ wanted: 0, confirmed: 0 });
+  });
+
+  it("lets go of a channel no handler wanted by the time Redis answered its SUBSCRIBE", async () => {
+    const sub = createClient();
+    const reply = Promise.withResolvers<number>();
+    sub.subscribe.mockImplementationOnce(() => reply.promise);
+    const pubsub = adapterOn(createClient(), sub);
+    const leave = await pubsub.subscribe("room", () => undefined);
+    await expect.poll(() => sub.subscribe.mock.calls).toEqual([["room"]]);
+
+    leave();
+    reply.resolve(1);
+
+    await expect.poll(() => sub.unsubscribe.mock.calls).toEqual([["room"]]);
+    await expect.poll(() => pubsub.stats().channels).toEqual({ wanted: 0, confirmed: 0 });
+  });
+
+  it("lets go, once reconnected, of a channel held as the connection was lost and wanted no more", async () => {
+    const sub = createClient();
+    const pubsub = adapterOn(createClient(), sub);
+    const leave = await pubsub.subscribe("room", () => undefined);
+    await expect.poll(() => pubsub.stats().channels.confirmed).toBe(1);
+
+    sub.become("close");
+    leave();
+    sub.become("ready");
+
+    await expect.poll(() => sub.unsubscribe.mock.calls).toEqual([["room"]]);
+  });
+
+  it("lets go of a channel wanted no more whose SUBSCRIBE is answered once reconnected", async () => {
+    const sub = createClient();
+    const reply = Promise.withResolvers<number>();
+    sub.subscribe.mockImplementationOnce(() => reply.promise);
+    const pubsub = adapterOn(createClient(), sub);
+    const leave = await pubsub.subscribe("room", () => undefined);
+    await expect.poll(() => sub.subscribe.mock.calls).toEqual([["room"]]);
+
+    sub.become("close");
+    leave();
+    sub.become("ready");
+    reply.resolve(1);
+
+    await expect.poll(() => sub.unsubscribe.mock.calls).toEqual([["room"]]);
   });
 
   it("queues what is published while Redis is away, and sends it in order once it is back", async () => {

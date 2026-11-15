@@ -78,9 +78,12 @@ export interface ConnectionRegistry {
   /**
    * Close the connections `selector` names, with `code` and `reason` — on
    * every replica that shares the handler's pub/sub adapter. Resolves once
-   * this replica's are closed and the command for the others has gone to
-   * the adapter; rejects with a `TypeError`, closing none, for a selector
-   * that names no connection or a code no socket can send.
+   * this replica's are closed and the adapter's publish of the command for
+   * the others has settled: with Redis, once Redis answered it, or at once
+   * while Redis is away and the command waits in the adapter's queue. A
+   * Redis that stops answering with its connection up holds it until the
+   * publisher's `commandTimeout`. Rejects with a `TypeError`, closing none,
+   * for a selector that names no connection or a code no socket can send.
    */
   disconnect(selector: ConnectionSelector, options?: DisconnectOptions): Promise<void>;
   /**

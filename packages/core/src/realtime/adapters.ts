@@ -136,8 +136,11 @@ export interface PubSubAdapter extends AdapterLifecycle {
   /**
    * Publish a message to all subscribers across replicas, or queue it while
    * the adapter is not ready. Implementations wrap the payload in
-   * {@link PubSubEnvelope} with their origin. It never rejects because the
-   * server is away; it rejects once the adapter is stopped.
+   * {@link PubSubEnvelope} with their origin. It settles once the server has
+   * answered, or once the message is queued: a server that stops answering
+   * while the adapter is ready holds it as long as the client it publishes
+   * through lets a command wait. It never rejects because the server is
+   * away; it rejects once the adapter is stopped.
    */
   publish(topic: string, message: unknown): Promise<void>;
   /**

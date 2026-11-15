@@ -59,9 +59,10 @@ export interface SSEConnectionRegistry {
    * End the streams `selector` names — on every replica that shares the
    * handler's pub/sub adapter. A stream ended so says nothing of why: its
    * client reconnects as from a dropped stream, and passes `onSSEConnect`
-   * again. Resolves once this replica's are ended and the command for the
-   * others has gone to the adapter; rejects with a `TypeError`, ending
-   * none, for a selector that names no connection.
+   * again. Resolves once this replica's are ended and the adapter's publish
+   * of the command for the others has settled, as the WebSocket registry's
+   * `disconnect` does; rejects with a `TypeError`, ending none, for a
+   * selector that names no connection.
    */
   disconnect(selector: ConnectionSelector): Promise<void>;
   /** End every stream of this replica */

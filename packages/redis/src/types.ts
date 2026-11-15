@@ -41,7 +41,11 @@ export interface RedisPresenceConfig {
 export interface RedisPubSubConfig {
   /**
    * Redis instance used for PUBLISH commands.
-   * Must be a separate connection from `subscriber`.
+   * Must be a separate connection from `subscriber`. Give it a
+   * `commandTimeout`: while Redis is reached, a publish waits for its
+   * answer, and one that stops answering with its connection up holds it —
+   * and a broadcast, `disconnect` and `requireAuth` with it — as long as
+   * the client lets a command wait.
    */
   publisher: Redis;
   /**

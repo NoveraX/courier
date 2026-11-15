@@ -77,7 +77,7 @@ import { Redis } from "ioredis"
 import { createRedisPubSub } from "@noverax/courier-redis"
 
 const pubsub = createRedisPubSub({
-  publisher: new Redis(),
+  publisher: new Redis({ commandTimeout: 5_000 }),
   subscriber: new Redis(),
   prefix: "courier:",
 })
@@ -85,7 +85,7 @@ const pubsub = createRedisPubSub({
 await pubsub.connect().catch((error) => console.warn(error.message))
 ```
 
-It works from the moment it is made, Redis there or not. What is published while Redis is away waits — at most 1000 messages, 1 MiB, 5 seconds, the oldest dropped and counted past them (`queue` sets them) — and goes out in order once Redis is back; every subscription is made again after each reconnect, and tried again after a growing pause when Redis refuses it. `connect()` waits for both connections and rejects at its deadline while the adapter goes on; `disconnect()` settles within its own. `state`, `onStateChange()` and `stats()` say how it stands.
+It works from the moment it is made, Redis there or not. What is published while Redis is away waits — at most 1000 messages, 1 MiB, 5 seconds, the oldest dropped and counted past them (`queue` sets them) — and goes out in order once Redis is back. While Redis is reached but does not answer, a publish waits for it, and a broadcast, `disconnect` and `requireAuth` with it, as long as the publisher's `commandTimeout` lets them. Every subscription is made again after each reconnect, and tried again after a growing pause when Redis refuses it. `connect()` waits for both connections and rejects at its deadline while the adapter goes on; `disconnect()` settles within its own. `state`, `onStateChange()` and `stats()` say how it stands.
 
 With `log: {}`, it keeps a log of each topic's events in Redis — 100 a topic, for an hour after its last (`maxEvents`, `ttlMs`) — which numbers them in one sequence for every replica: a WebSocket handler publishes a topic's events through it, every replica delivers each under the same number, and a client resumes its subscription on any replica.
 

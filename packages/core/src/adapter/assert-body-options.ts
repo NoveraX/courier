@@ -8,8 +8,9 @@ const UPLOAD_MODES: ReadonlySet<unknown> = new Set(["auto", "memory", "stream"])
 /**
  * Refuse, where the handler is made, options for request bodies that could
  * not work as written: an upload mode it does not have, a byte count or a
- * part count that is not a whole number, a wait that is not one a timer can
- * keep, or an upload folder that names none.
+ * part count that is not a whole number, a limit of no bytes or parts, a
+ * wait that is not one a timer can keep, or an upload folder that names
+ * none. A limit that is no number would let every body through.
  *
  * @param config - The handler's options
  * @param where - What the handler is, named in the error
@@ -30,6 +31,12 @@ function bodyOptionsProblem(config: HandlerConfig): string | undefined {
   const { uploadMode, uploadDirectory, maxUploadParts } = config;
   if (uploadMode !== undefined && !UPLOAD_MODES.has(uploadMode)) {
     return `uploadMode is "auto", "memory" or "stream"; got ${String(uploadMode)}`;
+  }
+  for (const key of ["maxBodyBytes", "maxUploadBytes"] as const) {
+    const bytes = config[key];
+    if (bytes !== undefined && !wholeNumber(bytes, 1)) {
+      return `${key} is a whole number of bytes, 1 or more; got ${String(bytes)}`;
+    }
   }
   for (const key of [
     "uploadMemoryBytes",

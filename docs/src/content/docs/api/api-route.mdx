@@ -47,7 +47,7 @@ A record of API source definitions created with `defineApi()`. Given, the handle
 | `maxSSEConnections` | unlimited | Most SSE streams open at once, each counted from its request on, while its middleware and `onSSEConnect` run; one more is answered 503 |
 | `onSSEConnect`, `onSSEDisconnect`, `onSSEError` | — | SSE lifecycle hooks |
 
-Every option is optional, so `createHandler()` is a complete call.
+Every option is optional, so `createHandler()` is a complete call. A body option that could not work as written — a size or a count that is not a whole number, a limit of no bytes or parts, an upload mode it does not have, a wait no timer keeps — is refused where the handler is made, with a `ConfigurationError` of code `BODY_OPTIONS_INVALID`.
 
 ### Request bodies
 

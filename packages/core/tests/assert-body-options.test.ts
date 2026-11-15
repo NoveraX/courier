@@ -12,6 +12,8 @@ describe("createHandler's options for request bodies", () => {
     expect(() =>
       createHandler({
         uploadMode: "memory",
+        maxBodyBytes: 1,
+        maxUploadBytes: 1,
         uploadMemoryBytes: 0,
         totalUploadMemoryBytes: 0,
         totalUploadDiskBytes: 1,
@@ -29,6 +31,9 @@ describe("createHandler's options for request bodies", () => {
       { uploadMode: "disk" },
       'uploadMode is "auto", "memory" or "stream"',
     ],
+    ["a body limit that is no number", { maxBodyBytes: Number.NaN }, "maxBodyBytes"],
+    ["an upload limit written as words", { maxUploadBytes: "100mb" }, "maxUploadBytes"],
+    ["an upload limit of no bytes", { maxUploadBytes: 0 }, "maxUploadBytes"],
     ["a share of memory below 0", { uploadMemoryBytes: -1 }, "uploadMemoryBytes"],
     ["a share of memory that is not whole", { uploadMemoryBytes: 1.5 }, "uploadMemoryBytes"],
     ["room in memory below 0", { totalUploadMemoryBytes: -1 }, "totalUploadMemoryBytes"],

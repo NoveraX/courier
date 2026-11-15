@@ -244,6 +244,8 @@ authMiddleware({
 
 A refresh is shared by token, never between tokens. On a server, where `getToken` and `refreshToken` read the user of the request being served — from its cookies, or an `AsyncLocalStorage` — each user's calls renew that user's token, and a call refused with one user's token is never sent again with another's. A call sent without a token refreshes for itself. A refresher remembers the last 100 tokens it renewed.
 
+`getToken` and `refreshToken` are waited for no longer than the call is, as `onRetry` is: a call cancelled while one of them has not answered rejects at once with its `AbortError`, and one past the `deadline` of a retry policy around the middleware with that `TimeoutError`; a refresh other calls wait for goes on for them. A call's `timeout` bounds each request it sends, not them: a token source that may hang — one that renews the token over the network — bounds its own wait, as with `AbortSignal.timeout()` on its `fetch`.
+
 ### API key authentication
 
 Set `scheme` to an empty string and use a custom header for non-Bearer auth:

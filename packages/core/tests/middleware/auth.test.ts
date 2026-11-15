@@ -5,7 +5,7 @@ import { defineApi } from "../../src/define/api";
 import { courier } from "../../src/define/courier";
 import { ConfigurationError, HTTPError, MissingTokenError } from "../../src/errors";
 import type { Context } from "../../src/http-client/types";
-import { authMiddleware } from "../../src/middleware/index";
+import { authMiddleware, retryMiddleware } from "../../src/middleware/index";
 import type { WrapHandler } from "../../src/middleware/types";
 import { executeRequest } from "../../src/utils/execute";
 import { sendJson, startUpstream, type Upstream } from "../helpers/middleware-upstream";
@@ -400,5 +400,73 @@ describe("one refresh for many calls", () => {
     });
     expect(refreshToken).not.toHaveBeenCalled();
     expect(seen).toHaveLength(1);
+  });
+});
+
+describe("a token source that has not answered", () => {
+  /** A token source that never answers, and when it was first asked. */
+  function unanswering() {
+    const asked = Promise.withResolvers<void>();
+    const source = vi.fn(() => {
+      asked.resolve();
+      return new Promise<string>(() => {});
+    });
+    return { source, asked: asked.promise };
+  }
+
+  it("is waited for no longer than the call: aborted, the call rejects at once, with nothing sent", async () => {
+    upstream = await startUpstream((_req, res) => sendJson(res, 200, { user: "ada" }));
+    const { source, asked } = unanswering();
+    const controller = new AbortController();
+    const client = clientFor(upstream.url, authMiddleware({ getToken: source }));
+    const call = client.me.with({ signal: controller.signal })();
+
+    await asked;
+    controller.abort();
+
+    await expect(call).rejects.toMatchObject({ code: "ABORTED" });
+    expect(upstream.seen).toHaveLength(0);
+  });
+
+  it("ends the call at the deadline of a retry policy around it, with its TimeoutError", async () => {
+    upstream = await startUpstream((_req, res) => sendJson(res, 200, { user: "ada" }));
+    const client = createCaller(
+      defineApi({
+        name: "api",
+        baseURL: upstream.url,
+        middleware: [
+          retryMiddleware({ deadline: 50 }),
+          authMiddleware({ getToken: unanswering().source }),
+        ],
+        endpoints: { me: endpoint.get("me") },
+      }),
+    );
+
+    await expect(client.me()).rejects.toMatchObject({ scope: "deadline", timeout: 50 });
+    expect(upstream.seen).toHaveLength(0);
+  });
+
+  it("is a refresh a cancelled call stops waiting for, which goes on for the next", async () => {
+    const { url, seen } = await acceptingOnlyFresh();
+    const refresh = Promise.withResolvers<string>();
+    const refreshToken = vi.fn(() => refresh.promise);
+    const client = clientFor(url, authMiddleware({ getToken: () => "stale", refreshToken }));
+    const controller = new AbortController();
+    const cancelled = client.me.with({ signal: controller.signal })();
+    await vi.waitFor(() => expect(refreshToken).toHaveBeenCalledOnce());
+    const next = client.me();
+    await vi.waitFor(() => expect(seen).toHaveLength(2));
+
+    controller.abort();
+
+    await expect(cancelled).rejects.toMatchObject({ code: "ABORTED" });
+    refresh.resolve("fresh");
+    await expect(next).resolves.toEqual({ user: "ada" });
+    expect(refreshToken).toHaveBeenCalledOnce();
+    expect(seen.map((r) => r.headers.authorization)).toEqual([
+      "Bearer stale",
+      "Bearer stale",
+      "Bearer fresh",
+    ]);
   });
 });

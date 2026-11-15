@@ -1,4 +1,4 @@
-export const metadata = { title: "CallOptions", description: "The options one call takes with .with(): its timeout, headers and signal, upload and download progress, a stream instead of parsed data, and the verb sent to the proxy.", mode: "both", updated: "2026-11-07" }
+export const metadata = { title: "CallOptions", description: "The options one call takes with .with(): its timeout, headers and signal, upload and download progress, a stream instead of parsed data, and the verb sent to the proxy.", mode: "both", updated: "2026-11-15" }
 
 ## Import
 
@@ -31,7 +31,7 @@ type WithOptions = Omit<CallOptions, "rawData">
 ## Properties
 
 - `signal` — aborts the call when it fires
-- `timeout` — milliseconds the call may take; a call's own wins over the source's
+- `timeout` — milliseconds each request the call sends may take, from the moment it is sent, so each attempt of a retried call has its own; a call's own wins over the source's
 - `headers` — added to the call's headers, name by name, whatever their case; `.with()` at the client, a group and an endpoint merges them all
 - `stream` — answers with the response's body as a stream, unread, instead of the parsed data
 - `forwardVariables` — whether the HTTP methods an endpoint calls send the call's variables by themselves, as the body of a write or the query of a read; `false` leaves them to the endpoint's own `.via()` code. Defaults to `true`

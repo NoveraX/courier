@@ -4,6 +4,7 @@ import { sendableValue } from "../utils/header-value";
 import { isReplayableBody } from "../utils/replayable-body";
 import { type AuthOptions, assertAuthOptions } from "./auth-options";
 import { defineMiddleware } from "./define";
+import { waitUnlessStopped } from "./pause";
 import { tokenOf, tokenRefresher } from "./token-refresher";
 import type { Middleware, MiddlewareContext, MiddlewareResponse, NextFn } from "./types";
 
@@ -33,6 +34,11 @@ type Attempt = { readonly response: MiddlewareResponse } | { readonly error: unk
  * once however the refusals fall. A refresh is shared by token and never
  * between tokens: on a server, where `getToken` gives the token of the
  * request's user, one user's call is never sent with another's.
+ *
+ * `getToken` and a refresh are waited for no longer than the call is: a
+ * call cancelled, or past the deadline of a retry policy around this
+ * middleware, while one has not answered rejects at once, and a refresh
+ * other calls wait for goes on for them.
  *
  * @param options - Where the token comes from, how to renew it, and where it goes
  * @returns The middleware, to place on a source or an endpoint
@@ -72,13 +78,13 @@ export function authMiddleware(options: AuthOptions): Middleware {
   // Wraps because it may send the request again (needs response access)
   return defineMiddleware("auth", "wrap", async (ctx, next) => {
     const sentAt = refresher?.generation ?? 0;
-    const token = tokenOf(await getToken());
+    const token = tokenOf(await waitUnlessStopped(getToken(), ctx.signal));
     attach(ctx, token, "getToken");
     if (!refresher) return next();
 
     const first = await settle(next);
     if (!isUnauthorized(first) || !isReplayableBody(ctx.variables)) return unwrap(first);
-    const renewed = await refresher.renew(token, sentAt);
+    const renewed = await waitUnlessStopped(refresher.renew(token, sentAt), ctx.signal);
     if (renewed === undefined) return unwrap(first);
     attach(ctx, renewed, "refreshToken");
     return next();

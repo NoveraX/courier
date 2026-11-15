@@ -196,7 +196,7 @@ The progress covers the browser's upload to the proxy route. The proxy then forw
 
 ## GET or POST
 
-A read that may be cached — one that declares `.cache()` and whose variables are not sensitive, which the routes mark `get: true` — goes to the proxy as GET, its variables as JSON in the `_v` parameter of the address, so a browser or a CDN can reuse the answer its `.cache()` allows. Every other call goes as POST, its variables in the body: GET would gain a read nothing that nothing on the way may keep, and POST keeps the variables of every other read out of the address.
+A read that may be cached — one that declares `.cache()` and whose variables are not sensitive, which the routes mark `get: true` — goes to the proxy as GET, its variables as JSON in the `_v` parameter of the address, so a browser or a CDN can reuse the answer its `.cache()` allows. Every other call goes as POST, its variables in the body: GET would gain nothing for a read that nothing on the way may keep, and POST keeps the variables of every other read out of the address.
 
 ```ts
 // search declares .cache({ revalidate: 60 }):

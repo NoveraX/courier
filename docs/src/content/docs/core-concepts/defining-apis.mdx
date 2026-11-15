@@ -39,7 +39,7 @@ A group may hold groups of its own, under `groups`, to any depth: `caller.billin
 
 `courier()` returns three heads and `extend`. Which head you start from declares what the endpoint is, not just what it returns:
 
-- **`endpoint`** — an HTTP endpoint. The verb that addresses it — named on the chain, or called by a `.via()` closure — decides whether it reads or writes: `get`, `head`, `options` and `query` read, and are proxied as a `GET` a CDN can cache; `post`, `put`, `patch` and `del` write, and are proxied as a `POST`.
+- **`endpoint`** — an HTTP endpoint. The verb that addresses it — named on the chain, or called by a `.via()` closure — decides whether it reads or writes: `get`, `head`, `options` and `query` read, and one that declares `.cache()` is proxied as a `GET` a CDN can cache, any other as a `POST` — see [GET or POST](/docs/api/create-proxy-caller#get-or-post); `post`, `put`, `patch` and `del` write, and are proxied as a `POST`.
 - **`stream`** — server-sent events.
 - **`channel`** — a WebSocket channel.
 
@@ -132,7 +132,7 @@ endpoint
 
 ### Asking with a body: QUERY
 
-HTTP QUERY is a read whose question travels in the body: a filter too long for an address, or too structured to flatten into one — nested conditions, a list of ids, a query language. `endpoint.query(path)` addresses one. It reads as `get` does — it is retried, its answer may be kept with `.cache()`, the query hooks take it, and the proxy carries it as any read: as a `GET`, or as a `POST` when its variables would not fit in an address — and it sends its variables as `post` does, its path filled from them and the rest as a JSON body:
+HTTP QUERY is a read whose question travels in the body: a filter too long for an address, or too structured to flatten into one — nested conditions, a list of ids, a query language. `endpoint.query(path)` addresses one. It reads as `get` does — it is retried, its answer may be kept with `.cache()`, the query hooks take it, and the proxy carries it as any read, as a `GET` only where it declares `.cache()` and its variables fit in an address — and it sends its variables as `post` does, its path filled from them and the rest as a JSON body:
 
 ```ts
 const Filter = z.object({ team: z.string(), status: z.array(z.enum(["active", "invited"])) })

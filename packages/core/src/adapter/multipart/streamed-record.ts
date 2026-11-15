@@ -1,10 +1,12 @@
 import { RECORD_PART } from "../../utils/record-upload";
 import { type FilePlace, formEntries } from "../../utils/variables-encoding";
+import type { BodyDeadline } from "../read-chunk";
 import { isOptionsPart, TextFields } from "./form-fields";
 import { type MultipartParts, multipartParts } from "./multipart-parts";
 import type { FormLimits } from "./read-form";
 import { malformedRecord, type RecordSlots, recordOf } from "./read-record";
-import { type OutgoingPart, type StreamedForm, sending } from "./streamed-form";
+import type { OutgoingPart } from "./reencoding";
+import { type StreamedForm, sending } from "./streamed-form";
 import type { UploadHold } from "./upload-hold";
 
 /**
@@ -16,6 +18,7 @@ import type { UploadHold } from "./upload-hold";
  * @param body - The upload's bytes, held to its size and length
  * @param boundary - Its boundary
  * @param limits - The most parts, header bytes and text it may hold
+ * @param due - By when the whole body must have arrived, which holds it while the upstream takes none of it
  * @param defaults - The fields written ahead of the record's own: its source's `defaultBody`
  * @param hold - The upload's part of the room every upload shares, which its text is taken from
  * @returns The options, the upload and what stops it
@@ -23,13 +26,14 @@ import type { UploadHold } from "./upload-hold";
  *   place fails the upload as it is sent
  * @example
  * ```ts
- * const { options, upload, stop } = await streamedRecord(body, boundary, limits);
+ * const { options, upload, stop } = await streamedRecord(body, boundary, limits, due);
  * ```
  */
 export async function streamedRecord(
   body: ReadableStream<Uint8Array<ArrayBuffer>>,
   boundary: string,
   limits: FormLimits,
+  due: BodyDeadline,
   defaults: Readonly<Record<string, unknown>> = {},
   hold?: UploadHold,
 ): Promise<StreamedForm> {
@@ -55,7 +59,7 @@ export async function streamedRecord(
     await parts.return();
     throw error;
   }
-  return sending(options, recordParts(record, parts, defaults), parts);
+  return sending(options, recordParts(record, parts, defaults), parts, due);
 }
 
 /* The parts of the form a record goes as: its fields' text, and at each place the file the body

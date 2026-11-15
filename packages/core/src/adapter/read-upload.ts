@@ -15,6 +15,7 @@ import { streamedForm } from "./multipart/streamed-form";
 import { streamedRecord } from "./multipart/streamed-record";
 import { UPLOAD_ROOM, UploadHold } from "./multipart/upload-hold";
 import { requestBodyStream } from "./read-body";
+import type { BodyDeadline } from "./read-chunk";
 import { parseWireOptionsJson } from "./wire-options";
 
 /** An upload read as far as its call needs before it runs, and what lets go of it. */
@@ -72,10 +73,15 @@ export async function readUpload(
     throw error;
   }
 
+  const timeoutMs = config?.bodyTimeoutMs ?? LIMITS.BODY_TIMEOUT_MS;
+  /* The whole body's time runs from here: for each read of it, and — sent on as it arrives —
+     for each wait on the upstream to take a piece. */
+  const due: BodyDeadline = { deadline: performance.now() + timeoutMs, timeoutMs };
   const body = requestBodyStream(request, {
     maxBytes: config?.maxUploadBytes ?? LIMITS.MAX_PROXY_UPLOAD_BYTES,
     idleTimeoutMs: config?.bodyIdleTimeoutMs,
-    timeoutMs: config?.bodyTimeoutMs,
+    timeoutMs,
+    deadline: due.deadline,
   });
   const limits: FormLimits = {
     maxParts: config?.maxUploadParts ?? LIMITS.MAX_UPLOAD_PARTS,
@@ -86,7 +92,7 @@ export async function readUpload(
   try {
     upload =
       config?.uploadMode === "stream"
-        ? await sentOn(body, boundary, limits, config, record, defaults)
+        ? await sentOn(body, boundary, limits, due, config, record, defaults)
         : await kept(body, boundary, limits, config, record);
   } catch (error) {
     if (error instanceof BodyError) return refusedBody(error);
@@ -128,14 +134,16 @@ async function kept(
   }
 }
 
-/* Nothing kept: past its options, the upload is read as the upstream takes it. Once the call
-   has its answer, an upload a fetch is still sending is the fetch's to end — it reads it to its
-   end, or cancels it once the answer is read, as Node's does — so an upstream that answers as
-   it reads loses neither; one nothing sends is stopped, the rest of its body taken off. */
+/* Nothing kept: past its options, the upload is read as the upstream takes it, and the body's
+   deadline holds it whichever of the two is slow. Once the call has its answer, an upload a
+   fetch is still sending is the fetch's to end — it reads it to its end, or cancels it once the
+   answer is read, as Node's does — so an upstream that answers as it reads loses neither; one
+   nothing sends is stopped, the rest of its body taken off. */
 async function sentOn(
   body: ReadableStream<Uint8Array<ArrayBuffer>>,
   boundary: string,
   limits: FormLimits,
+  due: BodyDeadline,
   config: HandlerConfig | undefined,
   record: boolean,
   defaults: Readonly<Record<string, unknown>> | undefined,
@@ -145,8 +153,8 @@ async function sentOn(
   const hold = record ? holdFor(config) : undefined;
   try {
     const { options, upload, stop } = record
-      ? await streamedRecord(body, boundary, limits, defaults, hold)
-      : await streamedForm(body, boundary, limits);
+      ? await streamedRecord(body, boundary, limits, due, defaults, hold)
+      : await streamedForm(body, boundary, limits, due);
     return {
       options,
       variables: upload,

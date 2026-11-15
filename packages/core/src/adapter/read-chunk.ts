@@ -16,6 +16,9 @@ export interface ChunkWait {
   signal: AbortSignal;
 }
 
+/** By when a whole body must have arrived, and its time, for the refusal to name. */
+export type BodyDeadline = Pick<ChunkWait, "deadline" | "timeoutMs">;
+
 /**
  * Read a body's next chunk, or fail once it is too long in coming.
  *
@@ -62,7 +65,7 @@ export function readChunk(
       delay <= MAX_TIMER_MS
         ? setTimeout(() => {
             settle();
-            reject(idle ? idleTimeout(wait.idleMs) : overdue(wait.timeoutMs));
+            reject(idle ? idleTimeout(wait.idleMs) : overdueBody(wait.timeoutMs));
           }, delay)
         : undefined;
     /* A wait for a client must not keep a server that is shutting down alive. */
@@ -82,6 +85,31 @@ export function readChunk(
   });
 }
 
+/**
+ * Run `then` once a body's deadline has come, unless the timer returned is
+ * cleared first: a wait on a body that no read of it bounds.
+ *
+ * @param due - The body's deadline
+ * @param then - What runs at it
+ * @returns The timer, or `undefined` for a deadline past what a timer holds, which never comes
+ * @example
+ * ```ts
+ * const timer = atDeadline(due, () => refuse(overdueBody(due.timeoutMs)));
+ * clearTimeout(timer);
+ * ```
+ */
+export function atDeadline(
+  due: BodyDeadline,
+  then: () => void,
+): ReturnType<typeof setTimeout> | undefined {
+  const delay = Math.max(0, due.deadline - performance.now());
+  if (delay > MAX_TIMER_MS) return undefined;
+  const timer = setTimeout(then, delay);
+  /* A wait on a body must not keep a server that is shutting down alive. */
+  if (typeof timer === "object" && "unref" in timer) timer.unref();
+  return timer;
+}
+
 function clientLeft(reason: unknown): BodyError {
   return new BodyError("BODY_ABORTED", "The client stopped sending its request body", {
     cause: reason,
@@ -92,6 +120,16 @@ function idleTimeout(ms: number): BodyError {
   return new BodyError("BODY_TIMEOUT", `No part of the request body arrived for ${ms} ms`);
 }
 
-function overdue(ms: number): BodyError {
+/**
+ * The refusal of a body still arriving at its deadline.
+ *
+ * @param ms - The whole body's time, in milliseconds
+ * @returns The refusal, `BODY_TIMEOUT`
+ * @example
+ * ```ts
+ * overdueBody(300_000).message; // "The request body took longer than 300000 ms to arrive"
+ * ```
+ */
+export function overdueBody(ms: number): BodyError {
   return new BodyError("BODY_TIMEOUT", `The request body took longer than ${ms} ms to arrive`);
 }

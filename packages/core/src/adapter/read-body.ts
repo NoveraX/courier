@@ -29,6 +29,8 @@ export interface BodyLimits {
   idleTimeoutMs?: number | undefined;
   /** Longest the whole body may take to arrive, in milliseconds; 5 minutes unless given */
   timeoutMs?: number | undefined;
+  /** The `performance.now()` time by which it must have arrived; `timeoutMs` after its first read unless given */
+  deadline?: number | undefined;
 }
 
 /* What a read fails with when the connection went from under it; Windows
@@ -66,7 +68,7 @@ export function requestBodyStream(
   const timeoutMs = limits.timeoutMs ?? LIMITS.BODY_TIMEOUT_MS;
   let reader: ReadableStreamDefaultReader<Uint8Array<ArrayBuffer>> | undefined;
   let declared: number | undefined;
-  let deadline: number | undefined;
+  let deadline = limits.deadline;
   let received = 0;
   let finished = false;
 

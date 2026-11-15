@@ -4,6 +4,12 @@ export interface UploadSending {
   readonly ended: Promise<boolean>;
   /** Whether it has been sent whole by now */
   whole(): boolean;
+  /**
+   * Aborted, with the upload's refusal, when it is refused while the request
+   * sending it waits on the upstream to take a piece — when no read of the
+   * upload is there to hear it, so the request must be stopped with it
+   */
+  readonly refused: AbortSignal;
 }
 
 /* Each upload being sent on, known by the stream the call sends. */

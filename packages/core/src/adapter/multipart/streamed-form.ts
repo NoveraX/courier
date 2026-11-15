@@ -1,28 +1,11 @@
-import { multipartBoundary, partHead, toCrlf } from "../../utils/multipart-framing";
-import {
-  type StreamedUpload,
-  type StreamedUploadSource,
-  streamedUpload,
-} from "../../utils/streamed-upload";
-import { trackSending, type UploadSending } from "../../utils/upload-sending";
+import { multipartBoundary } from "../../utils/multipart-framing";
+import { type StreamedUpload, streamedUpload } from "../../utils/streamed-upload";
+import { trackSending } from "../../utils/upload-sending";
+import type { BodyDeadline } from "../read-chunk";
 import { isOptionsPart, TextFields } from "./form-fields";
 import { type MultipartPart, type MultipartParts, multipartParts } from "./multipart-parts";
-import { DEFAULT_PART_TYPE } from "./part-headers";
 import type { FormLimits } from "./read-form";
-
-const CRLF = "\r\n";
-/* The characters a File keeps of the type it is given: one holding any other has none (File API). */
-const MEDIA_TYPE = /^[\x20-\x7e]*$/;
-
-/** A part as the re-encoded upload sends it: a field's text, or a file's bytes as they arrive. */
-export type OutgoingPart =
-  | { readonly name: string; readonly text: string }
-  | {
-      readonly name: string;
-      readonly filename: string;
-      readonly type: string | undefined;
-      readonly body: ReadableStream<Uint8Array<ArrayBuffer>>;
-    };
+import { type OutgoingPart, Reencoding } from "./reencoding";
 
 /** An upload being sent on: the call's options, the upload itself, and what stops it. */
 export interface StreamedForm {
@@ -60,13 +43,14 @@ export interface StreamedForm {
  * @param body - The upload's bytes, held to its size and length
  * @param boundary - Its boundary
  * @param limits - The most parts, header bytes and text it may hold
+ * @param due - By when the whole body must have arrived, which holds it while the upstream takes none of it
  * @returns The options, the upload and what stops it
  * @throws BodyError for a first part that does not parse, breaks a limit or
  *   fails; `BODY_MALFORMED` for options sent as a file
  *
  * @example
  * ```ts
- * const { options, upload, stop } = await streamedForm(body, boundary, limits);
+ * const { options, upload, stop } = await streamedForm(body, boundary, limits, due);
  * try {
  *   await fetch(url, { method: "POST", body: upload, duplex: "half", headers: { "content-type": upload.type } });
  * } finally {
@@ -78,6 +62,7 @@ export async function streamedForm(
   body: ReadableStream<Uint8Array<ArrayBuffer>>,
   boundary: string,
   limits: FormLimits,
+  due: BodyDeadline,
 ): Promise<StreamedForm> {
   const parts = multipartParts(body, boundary, limits);
   const fields = new TextFields(limits.maxFieldBytes);
@@ -91,7 +76,7 @@ export async function streamedForm(
     await parts.return();
     throw error;
   }
-  return sending(options, formParts(first, parts, fields), parts);
+  return sending(options, formParts(first, parts, fields), parts, due);
 }
 
 /* A form's parts as they come: a field read whole, a file passed through. */
@@ -122,112 +107,21 @@ async function* formParts(
  * @param options - The call's options, read before
  * @param outgoing - The parts to send, in order, read from `parts` as they are asked for
  * @param parts - The body's parts, whose reading stopping ends
+ * @param due - By when the whole body must have arrived
  * @returns The streamed upload
  * @example
  * ```ts
- * return sending(options, formParts(first, parts, fields), parts);
+ * return sending(options, formParts(first, parts, fields), parts, due);
  * ```
  */
 export function sending(
   options: string | undefined,
   outgoing: AsyncIterator<OutgoingPart>,
   parts: MultipartParts,
+  due: BodyDeadline,
 ): StreamedForm {
-  const encoding = new Reencoding(multipartBoundary(), outgoing, parts);
+  const encoding = new Reencoding(multipartBoundary(), outgoing, parts, due);
   const upload = streamedUpload(encoding.contentType, encoding);
   trackSending(upload, encoding);
   return { options, upload, stop: () => encoding.stop() };
-}
-
-/* What hands out the re-encoded upload, one piece each time it is asked for one, and says when
-   the last has gone. */
-class Reencoding implements StreamedUploadSource, UploadSending {
-  readonly contentType: string;
-  readonly #boundary: string;
-  readonly #outgoing: AsyncIterator<OutgoingPart>;
-  readonly #parts: MultipartParts;
-  readonly #encoder = new TextEncoder();
-  /* The file whose bytes are being sent. */
-  #file: ReadableStreamDefaultReader<Uint8Array<ArrayBuffer>> | undefined;
-  /* The line break that ends a file's bytes, sent with whatever follows them. */
-  #lead = "";
-  #ended = false;
-  #stopped = false;
-  #sentWhole = false;
-  #endWith: (whole: boolean) => void = () => {};
-  readonly ended: Promise<boolean> = new Promise((resolve) => {
-    this.#endWith = resolve;
-  });
-
-  constructor(boundary: string, outgoing: AsyncIterator<OutgoingPart>, parts: MultipartParts) {
-    this.contentType = `multipart/form-data; boundary=${boundary}`;
-    this.#boundary = boundary;
-    this.#outgoing = outgoing;
-    this.#parts = parts;
-  }
-
-  async pull(controller: ReadableStreamDefaultController<Uint8Array<ArrayBuffer>>): Promise<void> {
-    if (this.#stopped) throw new Error("The upload was stopped before it was sent whole");
-    try {
-      controller.enqueue(await this.#piece());
-    } catch (error) {
-      await this.stop();
-      throw error;
-    }
-    if (!this.#ended) return;
-    controller.close();
-    this.#sentWhole = true;
-    this.#endWith(true);
-  }
-
-  cancel(): Promise<void> {
-    return this.stop();
-  }
-
-  whole(): boolean {
-    return this.#sentWhole;
-  }
-
-  async stop(): Promise<void> {
-    if (this.#stopped) return;
-    this.#stopped = true;
-    this.#endWith(false);
-    await this.#parts.return();
-  }
-
-  async #piece(): Promise<Uint8Array<ArrayBuffer>> {
-    if (this.#file !== undefined) {
-      const read = await this.#file.read();
-      if (!read.done) return read.value;
-      this.#file = undefined;
-      this.#lead = CRLF;
-    }
-    const next = await this.#outgoing.next();
-    if (next.done) {
-      this.#ended = true;
-      return this.#text(`--${this.#boundary}--${CRLF}`);
-    }
-    const part = next.value;
-    if ("text" in part) {
-      return this.#text(`${partHead(this.#boundary, part.name)}${toCrlf(part.text)}${CRLF}`);
-    }
-    this.#file = part.body.getReader();
-    return this.#text(
-      partHead(this.#boundary, part.name, { filename: part.filename, type: fileType(part.type) }),
-    );
-  }
-
-  /* Text, after the line break that ends the file before it, if one does. */
-  #text(text: string): Uint8Array<ArrayBuffer> {
-    const bytes = this.#encoder.encode(this.#lead + text);
-    this.#lead = "";
-    return bytes;
-  }
-}
-
-/* The type a File made of the part holds, as `readForm` keeps one: RFC 7578's default when it
-   names none, lowercase, and none at all when it holds a character no media type does. */
-function fileType(type: string | undefined): string {
-  const named = type ?? DEFAULT_PART_TYPE;
-  return MEDIA_TYPE.test(named) ? named.toLowerCase() : "";
 }

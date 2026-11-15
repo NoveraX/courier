@@ -8,12 +8,12 @@ const MAX_TIMER_MS = 2_147_483_647;
 /**
  * The signal a request's own timeout aborts. Its time runs from the moment
  * the request is sent — or, for an upload the proxy sends on as it arrives,
- * from the moment the upload has been sent whole: until then the request
- * waits on the client, whose body is held to its own limits of idle and
- * whole time, and a slow client is no slow upstream. An upload that stops
- * short never starts it: the request fails with why it stopped. A page
- * sends no such upload, and its bundle takes a stand-in that starts every
- * timeout at once.
+ * from the moment the upload has been sent whole: until then the body's own
+ * limits hold the request — its idle time on the client, its whole time
+ * however slowly the upstream takes it — and a slow client is no slow
+ * upstream. An upload that stops short never starts it: the request fails
+ * with why it stopped. A page sends no such upload, and its bundle takes a
+ * stand-in that starts every timeout at once.
  *
  * @param timeout - The request's timeout, in ms
  * @param body - The request's body

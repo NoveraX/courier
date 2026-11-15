@@ -21,6 +21,8 @@ import { chunked, concat } from "../helpers/multipart-fixtures";
 import { seededRandom } from "../helpers/seeded-random";
 
 const LIMITS = { maxParts: 100, maxHeaderBytes: 8192, maxFieldBytes: 4096 };
+/* A body given all the time there is: these uploads are not held to a deadline. */
+const NO_DEADLINE = { deadline: Number.POSITIVE_INFINITY, timeoutMs: Number.POSITIVE_INFINITY };
 const B = "----courier-streamed";
 
 const field = (name: string, value: string): string =>
@@ -81,7 +83,12 @@ async function streamedThenSent(
   cuts: number[],
 ): Promise<{ options: string | undefined; text: string } | { refused: string }> {
   try {
-    const { options, upload } = await streamedForm(chunked(body, cuts).stream, boundary, LIMITS);
+    const { options, upload } = await streamedForm(
+      chunked(body, cuts).stream,
+      boundary,
+      LIMITS,
+      NO_DEADLINE,
+    );
     return { options, text: unbounded(await sent(upload), upload.type) };
   } catch (error) {
     if (error instanceof BodyError) return { refused: error.code };
@@ -110,6 +117,7 @@ describe("streamedForm", () => {
         .stream,
       B,
       LIMITS,
+      NO_DEADLINE,
     );
 
     expect(options).toBe('{"timeout":5000}');
@@ -121,7 +129,7 @@ describe("streamedForm", () => {
   it("refuses options sent as a file", async () => {
     const body = concat(fileHead("_options", "o.json", "application/json"), "{}\r\n", close);
 
-    const refusal = await refusalOf(streamedForm(chunked(body, []).stream, B, LIMITS));
+    const refusal = await refusalOf(streamedForm(chunked(body, []).stream, B, LIMITS, NO_DEADLINE));
 
     expect(refusal.code).toBe("BODY_MALFORMED");
   });
@@ -131,6 +139,7 @@ describe("streamedForm", () => {
       chunked(concat(field("a", "1"), close), []).stream,
       B,
       LIMITS,
+      NO_DEADLINE,
     );
 
     expect(isStreamedUpload(upload)).toBe(true);
@@ -139,7 +148,12 @@ describe("streamedForm", () => {
   });
 
   it("sends an empty form as its closing delimiter alone", async () => {
-    const { options, upload } = await streamedForm(chunked(concat(close), []).stream, B, LIMITS);
+    const { options, upload } = await streamedForm(
+      chunked(concat(close), []).stream,
+      B,
+      LIMITS,
+      NO_DEADLINE,
+    );
 
     expect(options).toBeUndefined();
     expect(unbounded(await sent(upload), upload.type)).toBe("--BOUNDARY--\r\n");
@@ -155,7 +169,7 @@ describe("streamedForm", () => {
       "c\r\n",
       close,
     );
-    const { upload } = await streamedForm(chunked(body, [40]).stream, B, LIMITS);
+    const { upload } = await streamedForm(chunked(body, [40]).stream, B, LIMITS, NO_DEADLINE);
 
     const types = [...(await sent(upload)).matchAll(/Content-Type: ([^\r]*)\r\n/g)].map(
       (match) => match[1],
@@ -179,7 +193,7 @@ describe("streamedForm", () => {
       Array.from({ length: 101 }, (_, at) => head + at * 1000),
     );
 
-    const { upload } = await streamedForm(stream, B, LIMITS);
+    const { upload } = await streamedForm(stream, B, LIMITS, NO_DEADLINE);
     const reader = upload.getReader();
     const before = pulls();
     for (let read = 0; read < 10; read++) await reader.read();
@@ -219,7 +233,12 @@ describe("streamedForm", () => {
   ])(
     "fails the upload with the body's refusal, its close never sent, when %s",
     async (_case, body, code, limits) => {
-      const { upload } = await streamedForm(chunked(body, [30, 200, 3000]).stream, B, limits);
+      const { upload } = await streamedForm(
+        chunked(body, [30, 200, 3000]).stream,
+        B,
+        limits,
+        NO_DEADLINE,
+      );
       const reader = upload.getReader();
       const text: string[] = [];
 
@@ -249,7 +268,7 @@ describe("streamedForm", () => {
         controller.error(cut);
       },
     });
-    const { upload } = await streamedForm(body, B, LIMITS);
+    const { upload } = await streamedForm(body, B, LIMITS, NO_DEADLINE);
 
     const refusal = await refusalOf(sent(upload));
 
@@ -266,7 +285,7 @@ describe("streamedForm", () => {
         cancelled = true;
       },
     });
-    const { upload, stop } = await streamedForm(body, B, LIMITS);
+    const { upload, stop } = await streamedForm(body, B, LIMITS, NO_DEADLINE);
     const reader = upload.getReader();
     await reader.read();
 
@@ -282,7 +301,7 @@ describe("streamedForm", () => {
         controller.error(new BodyError("BODY_TIMEOUT", "too slow"));
       },
     });
-    const refusal = await refusalOf(streamedForm(body, B, LIMITS));
+    const refusal = await refusalOf(streamedForm(body, B, LIMITS, NO_DEADLINE));
 
     expect(refusal.code).toBe("BODY_TIMEOUT");
   });
@@ -297,7 +316,7 @@ describe("streamedForm", () => {
         cancelled = true;
       },
     });
-    const { upload } = await streamedForm(body, B, LIMITS);
+    const { upload } = await streamedForm(body, B, LIMITS, NO_DEADLINE);
 
     await upload.cancel(new Error("the upstream went away"));
 

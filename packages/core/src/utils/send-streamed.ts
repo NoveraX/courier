@@ -1,10 +1,12 @@
 import type { PlatformFetch } from "../http-client/source-transport";
 import type { UploadProgress } from "../http-client/types";
 import type { WebBody } from "../http-client/web-types";
+import { anySignal } from "./any-signal";
 import { countedStream } from "./counted-stream";
 import { FETCH_COPIES } from "./fetch-copies";
 import { sendAsStream } from "./send-as-stream";
 import { isStreamedUpload } from "./streamed-upload";
+import { sendingOf } from "./upload-sending";
 
 /** How a body sent as a stream is sent. */
 export interface StreamedSend {
@@ -24,8 +26,9 @@ export interface StreamedSend {
  * is streamed too where the platform's fetch would keep a copy of it for as
  * long as it sends it, as Node's does — every version a form or a `Blob`,
  * Node 22 and 24 a stream — and so is a `StreamedUpload`, which goes with
- * its own content type. Code a page never runs: a bundler that builds for
- * the browser takes a stand-in that sends nothing.
+ * its own content type, and stops the request when it is refused while the
+ * upstream takes none of it. Code a page never runs: a bundler that builds
+ * for the browser takes a stand-in that sends nothing.
  *
  * @param url - Where to send it
  * @param init - The request as fetch would take it; its body is set
@@ -44,18 +47,27 @@ export function sendStreamed(
   { onProgress, withinOrigin, fetch }: StreamedSend,
 ): Promise<Response> | undefined {
   const options = { withinOrigin, fetch };
+  const sent = stoppedWithUpload(init);
   if (onProgress) {
     return sendAsStream(
       url,
-      init,
-      (stream, size) => countedStream(stream, size, onProgress, init.signal),
+      sent,
+      (stream, size) => countedStream(stream, size, onProgress, sent.signal),
       options,
     );
   }
   if (isStreamedUpload(init.body) || copied(init.body)) {
-    return sendAsStream(url, init, (stream) => stream, options);
+    return sendAsStream(url, sent, (stream) => stream, options);
   }
   return undefined;
+}
+
+/* The request, stopped as well by its upload's refusal when it sends one the proxy sends on as
+   it arrives: refused while the upstream takes none of it, it reaches no read to fail. */
+function stoppedWithUpload<TInit extends RequestInit>(init: TInit): TInit {
+  const refused = sendingOf(init.body)?.refused;
+  if (refused === undefined) return init;
+  return { ...init, signal: init.signal ? anySignal([init.signal, refused]) : refused };
 }
 
 /* Whether the platform's fetch would hold the whole body while it sends it. */

@@ -183,6 +183,42 @@ function stalledUpload(
   });
 }
 
+/** A browser's upload of a file of `size` bytes, sent as fast as the proxy reads it. */
+function largeUpload(size: number): Request {
+  const head = concat(field("_options", "{}"), fileHead("file", "large.zip"));
+  const tail = concat("\r\n", close);
+  const piece = new Uint8Array(65_536).fill(0x7a);
+  let sent: number | undefined;
+  const stream = new ReadableStream<Uint8Array<ArrayBuffer>>(
+    {
+      pull(controller) {
+        if (sent === undefined) {
+          sent = 0;
+          return controller.enqueue(head);
+        }
+        if (sent >= size) {
+          controller.enqueue(tail);
+          return controller.close();
+        }
+        controller.enqueue(piece.slice(0, size - sent));
+        sent += piece.length;
+      },
+    },
+    { highWaterMark: 0 },
+  );
+  return new Request("http://localhost/api/request?_s=api&_g=files&_m=upload", {
+    method: "POST",
+    headers: {
+      origin: "http://localhost",
+      "content-type": `multipart/form-data; boundary=${B}`,
+      "content-length": String(head.length + size + tail.length),
+    },
+    body: stream,
+    // @ts-expect-error -- required by the platform for a streaming body
+    duplex: "half",
+  });
+}
+
 /** An upstream that reads the whole upload, then answers 200. */
 const readsAll = (_req: IncomingMessage, res: ServerResponse): void => {
   _req.on("end", () => {
@@ -418,6 +454,35 @@ describe("an upload sent on as it arrives", () => {
 
     expect(response.status).toBe(408);
     expect(((await response.json()) as { code: string }).code).toBe("BODY_TIMEOUT");
+    expect(logged("Upstream request failed")).toBe(false);
+  });
+
+  it("answers 408 BODY_TIMEOUT once bodyTimeoutMs runs out while the upstream reads none of it", async () => {
+    /* It takes the request and reads nothing of it: past what the sockets hold, the proxy is
+       read no more, and nothing waits on the client's body. */
+    const held: IncomingMessage[] = [];
+    const unread = (req: IncomingMessage): void => {
+      req.pause();
+      held.push(req);
+    };
+    const size = 64 * 1024 * 1024;
+    const { handlePost, arrivals } = await proxyTo(unread, {
+      bodyTimeoutMs: 600,
+      maxUploadBytes: 2 * size,
+    });
+
+    const answer = await Promise.race([
+      handlePost(largeUpload(size)),
+      new Promise<"none">((resolve) => setTimeout(() => resolve("none"), 3_000)),
+    ]);
+
+    expect(answer).not.toBe("none");
+    const response = answer as Response;
+    expect(response.status).toBe(408);
+    expect(await response.json()).toMatchObject({ code: "BODY_TIMEOUT" });
+    /* Read again, the upstream finds its request ended short: the proxy closed it. */
+    for (const req of held) req.resume();
+    expect((await arrivals[0])?.complete).toBe(false);
     expect(logged("Upstream request failed")).toBe(false);
   });
 

@@ -25,10 +25,12 @@ export type OutgoingPart =
  *
  * While the upstream is asked for nothing — before it asks for the first
  * piece, and while it has not taken the last one handed to it — no read of
- * the client's body is waiting, and its limits hold nothing. The body's
- * deadline holds the upload then: still being sent at it, the upload is
- * refused as overdue, the rest of the body taken off the connection, and
- * `refused` stops the request sending it, which nothing else would.
+ * the client's body is waiting, and its limits hold nothing. Two times hold
+ * the wait then, and the first to run out stops the upload, the rest of the
+ * body taken off the connection: the body's deadline, at which the upload is
+ * refused as overdue and `refused` stops the request sending it, and the
+ * time that request gives each wait (`holdWaits`), past which it is told it
+ * ran out of time. Nothing else would stop it: no read of the body fails.
  */
 export class Reencoding implements StreamedUploadSource, UploadSending {
   readonly contentType: string;
@@ -46,7 +48,11 @@ export class Reencoding implements StreamedUploadSource, UploadSending {
   #ended = false;
   #stopped = false;
   #sentWhole = false;
-  /* Runs out at the body's deadline while the upstream is asked for nothing. */
+  /* Whether the upstream is asked for nothing now. */
+  #idle = false;
+  /* The time the request sending the upload gives each wait, and what it is told past it. */
+  #allowed: { readonly ms: number; readonly expire: () => void } | undefined;
+  /* Runs out while the upstream is asked for nothing, at the first of the times holding it. */
   #waiting: ReturnType<typeof setTimeout> | undefined;
   #endWith: (whole: boolean) => void = () => {};
   readonly ended: Promise<boolean> = new Promise((resolve) => {
@@ -68,8 +74,9 @@ export class Reencoding implements StreamedUploadSource, UploadSending {
   }
 
   async pull(controller: ReadableStreamDefaultController<Uint8Array<ArrayBuffer>>): Promise<void> {
-    clearTimeout(this.#waiting);
     if (this.#stopped) throw new Error("The upload was stopped before it was sent whole");
+    this.#idle = false;
+    clearTimeout(this.#waiting);
     try {
       controller.enqueue(await this.#piece());
     } catch (error) {
@@ -93,6 +100,12 @@ export class Reencoding implements StreamedUploadSource, UploadSending {
     return this.#sentWhole;
   }
 
+  holdWaits(ms: number, expire: () => void): void {
+    this.#allowed = { ms, expire };
+    /* A wait under way as the request begins is timed from then. */
+    if (this.#idle) this.#timeWait();
+  }
+
   async stop(): Promise<void> {
     if (this.#stopped) return;
     this.#stopped = true;
@@ -103,9 +116,21 @@ export class Reencoding implements StreamedUploadSource, UploadSending {
 
   #waitForUpstream(): void {
     if (this.#stopped) return;
-    this.#waiting = atDeadline(this.#due, () => {
-      this.#refusal.abort(overdueBody(this.#due.timeoutMs));
-      /* Taken off as far as it can be: the refusal is what the request fails with. */
+    this.#idle = true;
+    this.#timeWait();
+  }
+
+  /* One timer for the wait: at the body's deadline, or at the end of the request's time for the
+     wait when that comes first. */
+  #timeWait(): void {
+    clearTimeout(this.#waiting);
+    const allowed = this.#allowed;
+    const until = allowed === undefined ? Number.POSITIVE_INFINITY : performance.now() + allowed.ms;
+    const expire = until < this.#due.deadline ? allowed?.expire : undefined;
+    this.#waiting = atDeadline(Math.min(until, this.#due.deadline), () => {
+      if (expire) expire();
+      else this.#refusal.abort(overdueBody(this.#due.timeoutMs));
+      /* Taken off as far as it can be: the request fails with why it was stopped. */
       this.stop().catch(() => undefined);
     });
   }

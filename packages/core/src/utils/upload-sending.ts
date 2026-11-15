@@ -10,6 +10,12 @@ export interface UploadSending {
    * upload is there to hear it, so the request must be stopped with it
    */
   readonly refused: AbortSignal;
+  /**
+   * Hold each wait on the upstream to take a piece of the upload, the one
+   * under way included, to `ms`: one that lasts longer stops the upload and
+   * calls `expire`, for the request sending it to fail as out of time
+   */
+  holdWaits(ms: number, expire: () => void): void;
 }
 
 /* Each upload being sent on, known by the stream the call sends. */
@@ -17,7 +23,8 @@ const SENDING = new WeakMap<object, UploadSending>();
 
 /**
  * Note how an upload sent on as it arrives stands, for the call that sends
- * it: its timeout starts once the upload has been sent whole, and a timeout
+ * it: its timeout holds each wait on the upstream to take a piece, and the
+ * wait for the answer once the upload has been sent whole, and a deadline
  * that ends it before then is the client's upload arriving too slowly.
  * Server code alone reaches this: no page sends such an upload.
  *

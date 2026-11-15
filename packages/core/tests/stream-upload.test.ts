@@ -486,6 +486,61 @@ describe("an upload sent on as it arrives", () => {
     expect(logged("Upstream request failed")).toBe(false);
   });
 
+  it("answers 504 UPSTREAM_TIMEOUT once the upstream takes no piece of it for the call's timeout", async () => {
+    const held: IncomingMessage[] = [];
+    const unread = (req: IncomingMessage): void => {
+      req.pause();
+      held.push(req);
+    };
+    const size = 64 * 1024 * 1024;
+    const { handlePost, arrivals } = await proxyTo(
+      unread,
+      { bodyTimeoutMs: 60_000, maxUploadBytes: 2 * size },
+      endpoint.post("upload").timeout(600),
+    );
+
+    const answer = await Promise.race([
+      handlePost(largeUpload(size)),
+      new Promise<"none">((resolve) => setTimeout(() => resolve("none"), 3_000)),
+    ]);
+
+    expect(answer).not.toBe("none");
+    const response = answer as Response;
+    expect(response.status).toBe(504);
+    expect(await response.json()).toMatchObject({ code: "UPSTREAM_TIMEOUT" });
+    for (const req of held) req.resume();
+    expect((await arrivals[0])?.complete).toBe(false);
+    expect(logged("Upstream request failed")).toBe(true);
+  });
+
+  it("is sent whole to an upstream that takes each piece within the call's timeout, however long the whole takes", async () => {
+    /* It stops after each of its first reads, for far less than the timeout and far longer
+       together, and then reads the rest as it comes. */
+    let stops = 40;
+    const slowly = (req: IncomingMessage, res: ServerResponse): void => {
+      req.on("data", () => {
+        if (stops-- <= 0) return;
+        req.pause();
+        setTimeout(() => req.resume(), 20);
+      });
+      readsAll(req, res);
+    };
+    const size = 16 * 1024 * 1024;
+    const timeout = 300;
+    const { handlePost, arrivals } = await proxyTo(
+      slowly,
+      { maxUploadBytes: 2 * size },
+      endpoint.post("upload").timeout(timeout),
+    );
+    const started = performance.now();
+
+    const response = await handlePost(largeUpload(size));
+
+    expect(response.status).toBe(200);
+    expect(performance.now() - started).toBeGreaterThan(timeout);
+    expect((await arrivals[0])?.complete).toBe(true);
+  });
+
   it("still times out an upstream that leaves the upload, sent whole, unanswered", async () => {
     const silent = (req: IncomingMessage): void => {
       req.resume();

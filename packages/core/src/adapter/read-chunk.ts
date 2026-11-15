@@ -86,23 +86,23 @@ export function readChunk(
 }
 
 /**
- * Run `then` once a body's deadline has come, unless the timer returned is
- * cleared first: a wait on a body that no read of it bounds.
+ * Run `then` once a deadline has come, unless the timer returned is cleared
+ * first: a wait on a body that no read of it bounds.
  *
- * @param due - The body's deadline
+ * @param deadline - When, as `performance.now()` counts
  * @param then - What runs at it
  * @returns The timer, or `undefined` for a deadline past what a timer holds, which never comes
  * @example
  * ```ts
- * const timer = atDeadline(due, () => refuse(overdueBody(due.timeoutMs)));
+ * const timer = atDeadline(due.deadline, () => refuse(overdueBody(due.timeoutMs)));
  * clearTimeout(timer);
  * ```
  */
 export function atDeadline(
-  due: BodyDeadline,
+  deadline: number,
   then: () => void,
 ): ReturnType<typeof setTimeout> | undefined {
-  const delay = Math.max(0, due.deadline - performance.now());
+  const delay = Math.max(0, deadline - performance.now());
   if (delay > MAX_TIMER_MS) return undefined;
   const timer = setTimeout(then, delay);
   /* A wait on a body must not keep a server that is shutting down alive. */

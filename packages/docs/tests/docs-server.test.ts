@@ -123,6 +123,17 @@ describe("the docs server", () => {
     });
   });
 
+  it("answers a search no part of the docs holds with where to look instead", async () => {
+    const server = docsServer(folder.dir);
+    const { result } = await tool(server, await opened(server), "docs_search", {
+      query: "zqxjv wkpfh",
+    });
+    const found = result.structuredContent as { results: unknown[]; hint?: string };
+    expect(result.isError).toBe(false);
+    expect(found.results).toEqual([]);
+    expect(found.hint).toContain("The docs are in English: search with English words");
+  });
+
   it("answers a read with the page's Markdown, and the list with every page by section", async () => {
     const server = docsServer(folder.dir);
     const connection = await opened(server);

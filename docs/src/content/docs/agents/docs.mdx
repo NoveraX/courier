@@ -52,7 +52,7 @@ In Cursor or VS Code, add the same command to `.cursor/mcp.json` or `.vscode/mcp
 
 | Tool | What it does |
 | --- | --- |
-| `docs_search` | The parts of the docs that answer a question — a feature, an export's name, an option, an error's code — best first: each the part of a page under one heading, with the lines that match, and at most two parts of one page. `limit` takes 1 to 10, 5 by default. |
+| `docs_search` | The parts of the docs that answer a question — a feature, an export's name, an option, an error's code — best first: each the part of a page under one heading, with the lines that match, and at most two parts of one page. `limit` takes 1 to 10, 5 by default. A search no part answers says so, with a `hint`: the docs are in English, and `docs_list` lists every page. |
 | `docs_read` | A page as Markdown, or the part of it under one heading, by its heading's words or its anchor: the page as `docs_search` or `docs_list` names it, or as a link in another page does, `/docs/<page>#<anchor>`. A page longer than 32,000 characters comes in pieces, each saying where the next one starts. |
 | `docs_list` | Every page by section, with what it covers. |
 

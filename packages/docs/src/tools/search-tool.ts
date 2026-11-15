@@ -3,6 +3,10 @@ import type { ServedTool } from "@noverax/courier-mcp/internal";
 import { DOCS_LIMITS } from "../limits";
 import { answer, type DocsSource, readTool, refused } from "./docs-source";
 
+/* What a search no part of the docs answers says: the docs' language, and where else to look. */
+const NOTHING_FOUND =
+  "No part of the docs holds these words. The docs are in English: search with English words — a feature, an export's name, an option, an error's code — or list every page with docs_list.";
+
 /**
  * `docs_search`: the parts of the docs that answer a search, best first.
  *
@@ -38,6 +42,7 @@ export function searchTool(source: DocsSource): ServedTool {
       properties: {
         version: { type: "string" },
         results: { type: "array", items: { type: "object" } },
+        hint: { type: "string", description: "Where else to look, when no part answers" },
       },
       required: ["version", "results"],
     },
@@ -58,7 +63,12 @@ export function searchTool(source: DocsSource): ServedTool {
           return refused(`limit is a whole number from 1 to ${DOCS_LIMITS.maxResults}`);
         }
         const results = source.index().search(query, limit);
-        return { ok: true, data: { version: source.docs().manifest.version, results } };
+        const { version } = source.docs().manifest;
+        return {
+          ok: true,
+          data:
+            results.length > 0 ? { version, results } : { version, results, hint: NOTHING_FOUND },
+        };
       }),
   });
 }

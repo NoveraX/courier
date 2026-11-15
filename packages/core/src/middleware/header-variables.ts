@@ -1,9 +1,13 @@
 import { defineOwn } from "../utils/define-own";
 import { sentHeaderValue } from "../utils/header-value";
 import { isRecord } from "../utils/is-record";
+import { simpleTexts } from "../utils/simple-style";
 import { ValidationError } from "../validation";
 import { defineMiddleware } from "./define";
 import type { Middleware } from "./types";
+
+/* Why a file is refused where a header would carry it. */
+const HEADER_HOLDS_TEXT = "a header holds text; send a file in the body";
 
 /**
  * Send some of a call's variables as request headers instead of in its path,
@@ -12,8 +16,13 @@ import type { Middleware } from "./types";
  * are then taken out and set as headers, and one left unset is not sent.
  *
  * A list is written comma-separated and an object as its keys and values in
- * turn, as OpenAPI's `simple` style writes a header; anything else as text.
- * It runs where the call is made: for a call through the proxy, in the
+ * turn, as OpenAPI's `simple` style writes a header, each value as JSON
+ * writes it, its `toJSON` asked first: a date is its ISO string, so a direct
+ * call sends what a call through the proxy does, and a value JSON writes as
+ * `null` or leaves out sends no header. A file, a `Set`, a `Map` or a
+ * `BigInt` is refused with a `ConfigurationError` whose `code` is
+ * `VARIABLE_NOT_ENCODABLE`, before anything is sent. It runs where the call
+ * is made: for a call through the proxy, in the
  * application's server, so the values travel with the variables and the
  * browser sends no such header itself. A value no header carries — a
  * control character other than a tab, or a character past U+00FF — fails
@@ -41,16 +50,19 @@ export function headerVariablesMiddleware(names: readonly string[]): Middleware 
     if (!isRecord(ctx.variables)) return;
     const rest: Record<string, unknown> = {};
     for (const [name, value] of Object.entries(ctx.variables)) {
-      if (!headers.has(name)) defineOwn(rest, name, value);
-      else if (value !== undefined && value !== null)
-        ctx.headers.set(name, headerValue(name, value));
+      if (!headers.has(name)) {
+        defineOwn(rest, name, value);
+        continue;
+      }
+      const text = simpleTexts(name, value, HEADER_HOLDS_TEXT)?.join(",");
+      if (text !== undefined) ctx.headers.set(name, headerValue(name, text));
     }
     ctx.variables = rest;
   });
 }
 
-function headerValue(name: string, value: unknown): string {
-  const sent = sentHeaderValue(headerText(value));
+function headerValue(name: string, text: string): string {
+  const sent = sentHeaderValue(text);
   if (sent !== undefined) return sent;
   throw new ValidationError("variables", [
     {
@@ -59,10 +71,4 @@ function headerValue(name: string, value: unknown): string {
       path: [name],
     },
   ]);
-}
-
-function headerText(value: unknown): string {
-  if (Array.isArray(value)) return value.map(String).join(",");
-  if (isRecord(value)) return Object.entries(value).flat().map(String).join(",");
-  return String(value);
 }

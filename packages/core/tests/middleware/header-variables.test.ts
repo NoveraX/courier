@@ -28,8 +28,8 @@ function api() {
     endpoints: {
       find: endpoint
         .get("things")
-        .variables<{ q: string; "X-Digest"?: string; "X-Tags"?: string[] }>()
-        .use(headerVariablesMiddleware(["X-Digest", "X-Tags"])),
+        .variables<{ q: string; "X-Digest"?: string; "X-Tags"?: string[]; "X-Since"?: Date }>()
+        .use(headerVariablesMiddleware(["X-Digest", "X-Tags", "X-Since"])),
       create: endpoint
         .post("things")
         .variables(z.object({ name: z.string(), "Idempotency-Key": z.string().min(8) }))
@@ -63,6 +63,24 @@ describe("variables sent as headers", () => {
     const sent = upstream.last();
     expect(JSON.parse(sent.body.toString())).toEqual({ name: "chair" });
     expect(sent.headers["idempotency-key"]).toBe("key-12345");
+  });
+
+  it("write a value as JSON writes it, as a call through the proxy carries it", async () => {
+    await createCaller(api()).find({ q: "red", "X-Since": new Date(Date.UTC(2026, 10, 15)) });
+
+    expect(upstream.last().headers["x-since"]).toBe("2026-11-15T00:00:00.000Z");
+  });
+
+  it("send no header for a value JSON writes as null, and refuse a file before anything is sent", async () => {
+    await createCaller(api()).find({ q: "red", "X-Since": new Date(Number.NaN) });
+    const file = { q: "red", "X-Digest": new Blob(["x"]) as unknown as string };
+    const failure = await createCaller(api())
+      .find(file)
+      .catch((error: unknown) => error);
+
+    expect(upstream.last().headers["x-since"]).toBeUndefined();
+    expect(failure).toMatchObject({ code: "VARIABLE_NOT_ENCODABLE" });
+    expect(upstream.received).toHaveLength(1);
   });
 
   it("send no header for one left unset", async () => {

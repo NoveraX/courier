@@ -1,3 +1,5 @@
+import type { StandardSchemaV1 } from "@standard-schema/spec";
+
 import type { Sources } from "../define/types";
 import type {
   ConnectionLeaseStore,
@@ -8,6 +10,7 @@ import type {
 import type { WSAuthParams } from "../realtime/ws/ws-credentials";
 import type { ConnectionMeta, ConnectResult } from "./connection-meta";
 import type { AllowedHostsSetting, AllowedOriginsSetting } from "./runtime-policy";
+import type { SubscriptionTracker } from "./ws-context";
 import type { WSHandlerStats } from "./ws-handler-stats";
 import type { ClientIPResolver } from "./ws-ip-tracker";
 import type { ConnectionRegistry } from "./ws-registry-types";
@@ -289,10 +292,26 @@ export interface WSSubscriptionEntry {
   topic: string;
   /** What it was authorized as, so `authorize` runs again for it once who the connection is changes */
   authorized?: AuthorizedSubscription | undefined;
+  /** Studio's record of it, which what ends it closes */
+  record?: SubscriptionTracker | undefined;
   /** Cleanup function — calls onLeave or cancels generator */
   cleanup: () => void | Promise<void>;
   /** Channel message handler — called on incoming "message" for this topic */
   onMessage?: (payload: unknown) => void | Promise<void>;
+}
+
+/** What a subscription is opened with, besides its topic, its handler and its variables. */
+export interface SubscriptionOpening {
+  /** The id of the client's subscribe message, if any */
+  readonly subscribeId?: string | undefined;
+  /** The endpoint's response schema, which everything sent is held to */
+  readonly responseSchema?: StandardSchemaV1 | undefined;
+  /** What the subscription was authorized as */
+  readonly authorized?: AuthorizedSubscription | undefined;
+  /** Studio's record of it, which its entry holds and its own end closes */
+  readonly record?: SubscriptionTracker | undefined;
+  /** Sends what the subscription missed, once it is registered; whether it sent all of it */
+  readonly resume?: (() => boolean | Promise<boolean>) | undefined;
 }
 
 /** Server-side WS handler returned by createWSHandler */

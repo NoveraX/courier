@@ -1,5 +1,6 @@
 import { generateRequestId } from "../studio";
-import type { WSSocketContext } from "./ws-context";
+import type { SubscriptionTracker, WSSocketContext } from "./ws-context";
+import type { WSSubscriptionEntry } from "./ws-types";
 
 /**
  * Shared helpers for WS dispatch handlers.
@@ -27,32 +28,33 @@ export type SubscriptionCloseReason =
   | "max_lifetime";
 
 /**
- * Close a per-subscription stream entry and clean up tracking.
- * No-op if the entry has already been closed (idempotent).
+ * Close Studio's record of one subscription, as that subscription ends.
+ * A record is closed once: closed already, or never opened, it is left as
+ * it is. What ends a subscription closes that one's record, never the
+ * topic's: a subscription to the same topic made since has its own.
  *
  * @param ctx - Per-connection socket context
- * @param topic - Topic identifier whose subscription should be closed
+ * @param record - The subscription's record, as `openSubscriptionEntry` gave it
  * @param reason - Close reason reported to Studio (defaults to "complete")
+ * @example
+ * ```ts
+ * closeSubscriptionEntry(ctx, entry.record, "error");
+ * ```
  */
 export function closeSubscriptionEntry(
   ctx: WSSocketContext,
-  topic: string,
+  record: SubscriptionTracker | undefined,
   reason: SubscriptionCloseReason = "complete",
 ): void {
-  const sub = ctx.subscriptionIds.get(topic);
-  if (!sub) return;
-  // Claim ownership before firing hooks: deleting first ensures any
-  // re-entrant call (e.g. a hook that triggers another close) finds an
-  // empty slot and short-circuits at the guard above. Without this,
-  // two callers in the same microtask both pass the guard and double-fire.
-  ctx.subscriptionIds.delete(topic);
-  ctx.dt.onWSUntrack?.({ requestId: sub.requestId });
+  /* Claimed before the hooks fire: a close they set off again finds it closed. */
+  if (record === undefined || !ctx.records.delete(record)) return;
+  ctx.dt.onWSUntrack?.({ requestId: record.requestId });
   ctx.dt.onStreamClose?.({
-    requestId: sub.requestId,
+    requestId: record.requestId,
     reason,
-    eventCount: sub.seq.value,
+    eventCount: record.seq.value,
     totalBytes: 0,
-    duration: performance.now() - sub.t0,
+    duration: performance.now() - record.t0,
     timestamp: Date.now(),
   });
 }
@@ -65,14 +67,22 @@ export function closeSubscriptionEntry(
  * and forwards it via `?_playground_rid=<id>` on the upgrade URL; it is used
  * as the subscription's requestId so its events correlate back to the
  * playground tab. Other connections get a fresh id.
+ *
+ * @param ctx - Per-connection socket context
+ * @param endpoint - The endpoint subscribed to
+ * @returns The subscription's record, for its entry to hold and its end to close
+ * @example
+ * ```ts
+ * const record = openSubscriptionEntry(ctx, { source: "api", group: "chat", method: "room" });
+ * ```
  */
 export function openSubscriptionEntry(
   ctx: WSSocketContext,
-  topic: string,
   endpoint: { source: string; group?: string | undefined; method: string },
-): string {
+): SubscriptionTracker {
   const requestId = ctx.playgroundRequestId ?? generateRequestId();
-  ctx.subscriptionIds.set(topic, { requestId, seq: { value: 0 }, t0: performance.now() });
+  const record: SubscriptionTracker = { requestId, seq: { value: 0 }, t0: performance.now() };
+  ctx.records.add(record);
   ctx.dt.onStreamOpen?.({
     requestId,
     source: endpoint.source,
@@ -83,5 +93,21 @@ export function openSubscriptionEntry(
     timestamp: Date.now(),
     requestHeaders: extractHeaders(ctx.request.headers),
   });
-  return requestId;
+  return record;
+}
+
+/**
+ * Hold a subscription as its connection's to its topic. Two subscribes to
+ * one topic can open side by side: the one it takes the place of is ended,
+ * and Studio's record of that one is closed with it.
+ *
+ * @param ctx - Per-connection socket context
+ * @param entry - The subscription, with Studio's record of it
+ * @example
+ * ```ts
+ * holdSubscription(ctx, { topic, authorized, record, cleanup: () => ended.abort() });
+ * ```
+ */
+export function holdSubscription(ctx: WSSocketContext, entry: WSSubscriptionEntry): void {
+  closeSubscriptionEntry(ctx, ctx.topicManager.subscribe(ctx.connectionId, entry)?.record);
 }

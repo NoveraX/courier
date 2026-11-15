@@ -116,9 +116,10 @@ async function openSubscription(
   /* Reconnect dedup: replace an existing subscription to the same topic, and
      only once this one is cleared to take its place — tearing it down before
      authorization would cost a working subscription to a failed re-subscribe. */
-  if (ctx.topicManager.has(ctx.connectionId, subscribedTopic)) {
+  const replaced = ctx.topicManager.get(ctx.connectionId, subscribedTopic);
+  if (replaced) {
     await ctx.topicManager.unsubscribe(ctx.connectionId, subscribedTopic);
-    closeSubscriptionEntry(ctx, subscribedTopic);
+    closeSubscriptionEntry(ctx, replaced.record);
     if (ctx.closed) return;
   }
 
@@ -127,7 +128,7 @@ async function openSubscription(
   if (subscribedTopic !== topic) {
     ctx.sendMessage({ type: "renamed", id: msg.id, topic, payload: subscribedTopic });
   }
-  const subRequestId = openSubscriptionEntry(ctx, subscribedTopic, resolved);
+  const record = openSubscriptionEntry(ctx, resolved);
   const { source, group, method } = resolved;
   const authorized = { source, group, method, variables };
   /* What the subscription missed since the position it sent, when all of it was kept and reached
@@ -142,44 +143,34 @@ async function openSubscription(
   };
 
   /* Ended while it opened, it is done with: what ended it — the client's
-     unsubscribe, its subscribe again, the channel's own close — said so. */
+     unsubscribe, its subscribe again, the channel's own close — said so.
+     Its record closes with it, whatever ended it: one subscribe that
+     replaced it closes no record but the one of the subscription it found. */
   let open = true;
+  const opening = {
+    subscribeId: msg.id,
+    responseSchema: resolved.schema.response,
+    authorized,
+    record,
+    resume,
+  };
   try {
     if (!resolved.served) {
       const target = { api: resolved.api, group: resolved.group ?? "", method: resolved.method };
-      startRelay(ctx, subscribedTopic, target, variables, opened, authorized);
+      startRelay(ctx, subscribedTopic, target, variables, opened, opening);
     } else if (isChannelSchema(resolved.schema)) {
-      open = await startChannel(
-        ctx,
-        subscribedTopic,
-        resolved.endpoint,
-        variables,
-        msg.id,
-        resolved.schema.response,
-        authorized,
-        resume,
-      );
+      open = await startChannel(ctx, subscribedTopic, resolved.endpoint, variables, opening);
     } else {
-      open = await startPush(
-        ctx,
-        subscribedTopic,
-        resolved.endpoint,
-        variables,
-        msg.id,
-        resolved.schema.response,
-        authorized,
-        resume,
-      );
+      open = await startPush(ctx, subscribedTopic, resolved.endpoint, variables, opening);
     }
   } catch (error) {
     // Rollback tracking on init failure; the endpoint logged the error.
-    closeSubscriptionEntry(ctx, subscribedTopic, "error");
+    closeSubscriptionEntry(ctx, record, "error");
     sendSubscriptionEnd(ctx, topic, msg.id, describeFailure(error, "Subscription failed"));
     return;
   }
-  if (!open) return;
-  if (ctx.closed) {
-    closeSubscriptionEntry(ctx, subscribedTopic);
+  if (!open || ctx.closed) {
+    closeSubscriptionEntry(ctx, record);
     return;
   }
 
@@ -196,7 +187,7 @@ async function openSubscription(
     ...(msg.since !== undefined && { recovered: recovered && reached() }),
   });
   ctx.dt.onWSTrack?.({
-    requestId: subRequestId,
+    requestId: record.requestId,
     connectionId: ctx.connectionId,
     topic: subscribedTopic,
   });

@@ -1,5 +1,3 @@
-import type { StandardSchemaV1 } from "@standard-schema/spec";
-
 import { createLogger } from "../../logger";
 import { checkResponse } from "../../realtime/check-response";
 import { describeFailure } from "../../realtime/describe-failure";
@@ -8,9 +6,9 @@ import type { WSContext } from "../../realtime/types";
 import { unqualifyTopic } from "../../realtime/ws/topic-key";
 import { abortableEvents } from "../../utils/abortable-events";
 import type { WSSocketContext } from "../ws-context";
-import { closeSubscriptionEntry } from "../ws-dispatch-helpers";
+import { closeSubscriptionEntry, holdSubscription } from "../ws-dispatch-helpers";
 import { sendSubscriptionEnd } from "../ws-subscription-end";
-import type { AuthorizedSubscription, WSSubscriptionEntry } from "../ws-types";
+import type { SubscriptionOpening, WSSubscriptionEntry } from "../ws-types";
 import { emitChannelMessage } from "./emit-channel-message";
 import { reportHandlerFailure } from "./report-handler-failure";
 
@@ -27,10 +25,9 @@ const log = createLogger("WS");
  * @param topic - Qualified topic string (e.g. 'api.chat.feed#{"room":"a"}')
  * @param endpoint - Push endpoint function (async generator factory)
  * @param variables - Validated subscription variables
- * @param subscribeId - The id of the client's subscribe message, if any
- * @param responseSchema - The endpoint's response schema, which every value is held to
- * @param authorized - What the subscription was authorized as
- * @param resume - Sends what the subscription missed, once it is registered; whether it sent all of it
+ * @param opening - Its subscribe's id, the response schema every value is
+ *   held to, what it was authorized as, Studio's record of it, and what
+ *   sends it what it missed
  * @returns Whether the subscription is still open: false when it was ended
  *   while what it missed was sent — the client left it, or subscribed again
  */
@@ -39,11 +36,9 @@ export async function startPush(
   topic: string,
   endpoint: unknown,
   variables: unknown,
-  subscribeId?: string,
-  responseSchema?: StandardSchemaV1,
-  authorized?: AuthorizedSubscription,
-  resume: () => boolean | Promise<boolean> = () => false,
+  opening: SubscriptionOpening = {},
 ): Promise<boolean> {
+  const { subscribeId, responseSchema, authorized, record, resume = () => false } = opening;
   const ended = new AbortController();
   let recovered = false;
   const wsCtx: WSContext = {
@@ -79,11 +74,11 @@ export async function startPush(
         const value = responseSchema ? await checkResponse(responseSchema, yielded) : yielded;
         if (ended.signal.aborted) return;
         ctx.sendMessage({ type: "data", topic, payload: value });
-        emitChannelMessage(ctx, topic, value, "data");
+        emitChannelMessage(ctx, record, value, "data");
       }
       if (ended.signal.aborted) return;
       sendSubscriptionEnd(ctx, topic, subscribeId);
-      closeSubscriptionEntry(ctx, topic, "complete");
+      closeSubscriptionEntry(ctx, record, "complete");
     } catch (error) {
       reportHandlerFailure(ctx, topic, error, {
         refusal: "subscription ended",
@@ -91,12 +86,12 @@ export async function startPush(
       });
       if (ended.signal.aborted) return;
       sendSubscriptionEnd(ctx, topic, subscribeId, describeFailure(error, "Subscription failed"));
-      closeSubscriptionEntry(ctx, topic, "error");
+      closeSubscriptionEntry(ctx, record, "error");
     }
   };
 
-  const entry: WSSubscriptionEntry = { topic, authorized, cleanup: () => ended.abort() };
-  ctx.topicManager.subscribe(ctx.connectionId, entry);
+  const entry: WSSubscriptionEntry = { topic, authorized, record, cleanup: () => ended.abort() };
+  holdSubscription(ctx, entry);
   /* Registered first, then sent what it missed: a live event that comes meanwhile follows it. */
   recovered = await resume();
 

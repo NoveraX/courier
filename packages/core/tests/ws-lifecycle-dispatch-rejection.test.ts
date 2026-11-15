@@ -59,7 +59,7 @@ function createMockCtx(): WSSocketContext {
     sendMessage: (msg: WSMessage) => sent.push(msg),
     dt: {},
     seq: { value: 0 },
-    subscriptionIds: new Map(),
+    records: new Set(),
     subscribing: new Map(),
     t0: 0,
     meta: {},

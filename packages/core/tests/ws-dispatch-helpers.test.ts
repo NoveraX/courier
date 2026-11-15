@@ -4,26 +4,27 @@ import { closeSubscriptionEntry, extractHeaders } from "../src/adapter/ws-dispat
 
 function createCtx(overrides: { onWSUntrack?: () => void; onStreamClose?: () => void } = {}): {
   ctx: WSSocketContext;
-  subs: Map<string, SubscriptionTracker>;
+  records: Set<SubscriptionTracker>;
 } {
-  const subs = new Map<string, SubscriptionTracker>();
+  const records = new Set<SubscriptionTracker>();
   const ctx = {
-    subscriptionIds: subs,
+    records,
     dt: {
       onWSUntrack: overrides.onWSUntrack,
       onStreamClose: overrides.onStreamClose,
     },
   } as unknown as WSSocketContext;
-  return { ctx, subs };
+  return { ctx, records };
 }
 
-function seedTracker(subs: Map<string, SubscriptionTracker>, topic: string): SubscriptionTracker {
+/* An open record, as a subscription to the topic opened it. */
+function seedTracker(records: Set<SubscriptionTracker>, topic: string): SubscriptionTracker {
   const tracker: SubscriptionTracker = {
     requestId: `req-${topic}`,
     seq: { value: 3 },
     t0: performance.now(),
   };
-  subs.set(topic, tracker);
+  records.add(tracker);
   return tracker;
 }
 
@@ -41,13 +42,13 @@ describe("extractHeaders", () => {
 });
 
 describe("closeSubscriptionEntry", () => {
-  it("fires onWSUntrack and onStreamClose exactly once for one entry", () => {
+  it("fires onWSUntrack and onStreamClose exactly once for one record", () => {
     const onWSUntrack = vi.fn();
     const onStreamClose = vi.fn();
-    const { ctx, subs } = createCtx({ onWSUntrack, onStreamClose });
-    seedTracker(subs, "api.chat.room");
+    const { ctx, records } = createCtx({ onWSUntrack, onStreamClose });
+    const record = seedTracker(records, "api.chat.room");
 
-    closeSubscriptionEntry(ctx, "api.chat.room");
+    closeSubscriptionEntry(ctx, record);
 
     expect(onWSUntrack).toHaveBeenCalledTimes(1);
     expect(onStreamClose).toHaveBeenCalledTimes(1);
@@ -58,25 +59,27 @@ describe("closeSubscriptionEntry", () => {
         eventCount: 3,
       }),
     );
-    expect(subs.size).toBe(0);
+    expect(records.size).toBe(0);
   });
 
   it("forwards the close reason to onStreamClose", () => {
     const onStreamClose = vi.fn();
-    const { ctx, subs } = createCtx({ onStreamClose });
-    seedTracker(subs, "api.chat.room");
+    const { ctx, records } = createCtx({ onStreamClose });
+    const record = seedTracker(records, "api.chat.room");
 
-    closeSubscriptionEntry(ctx, "api.chat.room", "error");
+    closeSubscriptionEntry(ctx, record, "error");
 
     expect(onStreamClose).toHaveBeenCalledWith(expect.objectContaining({ reason: "error" }));
   });
 
-  it("is a no-op when topic is not subscribed", () => {
+  it("is a no-op for a record that is not open, or none", () => {
     const onWSUntrack = vi.fn();
     const onStreamClose = vi.fn();
     const { ctx } = createCtx({ onWSUntrack, onStreamClose });
+    const neverOpened: SubscriptionTracker = { requestId: "r", seq: { value: 0 }, t0: 0 };
 
-    closeSubscriptionEntry(ctx, "api.unknown");
+    closeSubscriptionEntry(ctx, neverOpened);
+    closeSubscriptionEntry(ctx, undefined);
 
     expect(onWSUntrack).not.toHaveBeenCalled();
     expect(onStreamClose).not.toHaveBeenCalled();
@@ -85,61 +88,60 @@ describe("closeSubscriptionEntry", () => {
   it("fires hooks exactly once across three sequential calls (idempotency under same-microtask re-entry)", () => {
     const onWSUntrack = vi.fn();
     const onStreamClose = vi.fn();
-    const { ctx, subs } = createCtx({ onWSUntrack, onStreamClose });
-    seedTracker(subs, "api.chat.room");
+    const { ctx, records } = createCtx({ onWSUntrack, onStreamClose });
+    const record = seedTracker(records, "api.chat.room");
 
-    // Three calls in a row inside the same microtask. Without the
-    // delete-before-fire claim, all three would observe the entry via
-    // the initial Map.get() check, pass the !sub guard, and double-fire
-    // both Studio hooks. Delete-first ensures only the first caller
-    // observes a non-empty slot.
-    closeSubscriptionEntry(ctx, "api.chat.room");
-    closeSubscriptionEntry(ctx, "api.chat.room");
-    closeSubscriptionEntry(ctx, "api.chat.room");
+    // Three calls in a row inside the same microtask: the first takes the
+    // record out before its hooks fire, so the others find it closed.
+    closeSubscriptionEntry(ctx, record);
+    closeSubscriptionEntry(ctx, record);
+    closeSubscriptionEntry(ctx, record);
 
     expect(onWSUntrack).toHaveBeenCalledTimes(1);
     expect(onStreamClose).toHaveBeenCalledTimes(1);
-    expect(subs.size).toBe(0);
+    expect(records.size).toBe(0);
   });
 
   it("survives a re-entrant close from inside an onWSUntrack hook", () => {
     let ctxRef!: WSSocketContext;
+    let recordRef!: SubscriptionTracker;
     const onWSUntrack = vi.fn(() => {
       // Re-entrant close attempt from a hook callback. Must not double-fire.
-      closeSubscriptionEntry(ctxRef, "api.chat.room");
+      closeSubscriptionEntry(ctxRef, recordRef);
     });
     const onStreamClose = vi.fn();
     const seeded = createCtx({ onWSUntrack, onStreamClose });
     ctxRef = seeded.ctx;
-    seedTracker(seeded.subs, "api.chat.room");
+    recordRef = seedTracker(seeded.records, "api.chat.room");
 
-    closeSubscriptionEntry(ctxRef, "api.chat.room");
+    closeSubscriptionEntry(ctxRef, recordRef);
 
     expect(onWSUntrack).toHaveBeenCalledTimes(1);
     expect(onStreamClose).toHaveBeenCalledTimes(1);
-    expect(seeded.subs.size).toBe(0);
+    expect(seeded.records.size).toBe(0);
   });
 
-  it("only closes the targeted topic when multiple are tracked", () => {
+  it("closes the record it is given alone, another of the same topic too", () => {
     const onWSUntrack = vi.fn();
     const onStreamClose = vi.fn();
-    const { ctx, subs } = createCtx({ onWSUntrack, onStreamClose });
-    seedTracker(subs, "api.chat.room");
-    seedTracker(subs, "api.feed");
+    const { ctx, records } = createCtx({ onWSUntrack, onStreamClose });
+    const room = seedTracker(records, "api.chat.room");
+    const feed = seedTracker(records, "api.feed");
+    const roomAgain: SubscriptionTracker = { requestId: "req-again", seq: { value: 0 }, t0: 0 };
+    records.add(roomAgain);
 
-    closeSubscriptionEntry(ctx, "api.chat.room");
+    closeSubscriptionEntry(ctx, room);
 
     expect(onWSUntrack).toHaveBeenCalledTimes(1);
     expect(onWSUntrack).toHaveBeenCalledWith({ requestId: "req-api.chat.room" });
-    expect(subs.has("api.chat.room")).toBe(false);
-    expect(subs.has("api.feed")).toBe(true);
+    expect([...records]).toEqual([feed, roomAgain]);
   });
 
   it("works when studio hooks are undefined (no-op)", () => {
-    const { ctx, subs } = createCtx();
-    seedTracker(subs, "api.chat.room");
+    const { ctx, records } = createCtx();
+    const record = seedTracker(records, "api.chat.room");
 
-    expect(() => closeSubscriptionEntry(ctx, "api.chat.room")).not.toThrow();
-    expect(subs.size).toBe(0);
+    expect(() => closeSubscriptionEntry(ctx, record)).not.toThrow();
+    expect(records.size).toBe(0);
   });
 });

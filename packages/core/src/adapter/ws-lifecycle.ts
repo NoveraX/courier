@@ -65,14 +65,12 @@ export function wireEvents(
     ctx.bridge?.onConnectionClose();
     await topicManager.disconnectAll(ctx.connectionId);
 
-    // Close each per-subscription stream entry. We snapshot the topic list
-    // first because closeSubscriptionEntry mutates ctx.subscriptionIds, and
-    // we route through the helper so the delete-before-fire ownership claim
-    // protects against re-entrant hooks (a Studio onWSUntrack callback that
-    // calls back into closeSubscriptionEntry would otherwise double-fire).
-    const closingTopics = Array.from(ctx.subscriptionIds.keys());
-    for (const topic of closingTopics) {
-      closeSubscriptionEntry(ctx, topic, "disconnect");
+    // Close Studio's record of each subscription still open, those still
+    // opening too. The set is copied first, as each close takes its record
+    // out, through the helper, whose claim before the hooks fire keeps a
+    // hook that closes a record again from firing twice.
+    for (const record of [...ctx.records]) {
+      closeSubscriptionEntry(ctx, record, "disconnect");
     }
     try {
       await config.onDisconnect?.({

@@ -1,18 +1,29 @@
-import type { WSSocketContext } from "../ws-context";
+import type { SubscriptionTracker, WSSocketContext } from "../ws-context";
 
-/** Emit a studio stream message event for a channel send/broadcast */
+/**
+ * Tell Studio of what a subscription sends, as the event of its record: a
+ * frame with no record counts on the connection.
+ *
+ * @param ctx - Per-connection socket context
+ * @param record - Studio's record of the subscription that sent it
+ * @param data - What was sent
+ * @param eventType - The frame's type
+ * @example
+ * ```ts
+ * emitChannelMessage(ctx, record, payload, "data");
+ * ```
+ */
 export function emitChannelMessage(
   ctx: WSSocketContext,
-  topic: string,
+  record: SubscriptionTracker | undefined,
   data: unknown,
   eventType: string,
 ): void {
   if (!ctx.dt.onStreamMessage) return;
-  const sub = ctx.subscriptionIds.get(topic);
-  const seq = sub ? ++sub.seq.value : ++ctx.seq.value;
+  const seq = record ? ++record.seq.value : ++ctx.seq.value;
   const json = typeof data === "string" ? data : JSON.stringify(data);
   ctx.dt.onStreamMessage({
-    requestId: sub?.requestId ?? ctx.requestId,
+    requestId: record?.requestId ?? ctx.requestId,
     seq,
     eventType,
     dataSize: json.length,

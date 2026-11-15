@@ -44,12 +44,17 @@ export interface WSSocketContext {
    * Set to `true` by the close listener in `wireEvents`. Async dispatch
    * handlers MUST check this after every `await` and bail out without
    * mutating per-connection state — otherwise an entry written after the
-   * close listener has already drained `subscriptionIds`/`topicManager`
-   * would leak past the connection's lifetime.
+   * close listener has already drained `records`/`topicManager` would leak
+   * past the connection's lifetime.
    */
   closed: boolean;
-  /** Per-subscription Studio tracking (topic → tracker) */
-  subscriptionIds: Map<string, SubscriptionTracker>;
+  /**
+   * Studio's records of the connection's subscriptions still open. Each
+   * belongs to one subscription, whose entry holds it, and is closed once,
+   * by what ended that subscription: a subscription to the same topic made
+   * since has a record of its own.
+   */
+  records: Set<SubscriptionTracker>;
   /**
    * Topics whose subscribe is still on its way in — validation, middleware
    * and authorization are awaited — counted against `maxSubscriptions`,
@@ -155,7 +160,6 @@ export function buildContext(
     // valid URL, and a corrupted one is the upstream proxy/handshake's bug.
     playgroundRequestId = undefined;
   }
-  const subscriptionIds = new Map<string, SubscriptionTracker>();
   const backpressure = createBackpressure(ws, session, config, connectionId);
 
   return {
@@ -163,7 +167,7 @@ export function buildContext(
     requestId,
     playgroundRequestId,
     closed: false,
-    subscriptionIds,
+    records: new Set(),
     subscribing: new Map(),
     resuming: new Map(),
     sources: servedSources(config.sources),

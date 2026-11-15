@@ -56,7 +56,7 @@ function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
     sendMessage: (msg: WSMessage) => sent.push(msg),
     dt: {},
     seq: { value: 5 },
-    subscriptionIds: new Map(),
+    records: new Set(),
     subscribing: new Map(),
     t0: performance.now(),
     meta: {},
@@ -239,12 +239,10 @@ describe("wireEvents", () => {
   it("stops heartbeat and cleans up on close", async () => {
     const ws = createMockWs();
     const onStreamClose = vi.fn();
-    const subIds = new Map([
-      ["test.topic", { requestId: "sub-1", seq: { value: 3 }, t0: performance.now() }],
-    ]);
+    const records = new Set([{ requestId: "sub-1", seq: { value: 3 }, t0: performance.now() }]);
     const { ctx } = createMockCtx({
       dt: { onStreamClose } as never,
-      subscriptionIds: subIds as never,
+      records,
     });
     const heartbeat = createHeartbeat();
     const topicManager = createTopicManager();
@@ -276,22 +274,19 @@ describe("wireEvents", () => {
     const ws = createMockWs();
     const onWSUntrack = vi.fn();
     const onStreamClose = vi.fn();
-    const subIds = new Map([
-      ["api.feed.a", { requestId: "sub-a", seq: { value: 1 }, t0: performance.now() }],
-      ["api.feed.b", { requestId: "sub-b", seq: { value: 2 }, t0: performance.now() }],
-    ]);
+    const a = { requestId: "sub-a", seq: { value: 1 }, t0: performance.now() };
+    const b = { requestId: "sub-b", seq: { value: 2 }, t0: performance.now() };
     let ctxRef!: WSSocketContext;
-    // Re-entrant attack: a hook callback synchronously closes the same topic
-    // again. Without the delete-before-fire claim in closeSubscriptionEntry
-    // and the loop routing through it, the hook would observe the entry and
+    // Re-entrant attack: a hook callback synchronously closes the same record
+    // again. Without the claim before the hooks fire in closeSubscriptionEntry
+    // and the loop routing through it, the hook would find the record open and
     // fire onWSUntrack/onStreamClose a second time for the same subscription.
     onWSUntrack.mockImplementation(({ requestId }: { requestId: string }) => {
-      const topic = requestId === "sub-a" ? "api.feed.a" : "api.feed.b";
-      closeSubscriptionEntry(ctxRef, topic, "disconnect");
+      closeSubscriptionEntry(ctxRef, requestId === "sub-a" ? a : b, "disconnect");
     });
     const { ctx } = createMockCtx({
       dt: { onWSUntrack, onStreamClose } as never,
-      subscriptionIds: subIds as never,
+      records: new Set([a, b]),
     });
     ctxRef = ctx;
     const heartbeat = createHeartbeat();
@@ -318,9 +313,9 @@ describe("wireEvents", () => {
     for (const call of onStreamClose.mock.calls) {
       expect(call[0]).toMatchObject({ reason: "disconnect" });
     }
-    // ctx.subscriptionIds is empty after the loop because closeSubscriptionEntry
-    // deletes each entry as it claims ownership.
-    expect(ctx.subscriptionIds.size).toBe(0);
+    // ctx.records is empty after the loop because closeSubscriptionEntry
+    // takes each record out as it claims it.
+    expect(ctx.records.size).toBe(0);
   });
 
   it("calls onDisconnect hook on close", async () => {

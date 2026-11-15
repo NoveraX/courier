@@ -25,9 +25,9 @@ import { layerHeaders } from "../../utils/layer-headers";
 import { sha256Hex } from "../../utils/sha256-hex";
 import type { TransportOpened } from "../../utils/transport-middleware";
 import type { WSSocketContext } from "../ws-context";
-import { closeSubscriptionEntry } from "../ws-dispatch-helpers";
+import { closeSubscriptionEntry, holdSubscription } from "../ws-dispatch-helpers";
 import { sendSubscriptionEnd } from "../ws-subscription-end";
-import type { AuthorizedSubscription } from "../ws-types";
+import type { SubscriptionOpening } from "../ws-types";
 import { emitChannelMessage } from "./emit-channel-message";
 
 /** What a client hears of a message the upstream had no room to take. */
@@ -70,7 +70,7 @@ export interface RelayTarget {
  * @param variables - Its validated variables
  * @param opened - What the subscription's middleware and session produced, and the source's
  *   options it was opened with
- * @param authorized - What the subscription was authorized as
+ * @param opening - What the subscription was authorized as, and Studio's record of it
  * @example
  * ```ts
  * startRelay(ctx, 'api.chat.room#{"room":"r1"}', { api, group: "chat", method: "room" }, { room: "r1" }, opened);
@@ -82,8 +82,9 @@ export function startRelay(
   target: RelayTarget,
   variables: unknown,
   opened: TransportOpened,
-  authorized?: AuthorizedSubscription,
+  opening: Pick<SubscriptionOpening, "authorized" | "record"> = {},
 ): void {
+  const { authorized, record } = opening;
   const { api, group, method } = target;
   const address = channelAddress(api, opened.options, group, method, variables);
   const sent = layerHeaders(sourceHeadersOf(opened.options), opened.headers);
@@ -92,11 +93,10 @@ export function startRelay(
   const upstream = lazyChannel(import("../../realtime/ws-channel-client"), ({ executeWSChannel }) =>
     executeWSChannel<unknown, unknown>(address.url, address.topic, variables, options),
   );
-  const tracked = ctx.subscriptionIds.get(topic);
   const unwatch =
-    tracked && ctx.dt.onStreamStatus
+    record && ctx.dt.onStreamStatus
       ? watchConnection(upstream, (status, reconnect) =>
-          ctx.dt.onStreamStatus?.(streamStatusEvent(tracked.requestId, status, reconnect)),
+          ctx.dt.onStreamStatus?.(streamStatusEvent(record.requestId, status, reconnect)),
         )
       : undefined;
   let ended = false;
@@ -110,12 +110,12 @@ export function startRelay(
       undefined,
       error && describeFailure(error, "Upstream subscription failed"),
     );
-    closeSubscriptionEntry(ctx, topic, error ? "error" : "complete");
+    closeSubscriptionEntry(ctx, record, error ? "error" : "complete");
     void ctx.topicManager.unsubscribe(ctx.connectionId, topic);
   };
   upstream.on("data", (payload) => {
     ctx.sendMessage({ type: "data", topic, payload });
-    emitChannelMessage(ctx, topic, payload, "data");
+    emitChannelMessage(ctx, record, payload, "data");
   });
   /* An error the upstream reports while it takes a message — one too large —
      reaches the client on its own, so the message's drop is not told twice. */
@@ -129,9 +129,10 @@ export function startRelay(
     ctx.sendMessage({ type: "error", topic, error: describeFailure(error, "Upstream error") });
   });
   upstream.on("close", (info) => end(info.reason === "failed" ? info.error : undefined));
-  ctx.topicManager.subscribe(ctx.connectionId, {
+  holdSubscription(ctx, {
     topic,
     authorized,
+    record,
     cleanup: async () => {
       ended = true;
       unwatch?.();

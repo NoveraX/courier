@@ -5,7 +5,7 @@ import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { resolveEndpoint } from "../utils/execute-resolve";
 import { ValidationError, validateSchema } from "../validation";
 import { endpointName } from "./endpoint-name";
-import type { WSSocketContext } from "./ws-context";
+import type { SubscriptionTracker, WSSocketContext } from "./ws-context";
 import { closeSubscriptionEntry } from "./ws-dispatch-helpers";
 import { parseTopic } from "./ws-resolve";
 
@@ -76,10 +76,9 @@ export async function handleMessage(ctx: WSSocketContext, msg: WSMessage): Promi
   if (ctx.authorizeMessage && !(await authorizeIncomingMessage(ctx, msg, topic))) return;
   if (ctx.closed) return;
 
-  ctx.seq.value++;
-  emitStudioMessageEvent(ctx, topic, msg);
-
   const entry = ctx.topicManager.get(ctx.connectionId, topic);
+  ctx.seq.value++;
+  emitStudioMessageEvent(ctx, entry?.record, msg);
   await entry?.onMessage?.(payload);
 }
 
@@ -88,10 +87,12 @@ export async function handleUnsubscribe(ctx: WSSocketContext, msg: WSMessage): P
   const topic = msg.topic;
   if (!topic) return;
 
+  /* The record of the subscription it ends: the topic may be another's by the time that has ended. */
+  const ending = ctx.topicManager.get(ctx.connectionId, topic);
   await ctx.topicManager.unsubscribe(ctx.connectionId, topic);
   if (ctx.closed) return;
   ctx.sendMessage({ type: "unsubscribed", id: msg.id, topic });
-  closeSubscriptionEntry(ctx, topic, "complete");
+  closeSubscriptionEntry(ctx, ending?.record, "complete");
 }
 
 /**
@@ -140,14 +141,17 @@ function refuseMessage(ctx: WSSocketContext, msg: WSMessage, failure: StreamFail
   });
 }
 
-/** Emit a Studio onStreamMessage event for an inbound WS message (if hooked) */
-function emitStudioMessageEvent(ctx: WSSocketContext, topic: string, msg: WSMessage): void {
+/** Emit a Studio onStreamMessage event for an inbound WS message (if hooked), as an event of the record of the subscription it reaches */
+function emitStudioMessageEvent(
+  ctx: WSSocketContext,
+  record: SubscriptionTracker | undefined,
+  msg: WSMessage,
+): void {
   if (!ctx.dt.onStreamMessage) return;
-  const sub = ctx.subscriptionIds.get(topic);
-  const seq = sub ? ++sub.seq.value : ctx.seq.value;
+  const seq = record ? ++record.seq.value : ctx.seq.value;
   const json = typeof msg.payload === "string" ? msg.payload : JSON.stringify(msg.payload);
   ctx.dt.onStreamMessage({
-    requestId: sub?.requestId ?? ctx.requestId,
+    requestId: record?.requestId ?? ctx.requestId,
     seq,
     eventType: "message",
     dataSize: json.length,

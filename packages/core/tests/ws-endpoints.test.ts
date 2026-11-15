@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { WSSocketContext } from "../src/adapter/ws-context";
 import { startChannel, startPush } from "../src/adapter/ws-endpoints";
+import { createServerTopicManager } from "../src/adapter/ws-topics";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 
 // ---------------------------------------------------------------------------
@@ -24,7 +25,7 @@ function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
   const ctx = {
     connectionId: "conn-1",
     requestId: "req-1",
-    subscriptionIds: new Map(),
+    records: new Set(),
     subscribing: new Map(),
     sendMessage: (msg: WSMessage) => sent.push(msg),
     dt: {},
@@ -139,7 +140,7 @@ describe("startPush", () => {
       throw new Error("Generator failed");
     };
 
-    startPush(ctx, "topic", handler, {}, "sub-1");
+    startPush(ctx, "topic", handler, {}, { subscribeId: "sub-1" });
     await new Promise((r) => setTimeout(r, 50));
 
     expect(sent.at(-1)).toEqual({
@@ -175,6 +176,30 @@ describe("startPush", () => {
     await new Promise((r) => setTimeout(r, 10));
 
     expect(sent.some((m) => m.type === "complete")).toBe(false);
+  });
+
+  it("closes Studio's record of a subscription opened beside it, whose place it takes", async () => {
+    const onStreamClose = vi.fn();
+    const { ctx } = createMockCtx({
+      topicManager: createServerTopicManager(),
+      dt: { onStreamClose } as never,
+    });
+    const open = async function* () {
+      await new Promise(() => {});
+    };
+    const records = ["first", "second"].map((requestId) => ({
+      requestId,
+      seq: { value: 0 },
+      t0: 0,
+    }));
+
+    for (const record of records) {
+      ctx.records.add(record);
+      await startPush(ctx, "api.chat.feed", open, {}, { record });
+    }
+
+    expect(onStreamClose.mock.calls.map(([event]) => event.requestId)).toEqual(["first"]);
+    expect([...ctx.records]).toEqual([records[1]]);
   });
 
   it("passes variables and connectionId to handler via WSContext", async () => {
@@ -259,7 +284,7 @@ describe("startChannel", () => {
     const factory = () => ({ onJoin, onMessage: vi.fn() });
     const { ctx, sent } = createMockCtx();
 
-    await startChannel(ctx, "topic", factory, {}, "sub-1");
+    await startChannel(ctx, "topic", factory, {}, { subscribeId: "sub-1" });
 
     const channelCtx = onJoin.mock.calls[0]![0];
     channelCtx.close(4001, "kicked");

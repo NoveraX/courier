@@ -141,7 +141,7 @@ function createMsgCtx(overrides: Partial<WSSocketContext> = {}): {
     },
     sendMessage: (msg: WSMessage) => sent.push(msg),
     dt: { onStreamMessage: vi.fn() },
-    subscriptionIds: new Map(),
+    records: new Set(),
     subscribing: new Map(),
     seq: { value: 0 },
     t0: performance.now(),

@@ -1,5 +1,3 @@
-import type { StandardSchemaV1 } from "@standard-schema/spec";
-
 import { createLogger } from "../../logger";
 import { checkResponseNow } from "../../realtime/check-response-now";
 import { describeFailure } from "../../realtime/describe-failure";
@@ -8,9 +6,9 @@ import type { ChannelHandlers, WSChannelContext } from "../../realtime/types";
 import { unqualifyTopic } from "../../realtime/ws/topic-key";
 import { WS_CODE } from "../../realtime/ws/ws-codes";
 import type { WSSocketContext } from "../ws-context";
-import { closeSubscriptionEntry } from "../ws-dispatch-helpers";
+import { closeSubscriptionEntry, holdSubscription } from "../ws-dispatch-helpers";
 import { sendSubscriptionEnd } from "../ws-subscription-end";
-import type { AuthorizedSubscription, WSSubscriptionEntry } from "../ws-types";
+import type { SubscriptionOpening, WSSubscriptionEntry } from "../ws-types";
 import { emitChannelMessage } from "./emit-channel-message";
 import { reportHandlerFailure } from "./report-handler-failure";
 
@@ -32,9 +30,8 @@ const log = createLogger("WS");
  * Error handling:
  * - Factory init throws → rethrown, no subscription registered
  * - onJoin throws → this subscription let go of, error rethrown so the outer
- *   `handleSubscribe` catch can run `closeSubscriptionEntry` (Studio
- *   tracking teardown) and send the single error message to the client.
- *   Doing both here would leak the `subscriptionIds` entry.
+ *   `handleSubscribe` catch can close Studio's record of it and send the
+ *   single error message to the client.
  * - onMessage throws → error sent to client for this topic; the channel goes on
  * - onLeave throws → logged, does not block cleanup
  * - ctx.send / ctx.broadcast of a value the response schema refuses → thrown
@@ -44,10 +41,9 @@ const log = createLogger("WS");
  * @param topic - Qualified topic string (e.g. 'api.chat.room#{"room":"a"}')
  * @param endpoint - Channel endpoint function (ChannelHandlers factory)
  * @param variables - Validated subscription variables
- * @param subscribeId - The id of the client's subscribe message, if any
- * @param responseSchema - The channel's response schema, which everything it sends is held to
- * @param authorized - What the subscription was authorized as
- * @param resume - Sends what the subscription missed, once it is registered; whether it sent all of it
+ * @param opening - Its subscribe's id, the response schema everything it
+ *   sends is held to, what it was authorized as, Studio's record of it, and
+ *   what sends it what it missed
  * @returns Whether the subscription is still open once it has joined: false
  *   when it was ended meanwhile — the client left it or subscribed again, or
  *   the channel closed it in `onJoin` — and has nothing more to say
@@ -57,11 +53,9 @@ export async function startChannel(
   topic: string,
   endpoint: unknown,
   variables: unknown,
-  subscribeId?: string,
-  responseSchema?: StandardSchemaV1,
-  authorized?: AuthorizedSubscription,
-  resume: () => boolean | Promise<boolean> = () => false,
+  opening: SubscriptionOpening = {},
 ): Promise<boolean> {
+  const { subscribeId, responseSchema, authorized, record, resume = () => false } = opening;
   let recovered = false;
   const outbound = (data: unknown): unknown =>
     responseSchema ? checkResponseNow(responseSchema, data) : data;
@@ -94,7 +88,7 @@ export async function startChannel(
       /* Ended, it reaches no one: the topic may be another subscription's by now. */
       if (ended.signal.aborted) return;
       ctx.sendMessage({ type: "data", topic, payload });
-      emitChannelMessage(ctx, topic, payload, "data");
+      emitChannelMessage(ctx, record, payload, "data");
     },
     broadcast: (t, data) => broadcastToTopic(ctx, t, outbound(data)),
     close: (code, reason) => {
@@ -104,7 +98,7 @@ export async function startChannel(
       const failed = code !== undefined && code !== WS_CODE.NORMAL;
       const failure = failed ? { code, message: reason ?? "Channel closed" } : undefined;
       sendSubscriptionEnd(ctx, topic, subscribeId, failure);
-      closeSubscriptionEntry(ctx, topic, failed ? "error" : "complete");
+      closeSubscriptionEntry(ctx, record, failed ? "error" : "complete");
       void ctx.topicManager.release(ctx.connectionId, entry);
     },
   };
@@ -112,6 +106,7 @@ export async function startChannel(
   const entry: WSSubscriptionEntry = {
     topic,
     authorized,
+    record,
     cleanup: async () => {
       ended.abort();
       if (!joined) return;
@@ -133,7 +128,7 @@ export async function startChannel(
       }
     },
   };
-  ctx.topicManager.subscribe(ctx.connectionId, entry);
+  holdSubscription(ctx, entry);
 
   /* Registered first, then sent what it missed: a live event that comes meanwhile follows it. */
   recovered = await resume();
@@ -150,9 +145,9 @@ export async function startChannel(
     });
     if (ended.signal.aborted) return false;
     await ctx.topicManager.release(ctx.connectionId, entry);
-    // Rethrow so handleSubscribe's outer catch runs closeSubscriptionEntry
-    // and sends the error to the client. Sending here would either leak the
-    // tracking entry or duplicate the error frame.
+    // Rethrow so handleSubscribe's outer catch closes Studio's record and
+    // sends the error to the client. Sending here as well would duplicate
+    // the error frame.
     throw error;
   }
   return !ended.signal.aborted;

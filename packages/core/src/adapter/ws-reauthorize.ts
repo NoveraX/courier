@@ -27,7 +27,8 @@ export async function reauthorizeSubscriptions(ctx: WSSocketContext): Promise<vo
     const msg = { type: "subscribe", topic } as const;
     if (await authorizeSubscription(ctx, msg, authorized, topic, authorized.variables)) continue;
     if (ctx.closed) return;
+    const ending = ctx.topicManager.get(ctx.connectionId, topic);
     await ctx.topicManager.unsubscribe(ctx.connectionId, topic);
-    closeSubscriptionEntry(ctx, topic, "error");
+    closeSubscriptionEntry(ctx, ending?.record, "error");
   }
 }

@@ -38,6 +38,15 @@ function createEndpoint(transport: string, receive?: unknown, variables?: unknow
   };
 }
 
+/** A push endpoint whose stream goes on until its subscription ends. */
+function createOpenEndpoint(): unknown {
+  const endpoint = createEndpoint("ws") as { probe: unknown };
+  endpoint.probe = async function* () {
+    await new Promise(() => {});
+  };
+  return endpoint;
+}
+
 function createSource(group: string, method: string, endpoint: unknown): unknown {
   return {
     options: {
@@ -93,7 +102,7 @@ function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
     sendMessage: (msg: WSMessage) => sent.push(msg),
     dt: {},
     seq: { value: 0 },
-    subscriptionIds: new Map(),
+    records: new Set(),
     subscribing: new Map(),
     t0: performance.now(),
     request: new Request("http://localhost/ws"),
@@ -275,7 +284,7 @@ describe("handleSubscribe", () => {
     // The subscription's tracking entry must use the playground id, AND the
     // onStreamOpen hook must fire with that exact id — that's the correlation
     // path the Studio UI playground tab depends on.
-    const tracker = ctx.subscriptionIds.get("api.chat.feed");
+    const tracker = ctx.topicManager.get("conn-1", "api.chat.feed")?.record;
     expect(tracker?.requestId).toBe(PLAYGROUND_RID);
     expect(onStreamOpen).toHaveBeenCalledOnce();
     expect(onStreamOpen.mock.calls[0]![0].requestId).toBe(PLAYGROUND_RID);
@@ -293,7 +302,7 @@ describe("handleSubscribe", () => {
 
     await handleSubscribe(ctx, { type: "subscribe", id: "1", topic: "api.chat.feed" });
 
-    const tracker = ctx.subscriptionIds.get("api.chat.feed");
+    const tracker = ctx.topicManager.get("conn-1", "api.chat.feed")?.record;
     expect(tracker?.requestId).toBeTruthy();
     expect(tracker?.requestId).not.toBe("playground-rid-ws-456");
     expect(onStreamOpen.mock.calls[0]![0].requestId).toBe(tracker?.requestId);
@@ -318,8 +327,8 @@ describe("handleSubscribe", () => {
 
     await handleSubscribe(ctx, { type: "subscribe", id: "1", topic: "api.chat.feed" });
 
-    // Guard after authorize aborted before subscriptionIds.set / onStreamOpen
-    expect(ctx.subscriptionIds.size).toBe(0);
+    // Guard after authorize aborted before a record was opened / onStreamOpen
+    expect(ctx.records.size).toBe(0);
     expect(onStreamOpen).not.toHaveBeenCalled();
     expect(sent.find((m) => m.type === "subscribed")).toBeUndefined();
   });
@@ -352,15 +361,15 @@ describe("handleSubscribe", () => {
     await handleSubscribe(ctx, { type: "subscribe", id: "1", topic: "api.chat.room" });
 
     expect(onJoin).toHaveBeenCalledOnce();
-    // Post-startChannel guard runs closeSubscriptionEntry
-    expect(ctx.subscriptionIds.size).toBe(0);
+    // Post-startChannel guard closes the subscription's record
+    expect(ctx.records.size).toBe(0);
     // No "subscribed" frame on a dead socket
     expect(sent.find((m) => m.type === "subscribed")).toBeUndefined();
   });
 
   // ── onJoin throw routes through outer catch → closeSubscriptionEntry ──
 
-  it("clears subscriptionIds and ends the subscription once when channel onJoin throws", async () => {
+  it("closes Studio's record and ends the subscription once when channel onJoin throws", async () => {
     const receiveSchema = { "~standard": { validate: (v: unknown) => ({ value: v }) } };
     const factory = () => ({
       onJoin: () => {
@@ -392,7 +401,7 @@ describe("handleSubscribe", () => {
     await handleSubscribe(ctx, { type: "subscribe", id: "1", topic: "api.chat.room" });
 
     // closeSubscriptionEntry MUST run via outer catch — not silently leak
-    expect(ctx.subscriptionIds.size).toBe(0);
+    expect(ctx.records.size).toBe(0);
     expect(onWSUntrack).toHaveBeenCalledOnce();
     expect(onStreamClose).toHaveBeenCalledOnce();
 
@@ -552,6 +561,39 @@ describe("handleUnsubscribe", () => {
     expect(unsub).toBeDefined();
     expect(unsub!.topic).toBe("api.chat.feed");
     expect(unsub!.id).toBe("u1");
+  });
+
+  it("closes Studio's record of the subscription it ended, not of one made to the topic since", async () => {
+    const onStreamOpen = vi.fn();
+    const onStreamClose = vi.fn();
+    const { ctx } = createMockCtx({
+      sources: { api: createSource("chat", "feed", createOpenEndpoint()) } as never,
+      dt: { onStreamOpen, onStreamClose } as never,
+    });
+    const topic = "api.chat.feed";
+    await handleSubscribe(ctx, { type: "subscribe", id: "1", topic });
+
+    /* Its subscription let go of, the unsubscribe has not returned yet when the
+       client subscribes to the topic again. */
+    const unsubscribe = vi.mocked(ctx.topicManager.unsubscribe);
+    const ends = unsubscribe.getMockImplementation()!;
+    let letGo!: () => void;
+    let returns!: () => void;
+    const letGone = new Promise<void>((resolve) => (letGo = resolve));
+    unsubscribe.mockImplementationOnce(async (connId, ended) => {
+      await ends(connId, ended);
+      letGo();
+      await new Promise<void>((resolve) => (returns = resolve));
+    });
+    const leaving = handleUnsubscribe(ctx, { type: "unsubscribe", id: "2", topic });
+    await letGone;
+    await handleSubscribe(ctx, { type: "subscribe", id: "3", topic });
+    returns();
+    await leaving;
+
+    const [first] = onStreamOpen.mock.calls.map(([event]) => event.requestId);
+    expect(onStreamOpen).toHaveBeenCalledTimes(2);
+    expect(onStreamClose.mock.calls.map(([event]) => event.requestId)).toEqual([first]);
   });
 
   it("bails out when ctx.closed flips during topicManager.unsubscribe", async () => {

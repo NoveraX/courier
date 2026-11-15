@@ -14,8 +14,11 @@ export interface TopicManagerHooks {
 
 /** Server-side topic manager — tracks subscriptions per connection */
 export interface ServerTopicManager {
-  /** Register a subscription for a connection: one it replaces on the same topic is ended */
-  subscribe(connectionId: string, entry: WSSubscriptionEntry): void;
+  /**
+   * Register a subscription for a connection: one it replaces on the same topic is ended
+   * @returns The subscription it took the place of, which it ends, if there was one
+   */
+  subscribe(connectionId: string, entry: WSSubscriptionEntry): WSSubscriptionEntry | undefined;
   /** End the subscription a connection holds to a topic */
   unsubscribe(connectionId: string, topic: string): Promise<void>;
   /**
@@ -66,7 +69,10 @@ export function createServerTopicManager(hooks?: TopicManagerHooks): ServerTopic
   /* Each subscription's cleanup, once it was asked for: whoever asks again waits for the same. */
   const ending = new WeakMap<WSSubscriptionEntry, Promise<void>>();
 
-  function subscribe(connectionId: string, entry: WSSubscriptionEntry): void {
+  function subscribe(
+    connectionId: string,
+    entry: WSSubscriptionEntry,
+  ): WSSubscriptionEntry | undefined {
     const isFirst = !index.has(entry.topic);
     let topics = connections.get(connectionId);
     if (!topics) {
@@ -78,11 +84,11 @@ export function createServerTopicManager(hooks?: TopicManagerHooks): ServerTopic
     index.add(entry.topic, connectionId);
     if (isFirst) hooks?.onFirstSubscriber?.(entry.topic);
     /* Two subscribes to one topic can open side by side: the one replaced is ended, never left running. */
-    if (replaced && replaced !== entry) {
-      end(replaced).catch((error: unknown) =>
-        log.warn("A replaced subscription failed to end", error),
-      );
-    }
+    if (replaced === undefined || replaced === entry) return undefined;
+    end(replaced).catch((error: unknown) =>
+      log.warn("A replaced subscription failed to end", error),
+    );
+    return replaced;
   }
 
   /* Its cleanup is asked for now, not a step later: what checks whether it has ended sees it has. */

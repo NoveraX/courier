@@ -6,6 +6,7 @@ import { studioHooks } from "../studio";
 import { ownFields } from "../utils/own";
 import type { ConnectResult } from "./connection-meta";
 import { assertListedSettings } from "./runtime-policy";
+import { assertClientTerms } from "./ws-client-terms";
 import { createHandlerCounters, type WSHandlerStats } from "./ws-handler-stats";
 import { createIPTracker } from "./ws-ip-tracker";
 import { connectionLimitOf } from "./ws-limit-rule";
@@ -30,8 +31,9 @@ export type { WSSocketContext } from "./ws-context";
  *
  * @param config - Handler configuration (pubsub, heartbeat, lifecycle hooks, etc.)
  * @returns WSHandler with handleSocket and connections registry
- * @throws ConfigurationError when `config.sources` is not a dictionary of sources, or
- *   `config.cluster.secret` is shorter than 32 bytes
+ * @throws ConfigurationError when `config.sources` is not a dictionary of sources,
+ *   `config.cluster.secret` is shorter than 32 bytes, or the heartbeat or `maxMessageSize` it
+ *   would tell each client is one no client keeps
  * @example
  * const ws = createWSHandler({
  *   onConnect: ({ connectionId, request }) => ({ userId: extractUser(request) }),
@@ -48,6 +50,7 @@ export function createWSHandler(given?: WSHandlerConfig): WSHandler {
   const config = ownFields(given);
   provideServerCapabilities();
   assertListedSettings(config, "createWSHandler");
+  assertClientTerms(config);
   if (config.sources !== undefined) {
     prepareSources(config.sources, "createWSHandler", "createWSHandler({ sources: { api } })");
   }

@@ -43,9 +43,14 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
    * 8 MiB in all. Off unless given: what is kept is memory.
    */
   history?: TopicHistoryOptions | undefined;
-  /** Heartbeat interval in ms (default 25000) */
+  /**
+   * Heartbeat interval in ms (default 25000). It is told to each client
+   * with `heartbeatTimeoutMs`, so both are whole numbers of 1 or more that
+   * add up to 2147483647 at most — the longest a timer waits — or the
+   * handler is refused as it is made.
+   */
   heartbeatIntervalMs?: number | undefined;
-  /** Pong timeout in ms (default 10000) */
+  /** Pong timeout in ms (default 10000): a whole number of 1 or more, told to each client */
   heartbeatTimeoutMs?: number | undefined;
   /**
    * Bytes a socket's buffer may hold before a client that reads too slowly
@@ -80,7 +85,11 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
    * twice this a second; one past that is refused with a 4429 error.
    */
   maxSubscriptionsPerConnection?: number | undefined;
-  /** Max inbound message size in bytes (default 65536 = 64KB) */
+  /**
+   * Max inbound message size in bytes (default 65536 = 64KB): a whole
+   * number of 1 or more, told to each client, or the handler is refused as
+   * it is made.
+   */
   maxMessageSize?: number | undefined;
   /**
    * How long a hook may take, in ms (default 30000): a subscription's

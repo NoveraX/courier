@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Standalone Server",
   description: "Run a dedicated Courier HTTP + WebSocket server with createCourierServer — health checks, CORS, graceful shutdown, and connection registries.",
-  updated: "2026-11-12",
+  updated: "2026-11-15",
 }
 
 ## Installation
@@ -134,6 +134,8 @@ const server = await createCourierServer({
 `localhost`, `*.localhost` names and IP addresses are always served. Any other host name — the attacker's own, in a DNS-rebinding attack — is refused until `allowedHosts` lists it: always in development, and in production once the list is set. A server reached by another name in development, such as a Docker Compose service name (`http://courier:3001`), lists that name. See [Host validation](/docs/proxy-mode/overview#host-validation).
 
 The server reads both lists as it starts: a function in place of either is called then, and where its options name none, `COURIER_ALLOWED_HOSTS` and `COURIER_ALLOWED_ORIGINS` do, comma-separated. A list that cannot be read — an entry with a scheme, a variable set and empty, a function that throws — stops the server before it listens, naming the setting and what is wrong.
+
+The heartbeat and `maxMessageSize` are told to each client as its socket is let in, so they take only values a client keeps: whole numbers of 1 or more, with an interval and a timeout that add up to 2,147,483,647 ms at most, the longest a timer waits. Any other stops the server before it listens, with a `ConfigurationError` (`WS_OPTIONS_INVALID`) naming the option.
 
 ## Lifecycle Hooks
 

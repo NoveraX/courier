@@ -1,5 +1,8 @@
-import { unqualifyTopic } from "../realtime/ws/topic-key";
+import { createLogger } from "../logger";
+import { createTopicIndex } from "./ws-topic-index";
 import type { WSSubscriptionEntry } from "./ws-types";
+
+const log = createLogger("WS");
 
 /** Optional lifecycle hooks for pub/sub bridge integration */
 export interface TopicManagerHooks {
@@ -11,10 +14,15 @@ export interface TopicManagerHooks {
 
 /** Server-side topic manager — tracks subscriptions per connection */
 export interface ServerTopicManager {
-  /** Register a subscription for a connection */
+  /** Register a subscription for a connection: one it replaces on the same topic is ended */
   subscribe(connectionId: string, entry: WSSubscriptionEntry): void;
-  /** Unsubscribe a single topic for a connection */
+  /** End the subscription a connection holds to a topic */
   unsubscribe(connectionId: string, topic: string): Promise<void>;
+  /**
+   * End a subscription while it is the one its connection holds to its
+   * topic: one that has taken its place since is left as it is
+   */
+  release(connectionId: string, entry: WSSubscriptionEntry): Promise<void>;
   /** Clean up all subscriptions for a disconnected connection */
   disconnectAll(connectionId: string): Promise<void>;
   /** Check if a connection is subscribed to a topic */
@@ -42,75 +50,73 @@ export interface ServerTopicManager {
  * Each connection can subscribe to multiple topics; disconnectAll
  * ensures all cleanup handlers run on socket close.
  *
+ * A connection holds one subscription to a topic, and what ends one ends
+ * that one alone: the same topic can be subscribed again while the
+ * subscription before it is still being ended — its generator finishing,
+ * its `onJoin` refusing late — and whatever comes of the older one leaves
+ * the newer one as it is. Each subscription's cleanup runs once, however
+ * many ask for it, and while it runs the subscription is still held, so
+ * its `onLeave` can reach the topic.
+ *
  * @param hooks - Optional lifecycle hooks for pubsub bridge integration
  */
 export function createServerTopicManager(hooks?: TopicManagerHooks): ServerTopicManager {
   const connections = new Map<string, Map<string, WSSubscriptionEntry>>();
-  /** Reverse index: topic → Set of connectionIds — O(1) subscriber lookup */
-  const topicIndex = new Map<string, Set<string>>();
-  /** Base topic → Set of qualified topics — O(1) base→qualified lookup */
-  const baseIndex = new Map<string, Set<string>>();
-  let subscriptions = 0;
-
-  function addToIndex(topic: string, connectionId: string): void {
-    const isNewTopic = !topicIndex.has(topic);
-    let conns = topicIndex.get(topic);
-    if (!conns) {
-      conns = new Set();
-      topicIndex.set(topic, conns);
-    }
-    if (!conns.has(connectionId)) {
-      conns.add(connectionId);
-      subscriptions++;
-    }
-    if (isNewTopic) {
-      const { baseTopic } = unqualifyTopic(topic);
-      let qualified = baseIndex.get(baseTopic);
-      if (!qualified) {
-        qualified = new Set();
-        baseIndex.set(baseTopic, qualified);
-      }
-      qualified.add(topic);
-    }
-  }
-
-  function removeFromIndex(topic: string, connectionId: string): void {
-    const conns = topicIndex.get(topic);
-    if (!conns) return;
-    if (conns.delete(connectionId)) subscriptions--;
-    if (conns.size === 0) {
-      topicIndex.delete(topic);
-      const { baseTopic } = unqualifyTopic(topic);
-      const qualified = baseIndex.get(baseTopic);
-      if (qualified) {
-        qualified.delete(topic);
-        if (qualified.size === 0) baseIndex.delete(baseTopic);
-      }
-    }
-  }
+  const index = createTopicIndex();
+  /* Each subscription's cleanup, once it was asked for: whoever asks again waits for the same. */
+  const ending = new WeakMap<WSSubscriptionEntry, Promise<void>>();
 
   function subscribe(connectionId: string, entry: WSSubscriptionEntry): void {
-    const isFirst = !topicIndex.has(entry.topic);
+    const isFirst = !index.has(entry.topic);
     let topics = connections.get(connectionId);
     if (!topics) {
       topics = new Map();
       connections.set(connectionId, topics);
     }
+    const replaced = topics.get(entry.topic);
     topics.set(entry.topic, entry);
-    addToIndex(entry.topic, connectionId);
+    index.add(entry.topic, connectionId);
     if (isFirst) hooks?.onFirstSubscriber?.(entry.topic);
+    /* Two subscribes to one topic can open side by side: the one replaced is ended, never left running. */
+    if (replaced && replaced !== entry) {
+      end(replaced).catch((error: unknown) =>
+        log.warn("A replaced subscription failed to end", error),
+      );
+    }
+  }
+
+  /* Its cleanup is asked for now, not a step later: what checks whether it has ended sees it has. */
+  function end(entry: WSSubscriptionEntry): Promise<void> {
+    let ended = ending.get(entry);
+    if (!ended) {
+      ended = (async () => entry.cleanup())();
+      ending.set(entry, ended);
+    }
+    return ended;
+  }
+
+  async function release(connectionId: string, entry: WSSubscriptionEntry): Promise<void> {
+    if (connections.get(connectionId)?.get(entry.topic) !== entry) return;
+    try {
+      await end(entry);
+    } finally {
+      forget(connectionId, entry);
+    }
+  }
+
+  /* A subscription ended is held no more, unless another has taken its place meanwhile. */
+  function forget(connectionId: string, entry: WSSubscriptionEntry): void {
+    const topics = connections.get(connectionId);
+    if (!topics || topics.get(entry.topic) !== entry) return;
+    topics.delete(entry.topic);
+    index.remove(entry.topic, connectionId);
+    if (topics.size === 0) connections.delete(connectionId);
+    if (!index.has(entry.topic)) hooks?.onLastUnsubscriber?.(entry.topic);
   }
 
   async function unsubscribe(connectionId: string, topic: string): Promise<void> {
-    const topics = connections.get(connectionId);
-    const entry = topics?.get(topic);
-    if (!entry || !topics) return;
-
-    await entry.cleanup();
-    topics.delete(topic);
-    removeFromIndex(topic, connectionId);
-    if (topics.size === 0) connections.delete(connectionId);
-    if (!topicIndex.has(topic)) hooks?.onLastUnsubscriber?.(topic);
+    const entry = connections.get(connectionId)?.get(topic);
+    if (entry) await release(connectionId, entry);
   }
 
   async function disconnectAll(connectionId: string): Promise<void> {
@@ -118,60 +124,31 @@ export function createServerTopicManager(hooks?: TopicManagerHooks): ServerTopic
     if (!topics) return;
 
     const topicNames = [...topics.keys()];
-    const cleanups = [...topics.values()].map((e) => e.cleanup());
+    const cleanups = [...topics.values()].map(end);
     await Promise.allSettled(cleanups);
     connections.delete(connectionId);
 
     for (const topic of topicNames) {
-      removeFromIndex(topic, connectionId);
-      if (!topicIndex.has(topic)) hooks?.onLastUnsubscriber?.(topic);
+      index.remove(topic, connectionId);
+      if (!index.has(topic)) hooks?.onLastUnsubscriber?.(topic);
     }
-  }
-
-  function has(connectionId: string, topic: string): boolean {
-    return connections.get(connectionId)?.has(topic) ?? false;
-  }
-
-  function get(connectionId: string, topic: string): WSSubscriptionEntry | undefined {
-    return connections.get(connectionId)?.get(topic);
-  }
-
-  const EMPTY_SET: ReadonlySet<string> = new Set();
-
-  function subscribers(topic: string): ReadonlySet<string> {
-    return topicIndex.get(topic) ?? EMPTY_SET;
-  }
-
-  function allTopics(): string[] {
-    return [...topicIndex.keys()];
-  }
-
-  function entriesOf(connectionId: string): WSSubscriptionEntry[] {
-    return [...(connections.get(connectionId)?.values() ?? [])];
-  }
-
-  function topicCount(connectionId: string): number {
-    return connections.get(connectionId)?.size ?? 0;
-  }
-
-  function topicsByBase(baseTopic: string): ReadonlySet<string> {
-    return baseIndex.get(baseTopic) ?? EMPTY_SET;
   }
 
   return {
     subscribe,
     unsubscribe,
+    release,
     disconnectAll,
-    has,
-    get,
-    entriesOf,
-    topicCount,
-    subscribers,
-    allTopics,
-    topicsByBase,
+    has: (connectionId, topic) => connections.get(connectionId)?.has(topic) ?? false,
+    get: (connectionId, topic) => connections.get(connectionId)?.get(topic),
+    entriesOf: (connectionId) => [...(connections.get(connectionId)?.values() ?? [])],
+    topicCount: (connectionId) => connections.get(connectionId)?.size ?? 0,
+    subscribers: (topic) => index.subscribers(topic),
+    allTopics: () => index.topics(),
+    topicsByBase: (baseTopic) => index.byBase(baseTopic),
     get size() {
       return connections.size;
     },
-    counts: () => ({ topics: topicIndex.size, subscriptions }),
+    counts: () => index.counts(),
   };
 }

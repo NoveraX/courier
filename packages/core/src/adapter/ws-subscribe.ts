@@ -137,12 +137,15 @@ async function openSubscription(
     return recovered;
   };
 
+  /* Ended while it opened, it is done with: what ended it — the client's
+     unsubscribe, its subscribe again, the channel's own close — said so. */
+  let open = true;
   try {
     if (!resolved.served) {
       const target = { api: resolved.api, group: resolved.group ?? "", method: resolved.method };
       startRelay(ctx, subscribedTopic, target, variables, opened, authorized);
     } else if (isChannelSchema(resolved.schema)) {
-      await startChannel(
+      open = await startChannel(
         ctx,
         subscribedTopic,
         resolved.endpoint,
@@ -153,7 +156,7 @@ async function openSubscription(
         resume,
       );
     } else {
-      await startPush(
+      open = await startPush(
         ctx,
         subscribedTopic,
         resolved.endpoint,
@@ -170,6 +173,7 @@ async function openSubscription(
     sendSubscriptionEnd(ctx, topic, msg.id, describeFailure(error, "Subscription failed"));
     return;
   }
+  if (!open) return;
   if (ctx.closed) {
     closeSubscriptionEntry(ctx, subscribedTopic);
     return;

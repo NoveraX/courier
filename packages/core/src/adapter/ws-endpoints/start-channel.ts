@@ -10,7 +10,7 @@ import { WS_CODE } from "../../realtime/ws/ws-codes";
 import type { WSSocketContext } from "../ws-context";
 import { closeSubscriptionEntry } from "../ws-dispatch-helpers";
 import { sendSubscriptionEnd } from "../ws-subscription-end";
-import type { AuthorizedSubscription } from "../ws-types";
+import type { AuthorizedSubscription, WSSubscriptionEntry } from "../ws-types";
 import { emitChannelMessage } from "./emit-channel-message";
 import { reportHandlerFailure } from "./report-handler-failure";
 
@@ -21,9 +21,16 @@ const log = createLogger("WS");
  * Creates the channel handlers via factory, registers subscription with onMessage,
  * then awaits onJoin. If onJoin throws, the subscription is rolled back.
  *
+ * `onLeave` follows each `onJoin`, one that threw too, once. A subscription
+ * ended while it opens — the client left it, or subscribed to the topic
+ * again, while what it missed was read or `onJoin` ran — is done with: one
+ * ended before it joined runs neither, the refusal of an `onJoin` it
+ * outlived is logged and said to no one, and nothing it does reaches the
+ * subscription that took its place.
+ *
  * Error handling:
  * - Factory init throws → rethrown, no subscription registered
- * - onJoin throws → topicManager unsubscribed, error rethrown so the outer
+ * - onJoin throws → this subscription let go of, error rethrown so the outer
  *   `handleSubscribe` catch can run `closeSubscriptionEntry` (Studio
  *   tracking teardown) and send the single error message to the client.
  *   Doing both here would leak the `subscriptionIds` entry.
@@ -40,6 +47,9 @@ const log = createLogger("WS");
  * @param responseSchema - The channel's response schema, which everything it sends is held to
  * @param authorized - What the subscription was authorized as
  * @param resume - Sends what the subscription missed, once it is registered; whether it sent all of it
+ * @returns Whether the subscription is still open once it has joined: false
+ *   when it was ended meanwhile — the client left it or subscribed again, or
+ *   the channel closed it in `onJoin` — and has nothing more to say
  */
 export async function startChannel(
   ctx: WSSocketContext,
@@ -50,7 +60,7 @@ export async function startChannel(
   responseSchema?: StandardSchemaV1,
   authorized?: AuthorizedSubscription,
   resume: () => boolean | Promise<boolean> = () => false,
-): Promise<void> {
+): Promise<boolean> {
   let recovered = false;
   const outbound = (data: unknown): unknown =>
     responseSchema ? checkResponseNow(responseSchema, data) : data;
@@ -65,6 +75,8 @@ export async function startChannel(
   }
 
   const ended = new AbortController();
+  /* Whether onJoin was called: only then does onLeave follow it. */
+  let joined = false;
   const channelCtx: WSChannelContext = {
     topic,
     variables,
@@ -90,15 +102,16 @@ export async function startChannel(
       const failure = failed ? { code, message: reason ?? "Channel closed" } : undefined;
       sendSubscriptionEnd(ctx, topic, subscribeId, failure);
       closeSubscriptionEntry(ctx, topic, failed ? "error" : "complete");
-      void ctx.topicManager.unsubscribe(ctx.connectionId, topic);
+      void ctx.topicManager.release(ctx.connectionId, entry);
     },
   };
 
-  ctx.topicManager.subscribe(ctx.connectionId, {
+  const entry: WSSubscriptionEntry = {
     topic,
     authorized,
     cleanup: async () => {
       ended.abort();
+      if (!joined) return;
       try {
         await handlers.onLeave?.(channelCtx);
       } catch (error) {
@@ -116,11 +129,15 @@ export async function startChannel(
         ctx.sendMessage({ type: "error", topic, error: describeFailure(error, "Handler error") });
       }
     },
-  });
+  };
+  ctx.topicManager.subscribe(ctx.connectionId, entry);
 
   /* Registered first, then sent what it missed: a live event that comes meanwhile follows it. */
   recovered = await resume();
+  /* Ended while that was read, it never joins, and so has nothing to leave. */
+  if (ended.signal.aborted) return false;
 
+  joined = true;
   try {
     await handlers.onJoin?.(channelCtx);
   } catch (error) {
@@ -128,12 +145,14 @@ export async function startChannel(
       refusal: "subscription refused",
       fault: "onJoin failed",
     });
-    await ctx.topicManager.unsubscribe(ctx.connectionId, topic);
+    if (ended.signal.aborted) return false;
+    await ctx.topicManager.release(ctx.connectionId, entry);
     // Rethrow so handleSubscribe's outer catch runs closeSubscriptionEntry
     // and sends the error to the client. Sending here would either leak the
     // tracking entry or duplicate the error frame.
     throw error;
   }
+  return !ended.signal.aborted;
 }
 
 /* To every subscriber of every replica but the sender, who is sent `skip`. */

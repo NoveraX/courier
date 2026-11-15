@@ -10,7 +10,7 @@ import { abortableEvents } from "../../utils/abortable-events";
 import type { WSSocketContext } from "../ws-context";
 import { closeSubscriptionEntry } from "../ws-dispatch-helpers";
 import { sendSubscriptionEnd } from "../ws-subscription-end";
-import type { AuthorizedSubscription } from "../ws-types";
+import type { AuthorizedSubscription, WSSubscriptionEntry } from "../ws-types";
 import { emitChannelMessage } from "./emit-channel-message";
 import { reportHandlerFailure } from "./report-handler-failure";
 
@@ -19,7 +19,9 @@ const log = createLogger("WS");
 /**
  * Start a push-only async generator subscription (server → client).
  * Iterates the endpoint's async generator and sends each yielded value
- * as a data message to the client. Registers subscription in topicManager.
+ * as a data message to the client. Registers subscription in topicManager;
+ * once its generator has finished, it lets go of that subscription alone,
+ * not of one the client made to the same topic since.
  *
  * @param ctx - Per-connection socket context
  * @param topic - Qualified topic string (e.g. 'api.chat.feed#{"room":"a"}')
@@ -29,6 +31,8 @@ const log = createLogger("WS");
  * @param responseSchema - The endpoint's response schema, which every value is held to
  * @param authorized - What the subscription was authorized as
  * @param resume - Sends what the subscription missed, once it is registered; whether it sent all of it
+ * @returns Whether the subscription is still open: false when it was ended
+ *   while what it missed was sent — the client left it, or subscribed again
  */
 export async function startPush(
   ctx: WSSocketContext,
@@ -39,7 +43,7 @@ export async function startPush(
   responseSchema?: StandardSchemaV1,
   authorized?: AuthorizedSubscription,
   resume: () => boolean | Promise<boolean> = () => false,
-): Promise<void> {
+): Promise<boolean> {
   const ended = new AbortController();
   let recovered = false;
   const wsCtx: WSContext = {
@@ -91,15 +95,14 @@ export async function startPush(
     }
   };
 
-  ctx.topicManager.subscribe(ctx.connectionId, {
-    topic,
-    authorized,
-    cleanup: () => ended.abort(),
-  });
+  const entry: WSSubscriptionEntry = { topic, authorized, cleanup: () => ended.abort() };
+  ctx.topicManager.subscribe(ctx.connectionId, entry);
   /* Registered first, then sent what it missed: a live event that comes meanwhile follows it. */
   recovered = await resume();
 
+  /* Ended meanwhile, its generator is closed before it runs. */
   iterate()
     .catch((err: unknown) => log.warn("Push generator failed", err))
-    .finally(() => void ctx.topicManager.unsubscribe(ctx.connectionId, topic));
+    .finally(() => void ctx.topicManager.release(ctx.connectionId, entry));
+  return !ended.signal.aborted;
 }

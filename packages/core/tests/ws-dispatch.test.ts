@@ -84,6 +84,11 @@ function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
           topicSubs.get(connId)!.delete(topic);
         }
       }),
+      release: vi.fn(async (connId: string, entry: { topic: string; cleanup: () => void }) => {
+        if (topicSubs.get(connId)?.get(entry.topic) !== entry) return;
+        await entry.cleanup();
+        topicSubs.get(connId)!.delete(entry.topic);
+      }),
     },
     sendMessage: (msg: WSMessage) => sent.push(msg),
     dt: {},

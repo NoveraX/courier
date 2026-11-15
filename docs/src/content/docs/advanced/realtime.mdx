@@ -1,4 +1,4 @@
-export const metadata = { title: "Streams & Channels", description: "Serve server-sent event streams and WebSocket channels, share a topic between subscribers, and broadcast to it.", mode: "both", updated: "2026-11-06" }
+export const metadata = { title: "Streams & Channels", description: "Serve server-sent event streams and WebSocket channels, share a topic between subscribers, and broadcast to it.", mode: "both", updated: "2026-11-15" }
 
 ## Overview
 
@@ -29,6 +29,8 @@ export const chat = defineGroup({
   },
 })
 ```
+
+A channel's `onJoin` runs once its subscription is set up and sent what it missed, and `onLeave` once the subscription ends — its client leaves it or subscribes again, its connection closes, or the channel closes it — after every `onJoin`, one that refused the join too. A subscription its client leaves before it joins runs neither.
 
 ## Serving a stream
 

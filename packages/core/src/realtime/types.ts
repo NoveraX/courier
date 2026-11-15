@@ -145,11 +145,18 @@ export interface WSChannelContext<TResponse = unknown, TVariables = unknown>
  * log. A failed `onJoin` ends the subscription; a failed `onMessage` does not.
  */
 export interface ChannelHandlers<TReceive = unknown, TResponse = unknown, TVariables = unknown> {
-  /** Called when a client subscribes to this channel */
+  /**
+   * Called when a client subscribes to this channel, once what the
+   * subscription missed is sent; not for one the client left before then
+   */
   onJoin?(ctx: WSChannelContext<TResponse, TVariables>): void | Promise<void>;
   /** Called on each incoming message from the client */
   onMessage(ctx: WSChannelContext<TResponse, TVariables>, message: TReceive): void | Promise<void>;
-  /** Called when a client unsubscribes or disconnects */
+  /**
+   * Called once the subscription ends — the client unsubscribes, subscribes
+   * again or disconnects, or the channel closes it — after its `onJoin`, one
+   * that threw too; a subscription that never joined calls neither
+   */
   onLeave?(ctx: WSChannelContext<TResponse, TVariables>): void | Promise<void>;
 }
 

@@ -37,6 +37,9 @@ function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
       unsubscribe: vi.fn(async (_connId: string, topic: string) => {
         subscriptions.delete(topic);
       }),
+      release: vi.fn(async (_connId: string, entry: MockEntry) => {
+        if (subscriptions.get(entry.topic) === entry) subscriptions.delete(entry.topic);
+      }),
     },
     registry: { broadcastToTopic: vi.fn() },
     pubsub: undefined,
@@ -267,7 +270,10 @@ describe("startChannel", () => {
       id: "sub-1",
       error: { code: 4001, message: "kicked" },
     });
-    expect(ctx.topicManager.unsubscribe).toHaveBeenCalledWith("conn-1", "topic");
+    expect(ctx.topicManager.release).toHaveBeenCalledWith(
+      "conn-1",
+      expect.objectContaining({ topic: "topic" }),
+    );
   });
 
   it("close without a code ends the subscription as finished", async () => {
@@ -281,7 +287,10 @@ describe("startChannel", () => {
     channelCtx.close();
 
     expect(sent.at(-1)).toEqual({ type: "complete", topic: "topic" });
-    expect(ctx.topicManager.unsubscribe).toHaveBeenCalledWith("conn-1", "topic");
+    expect(ctx.topicManager.release).toHaveBeenCalledWith(
+      "conn-1",
+      expect.objectContaining({ topic: "topic" }),
+    );
   });
 
   it("provides broadcast function that uses registry", async () => {
@@ -350,8 +359,11 @@ describe("startChannel", () => {
 
     await expect(startChannel(ctx, "topic", factory, {})).rejects.toThrow("Auth failed");
 
-    // Subscription was rolled back via unsubscribe BEFORE the rethrow
-    expect(ctx.topicManager.unsubscribe).toHaveBeenCalledWith("conn-1", "topic");
+    // This subscription was let go of BEFORE the rethrow
+    expect(ctx.topicManager.release).toHaveBeenCalledWith(
+      "conn-1",
+      expect.objectContaining({ topic: "topic" }),
+    );
     // No error frame is sent locally — the outer handleSubscribe catch owns
     // the client-facing error so closeSubscriptionEntry runs exactly once.
     expect(sent.find((m) => m.type === "error")).toBeUndefined();

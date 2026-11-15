@@ -30,10 +30,15 @@ type Attempt = { readonly response: MiddlewareResponse } | { readonly error: unk
  * the first when the refresh gives no token or the request's body is a
  * stream that cannot be sent twice. Every call refused with a token while
  * its refresh runs, or sent with it before that refresh ended, takes that
- * refresh's token, so a refresh token that may be used only once is spent
- * once however the refusals fall. A refresh is shared by token and never
- * between tokens: on a server, where `getToken` gives the token of the
- * request's user, one user's call is never sent with another's.
+ * refresh's token, so those calls cost one refresh however the refusals
+ * fall. A call sent with the token after its refresh ended refreshes
+ * again — on a server, a request that carried the user's old cookies, as a
+ * browser sends them until it has stored the renewed ones — so where a
+ * refresh token may be used only once, `refreshToken` answers one it has
+ * just spent with the renewal it gave, while such requests may still come.
+ * A refresh is shared by token and never between tokens: on a server,
+ * where `getToken` gives the token of the request's user, one user's call
+ * is never sent with another's.
  *
  * `getToken` and a refresh are waited for no longer than the call is: a
  * call cancelled, or past the deadline of a retry policy around this

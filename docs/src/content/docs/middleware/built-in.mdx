@@ -229,7 +229,7 @@ A token holding a control character other than a tab, a line break inside it amo
 
 ### With token refresh
 
-When `refreshToken` is provided and the upstream answers 401, the middleware calls `refreshToken()`, updates the header, and sends the request again once. If the new token is refused too, the call rejects with that second 401, and so it does with the first when `refreshToken()` gives no token or the request's body is a stream that cannot be sent twice. One refresh serves every call refused with the token it renews: a call refused with that token while the refresh runs waits for it, and one sent with it before the refresh ended takes the refresh's token, so `refreshToken()` runs once however the refusals fall — a hundred calls sent with an expired token cost one refresh. A refresh that fails rejects the calls waiting on it with its error, and the next 401 tries again:
+When `refreshToken` is provided and the upstream answers 401, the middleware calls `refreshToken()`, updates the header, and sends the request again once. If the new token is refused too, the call rejects with that second 401, and so it does with the first when `refreshToken()` gives no token or the request's body is a stream that cannot be sent twice. One refresh serves every call refused with the token it renews: a call refused with that token while the refresh runs waits for it, and one sent with it before the refresh ended takes the refresh's token, so `refreshToken()` runs once however the refusals fall — a hundred calls sent at once with an expired token cost one refresh. A refresh that fails rejects the calls waiting on it with its error, and the next 401 tries again:
 
 ```ts title="lib/sources.ts"
 authMiddleware({
@@ -243,6 +243,8 @@ authMiddleware({
 ```
 
 A refresh is shared by token, never between tokens. On a server, where `getToken` and `refreshToken` read the user of the request being served — from its cookies, or an `AsyncLocalStorage` — each user's calls renew that user's token, and a call refused with one user's token is never sent again with another's. A call sent without a token refreshes for itself. A refresher remembers the last 100 tokens it renewed.
+
+A call sent with a token after its refresh ended refreshes again, so a refresh token that may be used only once needs more of `refreshToken`. On a server, a request the browser sent before it stored the renewed cookies carries the old ones, and arrives once the refresh has ended; an identity provider that rotates refresh tokens may take the second use of one for a stolen copy and end the session. There `refreshToken` renews once for each refresh token, and answers one it has just spent with the renewal it gave, for as long as such requests may come — kept where every replica reads it, where there are several. The middleware does not do it for you: it would let an expired token, a leaked one among them, be sent again with its successor.
 
 `getToken` and `refreshToken` are waited for no longer than the call is, as `onRetry` is: a call cancelled while one of them has not answered rejects at once with its `AbortError`, and one past the `deadline` of a retry policy around the middleware with that `TimeoutError`; a refresh other calls wait for goes on for them. A call's `timeout` bounds each request it sends, not them: a token source that may hang — one that renews the token over the network — bounds its own wait, as with `AbortSignal.timeout()` on its `fetch`.
 

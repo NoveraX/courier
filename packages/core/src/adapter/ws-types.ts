@@ -244,9 +244,11 @@ export interface ConnectionLimitRule<TMeta = Record<string, unknown>> {
   max: number;
   /**
    * Over the limit, the oldest of the key's connections are closed for the
-   * new one (`"evict-oldest"`, the default), or the new one is refused
-   * (`"reject"`). Either is closed with 4429, which a Courier client does
-   * not reconnect on.
+   * new one (`"evict-oldest"`, the default), with 4409, which a Courier
+   * client does not reconnect on, as it would replace the newer one in
+   * turn; or the new one is refused (`"reject"`), with 4429 and a wait of
+   * 10 seconds, after which a Courier client tries again, as a place may
+   * free meanwhile.
    */
   onExceed?: LeaseOverflow | undefined;
 }

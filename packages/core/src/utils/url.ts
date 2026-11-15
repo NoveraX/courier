@@ -1,15 +1,12 @@
 import { HTTPError } from "../errors";
+import { ConfigurationError } from "../errors/configuration-error";
 import type { SearchParamsSerializer } from "../http-client/types";
 import { isFieldRecord } from "./body-kind";
 import { defineOwn } from "./define-own";
 import { isFormData } from "./helpers";
 import { pathJoin } from "./path-join";
-import {
-  encodePathValue,
-  fillPathParams,
-  pathParamNames,
-  routeChangingPart,
-} from "./path-template";
+import { pathParamText } from "./path-param-text";
+import { fillPathParams, pathParamNames } from "./path-template";
 
 const ABSOLUTE_URL = /^https?:\/\//i;
 /* An absolute URL's scheme and host, which end where its path, its query or a fragment starts. */
@@ -28,7 +25,9 @@ const fillPath = (path: string, params: Record<string, unknown>): string =>
  *
  * The value is read as given rather than as its string form, so `null` is
  * missing like `undefined` instead of the text "null", and the word
- * "undefined" is an ordinary value. `.` and `..` are refused, whole or as a
+ * "undefined" is an ordinary value. It is written as JSON writes it, in
+ * OpenAPI's style for a path — a date as its ISO time, a list as its items —
+ * as {@link pathParamText} writes it. `.` and `..` are refused, whole or as a
  * part between slashes: encoding does not hide them, since URL parsing
  * reads `%2E%2E` as `..` too, and the request would reach a route above the
  * one the endpoint declares — with whatever credentials the server sends.
@@ -40,13 +39,7 @@ function encodePathParam(name: string, value: unknown, keepsSlashes: boolean): s
       `Missing required path parameter "${name}": pass it in the variables, or return it from pathOptions`,
     );
   }
-  const text = String(value);
-  const part = routeChangingPart(text, keepsSlashes);
-  if (part !== undefined) {
-    const which = part === text ? "it" : `its part "${part}"`;
-    throw new Error(`Path parameter ${name} cannot be "${text}": ${which} would change the route`);
-  }
-  return encodePathValue(text, keepsSlashes);
+  return pathParamText(name, value, keepsSlashes, (message) => new Error(message));
 }
 
 export const resolveBasePath = (
@@ -149,6 +142,8 @@ export const compileUrl = (
 
     return [url, newVariables, objectSearchParameters];
   } catch (error) {
+    /* What no request can carry — a file, a BigInt — is refused as a query or a body refuses it. */
+    if (error instanceof ConfigurationError) throw error;
     if (error instanceof Error) throw pathRefusal(error.message);
     throw error;
   }

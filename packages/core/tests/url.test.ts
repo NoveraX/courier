@@ -60,11 +60,38 @@ describe("a path parameter's value", () => {
     [".", "."],
     ["an empty string", ""],
     ["null", null],
+    ["NaN, which JSON writes as null", Number.NaN],
+    ["a date that is no date", new Date(Number.NaN)],
+    ["an empty list", []],
   ])("is refused before any request when it is %s", async (_, id) => {
     const failure = await refusal(id);
 
     expect(failure).toBeInstanceOf(HTTPError);
     expect((failure as HTTPError).status).toBe(400);
+    expect(upstream.received).toHaveLength(0);
+  });
+
+  it("is a date's ISO time, whatever time zone the machine is in", async () => {
+    await client().items.one({ id: new Date(Date.UTC(2026, 10, 15)) });
+
+    expect(upstream.last().url).toBe("/items/2026-11-15T00%3A00%3A00.000Z/details");
+  });
+
+  it.each([
+    ["a list as its items", ["a", "b,c"], "a,b%2Cc"],
+    ["an object as each field's name and value", { role: "admin", page: 2 }, "role,admin,page,2"],
+    ["a value with a toJSON of its own as what it gives", { toJSON: () => "sku 1" }, "sku%201"],
+  ])("writes %s, in OpenAPI's style for a path", async (_, id, sent) => {
+    await client().items.one({ id });
+
+    expect(upstream.last().url).toBe(`/items/${sent}/details`);
+  });
+
+  it.each([
+    ["a file", new Blob(["x"])],
+    ["a BigInt", 12n],
+  ])("refuses %s, which JSON does not write, before any request", async (_, id) => {
+    expect(await refusal(id)).toMatchObject({ code: "VARIABLE_NOT_ENCODABLE" });
     expect(upstream.received).toHaveLength(0);
   });
 

@@ -1,4 +1,4 @@
-export const metadata = { title: "Path Parameters", description: "Dynamic URL segments with :param and {param}, a {+param} that keeps its slashes, filled from the variables or pathOptions, a colon sent as written for Google-style methods, and values a closure puts into its path.", mode: "both", updated: "2026-11-06" }
+export const metadata = { title: "Path Parameters", description: "Dynamic URL segments with :param and {param}, a {+param} that keeps its slashes, filled from the variables or pathOptions, a colon sent as written for Google-style methods, and values a closure puts into its path.", mode: "both", updated: "2026-11-15" }
 
 ## Basic syntax
 
@@ -66,6 +66,20 @@ Variables that fill no parameter by name — a form, a raw body, a list — are 
 - A path that writes a fragment, `items#top`, is refused where the endpoint or the group declares it: a request sends its path up to the `#`, and the query a read's variables make would have gone after it. A literal path the endpoint itself is declared with, as in `endpoint.get("items#top")`, is refused by its type as well; a group's `prefix` and a closure's path are not. Write `%23` for a `#` the path sends.
 
 The types read a path the same way, so the variables an endpoint asks for are the parameters its requests fill.
+
+## How a value is written
+
+A parameter's value is written as JSON writes it in the record a proxy call carries, its own `toJSON` asked first, so a direct call and a call through the proxy send the same path: a date is its ISO string, `2026-11-15T00%3A00%3A00.000Z` once encoded, whatever time zone the machine is in. A list or an object is written in OpenAPI's style for a path, `simple`: a list as its items, an object as each field's name and value, with a comma between each two and each encoded on its own, so a comma inside one is sent as `%2C`:
+
+```ts title="Lists and objects"
+// GET /users/3,4%2C5
+await caller.users.byIds({ ids: [3, "4,5"] })
+
+// GET /reports/role,admin,page,2
+await caller.reports.filtered({ filter: { role: "admin", page: 2 } })
+```
+
+A value JSON writes as `null` or leaves out — `NaN`, a date that is no date — has no text to send: the call is refused with an `HTTPError` 400 before a request is made, as it is for an empty list. A file, a `Set`, a `Map` or a `BigInt` is refused with a `ConfigurationError` whose `code` is `VARIABLE_NOT_ENCODABLE`, as it is in a query or a body. A stream's and a channel's parameters are written the same way, and the [OpenAPI document](/docs/advanced/openapi) gives each parameter the variable's own schema, which this style is OpenAPI's default for.
 
 ## A colon the path sends as written
 

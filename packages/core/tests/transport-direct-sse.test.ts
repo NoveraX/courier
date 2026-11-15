@@ -70,6 +70,17 @@ describe("a direct stream call", () => {
     expect(url).toBe("/direct/rooms/lobby/events?since=3");
   });
 
+  it("writes a path parameter as an HTTP call does: a date as its ISO time, a list as its items", async () => {
+    const caller = createCaller(remoteApi(await echoServer()));
+    const room = (value: unknown) => ({ room: value }) as { room: string };
+
+    const dated = await requestedUrl(caller.rooms.events(room(new Date(Date.UTC(2026, 10, 15)))));
+    const listed = await requestedUrl(caller.rooms.events(room(["a", "b,c"])));
+
+    expect(dated).toBe("/direct/rooms/2026-11-15T00%3A00%3A00.000Z/events");
+    expect(listed).toBe("/direct/rooms/a,b%2Cc/events");
+  });
+
   it("follows the path a closure builds from the call's variables", async () => {
     const caller = createCaller(remoteApi(await echoServer()));
 

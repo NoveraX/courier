@@ -174,7 +174,7 @@ endpoint
 // → POST /covers  Body: multipart/form-data, a cover among its parts or not
 ```
 
-A read writes its variables into the query in OpenAPI's default style, `form` exploded: a list repeats its name and an object's properties become names of their own. A parameter declared in another style — Stripe's `deepObject` filters, a comma- or pipe-joined list — is written by `formQuery`, which takes the same encodings as `formBody` and leaves out a field that is `undefined` or `null`:
+A read writes its variables into the query in OpenAPI's default style, `form` exploded: a list repeats its name and an object's properties become names of their own. Each value is written as JSON writes it in the record a proxy call carries, its own `toJSON` asked first, so a direct call and a proxy call send the same query: a date is its ISO string, and a value JSON leaves out or writes as `null` — `NaN`, a date that is no date — is left out. A parameter declared in another style — Stripe's `deepObject` filters, a comma- or pipe-joined list — is written by `formQuery`, which takes the same encodings as `formBody` and leaves out a field that is `undefined` or `null`:
 
 ```ts
 import { courier, formQuery } from "@noverax/courier/define"

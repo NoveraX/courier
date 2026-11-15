@@ -3,12 +3,8 @@ import { pathWriter } from "../../define/path-tag";
 import { type AnyProbe, recordWireCall } from "../../define/probe";
 import { RealtimeValidationError } from "../../realtime/validation-error";
 import { isRecord } from "../../utils/is-record";
-import {
-  encodePathValue,
-  fillPathParams,
-  pathParamNames,
-  routeChangingPart,
-} from "../../utils/path-template";
+import { pathParamText } from "../../utils/path-param-text";
+import { fillPathParams, pathParamNames } from "../../utils/path-template";
 import { FRAGMENT_IN_PATH } from "../../utils/url";
 
 /** Where one call to a remote stream or channel goes, relative to its group. */
@@ -89,17 +85,14 @@ function segmentOf(name: string, value: unknown, keepsSlashes: boolean): string 
       `Missing required path parameter "${name}": pass it in the variables`,
     );
   }
-  /* Relayed by a proxy, a `..` reached a route above the declared one with
-     the server's credentials. */
-  const text = String(value);
-  const part = routeChangingPart(text, keepsSlashes);
-  if (part !== undefined) {
-    const which = part === text ? "it" : `its part "${part}"`;
-    throw new RealtimeValidationError(
-      `Path parameter "${name}" cannot be "${text}": ${which} would change the route`,
-    );
-  }
-  return encodePathValue(text, keepsSlashes);
+  /* Written as an HTTP call writes it; relayed by a proxy, a `..` reached a route above the
+     declared one with the server's credentials. */
+  return pathParamText(
+    name,
+    value,
+    keepsSlashes,
+    (message) => new RealtimeValidationError(message),
+  );
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {

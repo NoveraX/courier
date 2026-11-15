@@ -3,19 +3,22 @@
  *
  * Written the way OpenAPI does by default (`style: form, explode: true`): a
  * list repeats its key, `?tag=a&tag=b`, and an object spreads its fields into
- * keys of their own. `String(value)` sent a list as `a,b` and an object as
- * `[object Object]`, and a date in the local format of whichever machine ran
- * the call.
+ * keys of their own. Each value is written as JSON writes it inside the
+ * variables, its `toJSON` asked first, so a direct call sends what a page's
+ * call through the proxy does. `String(value)` sent a list as `a,b`, an
+ * object as `[object Object]`, and a date in the local format of whichever
+ * machine ran the call.
  */
 
-import { ADDRESS_HOLDS_TEXT, assertJsonValue } from "./variables-encoding";
+import { isPlainRecord } from "./is-record";
+import { ADDRESS_HOLDS_TEXT, fieldText, jsonValueOf } from "./variables-encoding";
 
 /**
  * Query entries for a set of variables.
  *
- * @param variables - Values to write; `undefined` and `null` are left out
+ * @param variables - Values to write; what JSON leaves out or writes as `null` — `undefined`, `NaN`, a date that is no date — is left out
  * @returns Key/value pairs in order, a key repeated for each list item
- * @throws ConfigurationError `VARIABLE_NOT_ENCODABLE` for a file, a `Set` or a `Map`, named by where it sits
+ * @throws ConfigurationError `VARIABLE_NOT_ENCODABLE` for a file, a `Set`, a `Map` or a `BigInt`, named by where it sits
  *
  * @example
  * ```ts
@@ -24,17 +27,20 @@ import { ADDRESS_HOLDS_TEXT, assertJsonValue } from "./variables-encoding";
  */
 export function toQueryEntries(variables: Record<string, unknown>): [string, string][] {
   const entries: [string, string][] = [];
-  for (const [key, value] of Object.entries(variables)) {
+  for (const [key, field] of Object.entries(variables)) {
     const at = `variables.${key}`;
+    /* Its toJSON says, as JSON asks it, whether a value is a list, an object or text. */
+    const value = jsonValueOf(field, key);
     if (Array.isArray(value)) {
-      for (const [index, item] of value.entries())
-        pushScalar(entries, key, item, `${at}[${index}]`);
-    } else if (isPlainObject(value)) {
-      for (const [field, inner] of Object.entries(value)) {
-        pushScalar(entries, field, inner, `${at}.${field}`);
+      for (const [index, item] of value.entries()) {
+        pushText(entries, key, item, `${at}[${index}]`, String(index));
+      }
+    } else if (isPlainRecord(value)) {
+      for (const [name, inner] of Object.entries(value)) {
+        pushText(entries, name, inner, `${at}.${name}`, name);
       }
     } else {
-      pushScalar(entries, key, value, at);
+      pushText(entries, key, value, at, key);
     }
   }
   return entries;
@@ -57,24 +63,14 @@ export function appendQuery(url: string, variables: Record<string, unknown>): st
   return `${url}${url.includes("?") ? "&" : "?"}${query}`;
 }
 
-function pushScalar(entries: [string, string][], key: string, value: unknown, at: string): void {
-  if (value === undefined || value === null) return;
-  entries.push([key, scalarText(value, at)]);
-}
-
-/**
- * A value nested deeper than the form style reaches is sent as JSON: one
- * JSON would lose — a file, a `Set`, a `Map` — is refused, with where it sits.
- */
-function scalarText(value: unknown, at: string): string {
-  if (value instanceof Date) return value.toISOString();
-  if (typeof value !== "object") return String(value);
-  assertJsonValue(value, at, ADDRESS_HOLDS_TEXT);
-  return JSON.stringify(value);
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== "object" || value === null || value instanceof Date) return false;
-  const prototype: unknown = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
+/* A value nested deeper than the form style reaches is sent as its JSON; one with no text is no entry. */
+function pushText(
+  entries: [string, string][],
+  name: string,
+  value: unknown,
+  at: string,
+  key: string,
+): void {
+  const text = fieldText(value, at, key, ADDRESS_HOLDS_TEXT);
+  if (text !== undefined) entries.push([name, text]);
 }

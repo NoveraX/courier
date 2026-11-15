@@ -67,8 +67,19 @@ function blobOf(value: unknown): Blob | undefined {
 /* Why a stream is refused anywhere but as the whole body. */
 const NO_STREAM_PART = "a form's part is no stream; send it as the body";
 
-/* What JSON writes for a value, its `toJSON` asked first: an object's, or a BigInt's given one. */
-function jsonValueOf(value: unknown, key: string): unknown {
+/**
+ * What JSON goes on to write for a value, its `toJSON` asked first with its
+ * key: an object's, or a BigInt's given one; any other value as it is.
+ *
+ * @param value - The value
+ * @param key - The key JSON writes it under: its field's name, or its index in a list
+ * @returns What `toJSON` gives, or the value itself
+ * @example
+ * ```ts
+ * jsonValueOf(new Date(0), "since"); // → "1970-01-01T00:00:00.000Z"
+ * ```
+ */
+export function jsonValueOf(value: unknown, key: string): unknown {
   const toJSON: unknown = Reflect.get(Object(value), "toJSON");
   return typeof toJSON === "function" ? Reflect.apply(toJSON, value, [key]) : value;
 }
@@ -174,7 +185,7 @@ export function formEntries(
   const entries: FormEntry<unknown>[] = [];
   const add = (name: string, value: unknown, at: FilePlace, path: string): void => {
     const file = fileOf(value, at);
-    const part = file === undefined ? textOf(value, path, String(at[1] ?? name)) : file;
+    const part = file === undefined ? fieldText(value, path, String(at[1] ?? name)) : file;
     if (part !== undefined) entries.push({ name, value: part, at });
   };
   for (const [name, field] of Object.entries(record)) {
@@ -191,11 +202,32 @@ export function formEntries(
   return entries;
 }
 
-/* A value as a form's text part: as JSON writes it inside the record, its toJSON asked
-   with its key, a string without its quotes; nothing for what JSON leaves out or writes as
-   `null` — a function, `NaN`, a date that is no date. */
-function textOf(value: unknown, at: string, key: string): string | undefined {
-  assertJsonValue(value, at);
+/**
+ * A value as the text a request writes it as — a form's part, a part of its
+ * address: as JSON writes it inside the record, its `toJSON` asked with its
+ * key, so a date is its ISO time and a direct call writes what a page's call
+ * through the proxy carries; a string without its quotes; nothing for what
+ * JSON leaves out or writes as `null` — a function, `NaN`, a date that is no
+ * date.
+ *
+ * @param value - The value
+ * @param at - Where it sits, for a refusal: `variables.since`
+ * @param key - The key JSON writes it under: its field's name, or its index in a list
+ * @param binary - What to suggest for binary data found there
+ * @returns Its text, or `undefined` for none
+ * @throws ConfigurationError `VARIABLE_NOT_ENCODABLE` for what JSON would lose, as {@link assertJsonValue} refuses it
+ * @example
+ * ```ts
+ * fieldText(new Date(0), "variables.since", "since"); // → "1970-01-01T00:00:00.000Z"
+ * ```
+ */
+export function fieldText(
+  value: unknown,
+  at: string,
+  key: string,
+  binary?: string,
+): string | undefined {
+  assertJsonValue(value, at, binary);
   const json = JSON.stringify({ [key]: value }).slice(JSON.stringify(key).length + 2, -1);
   if (json === "" || json === "null") return undefined;
   return json[0] === '"' ? String(JSON.parse(json)) : json;

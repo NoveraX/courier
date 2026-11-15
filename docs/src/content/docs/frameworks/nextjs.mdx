@@ -1,4 +1,4 @@
-export const metadata = { title: "Next.js", description: "Full Next.js integration with apiRoute, createProxyQueryCaller, createCaller for RSC, and createAction for Server Actions.", mode: "both", updated: "2026-11-06" }
+export const metadata = { title: "Next.js", description: "Full Next.js integration with apiRoute, createProxyQueryCaller, createCaller for RSC, and createAction for Server Actions.", mode: "both", updated: "2026-11-15" }
 
 Courier has first-class Next.js support through the `@noverax/courier-next` package. It covers every Next.js pattern: API routes, client components with React Query, server components, and server actions.
 
@@ -360,7 +360,7 @@ A Server Action's request is POST; any other request a Next.js App Router serves
 
 ### A page that writes while it renders
 
-A write the API guards with a double-submit token asks for the token first when the user has none, and a page that renders cannot hand it to the browser: the next render asks again. A middleware hands it over with the page instead, where the request does not carry it, and gives it to the render too:
+A write the API guards with a double-submit token asks for the token first when the user has none, and a page that renders cannot hand it to the browser: the next render asks again. A middleware hands it over with the page instead, where the request does not carry it, and gives it to the render too, with a session cookie the API renewed as it handed the token out in place of the one the request had:
 
 ```ts title="proxy.ts"
 import { csrfTokenMiddleware } from "@noverax/courier-next/middleware"
@@ -385,7 +385,9 @@ export async function proxy(request: NextRequest) {
 }
 ```
 
-Next.js 14, 15 and 16 are checked with it: the token is asked once, the render's write repeats it, and the next visit asks nothing.
+The render gets the tokens through `tokens.headers`, and the browser each cookie as the API wrote it. Set a cookie of your own there through `response.headers`, not `response.cookies`: one set through `response.cookies` has Next.js rewrite the `Cookie` the render reads, every value URL-encoded, so a session cookie not already in that form reaches the API changed.
+
+Next.js 14, 15 and 16 are checked with it: the token is asked once, the render's write repeats it with the session's cookies as the browser sent them, or as the token's request renewed them, and the next visit asks nothing.
 
 ## Step 4: Server Actions (createAction)
 

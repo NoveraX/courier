@@ -2,8 +2,9 @@
  * A Next.js middleware handing each API's double-submit token to the
  * browser with the page: asked once with the user's session where the
  * request does not carry it, set on the response, and given to the page
- * that renders the request — which cannot set cookies itself — and nothing
- * asked where the request carries it. The API is a real server.
+ * that renders the request — which cannot set cookies itself — with the
+ * session as the token's answer left it, and nothing asked where the
+ * request carries it. The API is a real server.
  */
 import { createServer, type IncomingHttpHeaders, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -18,6 +19,8 @@ let upstream: Server;
 let api: ReturnType<typeof accounts>;
 const seen: Array<{ url: string | undefined; headers: IncomingHttpHeaders }> = [];
 let token = "t-fresh";
+/* What else the token's answer sets, as an API that renews or ends the session there does. */
+let alsoSet: string[] = [];
 
 function accounts(baseURL: string) {
   return defineApi({
@@ -34,7 +37,8 @@ function accounts(baseURL: string) {
 beforeAll(async () => {
   upstream = createServer((req, res) => {
     seen.push({ url: req.url, headers: req.headers });
-    if (req.url === "/csrf") res.setHeader("set-cookie", `csrftoken=${token}; Path=/`);
+    if (req.url === "/csrf")
+      res.setHeader("set-cookie", [`csrftoken=${token}; Path=/`, ...alsoSet]);
     res.writeHead(200, { "content-type": "application/json" });
     res.end("{}");
   });
@@ -50,6 +54,7 @@ afterAll(async () => {
 afterEach(() => {
   seen.length = 0;
   token = "t-fresh";
+  alsoSet = [];
 });
 
 const page = (cookie?: string) =>
@@ -64,13 +69,28 @@ describe("csrfTokenMiddleware", () => {
     expect(seen.map((each) => each.url)).toEqual(["/csrf"]);
     expect(seen[0]?.headers.cookie).toBe("sid=s1");
     expect(response.headers.getSetCookie()).toEqual(["csrftoken=t-fresh; Path=/; Secure"]);
-    /* What Next.js gives the page that renders the request: the request's headers in
-       Next.js 14 and 15, the response's cookies in Next.js 16. */
+    /* What Next.js gives the page that renders the request: the request's headers, the
+       browser's cookies in them as it sent them. Nothing is set through Next.js's cookie API,
+       which would have Next.js rewrite them, every value URL-encoded. */
     expect(response.headers.get("x-middleware-request-cookie")).toBe(
       "sid=s1; theme=dark; csrftoken=t-fresh",
     );
-    expect(response.headers.get("x-middleware-set-cookie")).toContain("csrftoken=t-fresh");
+    expect(response.headers.get("x-middleware-set-cookie")).toBeNull();
   });
+
+  it.each([
+    ["renews", "sid=s2; Path=/; HttpOnly", "theme=dark; csrftoken=t-fresh; sid=s2"],
+    ["ends", "sid=; Path=/; Max-Age=0", "theme=dark; csrftoken=t-fresh"],
+  ])(
+    "gives the page the session as the token's answer %s it, in place of the one the request had",
+    async (_, set, cookie) => {
+      alsoSet = [set];
+
+      const response = await csrfTokenMiddleware(api)(page("sid=s1; theme=dark"));
+
+      expect(response.headers.get("x-middleware-request-cookie")).toBe(cookie);
+    },
+  );
 
   it("hands a token Next.js would write changed to the browser byte for byte", async () => {
     token = "a/b";

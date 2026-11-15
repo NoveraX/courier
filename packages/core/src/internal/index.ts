@@ -75,6 +75,7 @@ export { buildDirectWSUrl, parseWSTopic } from "../realtime/ws-address";
 export { getSourcesGeneration, onSourcesChange } from "../registered-sources";
 export { provideServerCapabilities } from "../server/provide-server-capabilities";
 export { addressedOrigin } from "../server/session/addressed-origin";
+export { cookieHeaderAfter } from "../server/session/cookie-header-after";
 export { checkSources, prepareSources } from "../server/sources";
 export { isDeletion, parseSetCookie, serializeSetCookie } from "../session/set-cookie";
 export { serverOriginOf } from "../socket-origin";

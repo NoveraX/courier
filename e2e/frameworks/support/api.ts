@@ -71,18 +71,26 @@ function answer(
     referer: req.headers.referer ?? null,
   };
   const route = `${req.method} ${path}`;
-  if (route === "GET /me") send(res, 200, seen, jar.get("sid") === "expiring" ? [RENEWED] : []);
+  if (route === "GET /me") send(res, 200, seen, renewal(jar));
   else if (route === "GET /products") send(res, 200, [{ id: 1, title: "Notebook" }]);
   else if (route === "GET /b64") send(res, 200, seen, ["sid=YWJj+ZGVm/==; Path=/"]);
-  else if (route === "GET /csrf") send(res, 200, { ok: true }, ["csrftoken=t-fresh; Path=/"]);
+  else if (route === "GET /csrf") send(res, 200, { ok: true }, [TOKEN, ...renewal(jar)]);
   else if (route === "POST /login") signIn(req, res, jar, body, fromSpa);
   else if (route === "POST /logout") send(res, 200, { ok: true }, ["sid=; Path=/; Max-Age=0"]);
   else if (route === "POST /me/name") rename(req, res, jar, { ...seen, renamed: nameOf(body) });
   else send(res, 404, { error: "not found", route });
 }
 
-/* The API renews a session about to expire, for its own paths. */
+/* The double-submit token the API hands out at `/csrf`. */
+const TOKEN = "csrftoken=t-fresh; Path=/";
+
+/* The API renews a session about to expire, for its own paths: as it says who the user is, and as
+   it hands the token out, as Laravel Sanctum's does. */
 const RENEWED = "sid=renewed; Path=/api; HttpOnly; SameSite=Lax";
+
+function renewal(jar: ReadonlyMap<string, string>): string[] {
+  return jar.get("sid") === "expiring" ? [RENEWED] : [];
+}
 
 /* A write needs the session, and the double-submit token repeated from its cookie. */
 function rename(

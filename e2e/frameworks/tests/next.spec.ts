@@ -230,6 +230,41 @@ test("a page that writes while it renders is handed the token with the page, ask
   await visitor.close();
 });
 
+test("a page that writes while it renders sends the session the token's request renewed, not the one it replaced", async ({
+  browser,
+}) => {
+  const visitor = await browser.newContext();
+  await visitor.addCookies([{ name: "sid", value: "expiring", url: APP }]);
+  const tab = await visitor.newPage();
+  await clearReceived();
+
+  await tab.goto(`${APP}/visit`);
+  await expect(tab.locator("#visit")).toHaveText("written");
+  const [asked] = await received("GET", "/csrf");
+  const [write] = await received("POST", "/login");
+
+  expect(asked?.headers.cookie).toBe("sid=expiring");
+  expect(cookiesIn(write?.headers.cookie)).toEqual(["csrftoken=t-fresh", "sid=renewed"]);
+  await visitor.close();
+});
+
+test("a page that writes while it renders sends the session's cookies as the browser sent them", async ({
+  browser,
+}) => {
+  const visitor = await browser.newContext();
+  /* A value Next.js changes when it rewrites a request's cookies, as it does for one a middleware sets through its cookie API. */
+  await visitor.addCookies([{ name: "sid", value: "YWJj+ZGVm/==", url: APP }]);
+  const tab = await visitor.newPage();
+  await clearReceived();
+
+  await tab.goto(`${APP}/visit`);
+  await expect(tab.locator("#visit")).toHaveText("written");
+  const [write] = await received("POST", "/login");
+
+  expect(cookiesIn(write?.headers.cookie)).toEqual(["csrftoken=t-fresh", "sid=YWJj+ZGVm/=="]);
+  await visitor.close();
+});
+
 test("a client component's calls through the proxy route carry the session it set", async () => {
   await clearReceived();
 

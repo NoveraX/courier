@@ -118,6 +118,30 @@ describe("the page state", () => {
       mode: "proxy",
     });
   });
+
+  it("writes down again without credentials the drafts an earlier Studio kept whole", () => {
+    const { db } = database();
+    const drafts = {
+      variables: { "users.get": '{ "id": "1" }' },
+      headers: '{ "Authorization": "Bearer s3cret", "Accept": "text/plain" }',
+      mode: "proxy",
+    };
+    const row = "page.playground.drafts";
+    db.prepare("INSERT INTO studio_state (key, value) VALUES (?, ?)").run(
+      row,
+      JSON.stringify(drafts),
+    );
+
+    const pages = createPageState(db);
+
+    const cut = {
+      ...drafts,
+      headers: '{\n  "Authorization": "[redacted]",\n  "Accept": "text/plain"\n}',
+    };
+    expect(pages.read()["playground.drafts"]).toEqual(cut);
+    const kept = db.prepare("SELECT value FROM studio_state WHERE key = ?").get(row);
+    expect(kept?.value).toBe(JSON.stringify(cut));
+  });
 });
 
 describe("the pins", () => {

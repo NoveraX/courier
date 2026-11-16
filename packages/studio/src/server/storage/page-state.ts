@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync, StatementSync } from "node:sqlite";
 
 import { isPlainObject } from "../is-plain-object";
 import { withoutCredentials } from "./without-credentials";
@@ -47,10 +47,11 @@ export function isPageStateKey(value: unknown): value is PageStateKey {
  * drafts, the mock wizard and the API import left unfinished. Each is kept
  * under a name of its own and read back as each page connects. The drafts
  * are written down as the Playground's history is, each credential in their
- * headers kept by name with its value replaced. This Studio holds them as
- * its pages typed them, and has them so while the database holds what it
- * wrote: a page that reloads, or another browser, has the credential, and a
- * Studio that restarts, or one that has since written other drafts, has
+ * headers kept by name with its value replaced, and drafts an earlier Studio
+ * wrote down whole are written down so as this one starts. This Studio holds
+ * them as its pages typed them, and has them so while the database holds
+ * what it wrote: a page that reloads, or another browser, has the credential,
+ * and a Studio that restarts, or one that has since written other drafts, has
  * `[redacted]` in its place.
  *
  * @param db - Studio's database
@@ -67,6 +68,7 @@ export function createPageState(db: DatabaseSync): PageState {
   const upsert = db.prepare("INSERT OR REPLACE INTO studio_state (key, value) VALUES (?, ?)");
   /* Each value written down with something cut, as a page set it, beside the text written. */
   const whole = new Map<PageStateKey, { written: string; value: unknown }>();
+  cutDraftsKeptWhole(db, upsert);
   return {
     read() {
       const kept: Partial<Record<PageStateKey, unknown>> = {};
@@ -90,4 +92,13 @@ export function createPageState(db: DatabaseSync): PageState {
       return true;
     },
   };
+}
+
+/* Drafts an earlier Studio wrote down whole are written down again without their credentials. */
+function cutDraftsKeptWhole(db: DatabaseSync, upsert: StatementSync): void {
+  const key = `${PREFIX}${DRAFTS}`;
+  const row = db.prepare("SELECT value FROM studio_state WHERE key = ?").get(key);
+  if (typeof row?.value !== "string") return;
+  const cut = JSON.stringify(withoutCredentials(JSON.parse(row.value)));
+  if (cut !== row.value) upsert.run(key, cut);
 }

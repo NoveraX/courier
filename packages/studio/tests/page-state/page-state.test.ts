@@ -77,6 +77,47 @@ describe("the page state", () => {
       value: { variables: {} },
     });
   });
+
+  it("writes the Playground's drafts down as its history, and has them whole while Studio runs", () => {
+    const { db, root } = database();
+    const pages = createPageState(db);
+    const drafts = {
+      variables: { "users.get": '{ "id": "1" }' },
+      headers:
+        '{\n  // signed in as ana\n  "Authorization": "Bearer s3cret",\n  "Accept": "text/plain",\n}',
+      mode: "proxy",
+    };
+
+    expect(pages.write("playground.drafts", drafts)).toBe(true);
+
+    expect(pages.read()["playground.drafts"]).toEqual(drafts);
+    expect(createPageState(database(root).db).read()["playground.drafts"]).toEqual({
+      ...drafts,
+      headers: '{\n  "Authorization": "[redacted]",\n  "Accept": "text/plain"\n}',
+    });
+  });
+
+  it("has the drafts another Studio on the project wrote down since as they were written", () => {
+    const { db, root } = database();
+    const pages = createPageState(db);
+    pages.write("playground.drafts", {
+      variables: {},
+      headers: '{ "Authorization": "Bearer one" }',
+      mode: "direct",
+    });
+
+    createPageState(database(root).db).write("playground.drafts", {
+      variables: {},
+      headers: '{ "Authorization": "Bearer two" }',
+      mode: "proxy",
+    });
+
+    expect(pages.read()["playground.drafts"]).toEqual({
+      variables: {},
+      headers: '{\n  "Authorization": "[redacted]"\n}',
+      mode: "proxy",
+    });
+  });
 });
 
 describe("the pins", () => {

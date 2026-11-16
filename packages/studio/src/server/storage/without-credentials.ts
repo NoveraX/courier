@@ -6,8 +6,8 @@ import { withoutSecretTexts } from "../secrets/without-secret-texts";
 /**
  * What leaves the page that holds Studio's token holds no credentials.
  *
- * The request log, the mock logs, saved sessions and the Playground's
- * history are kept in `.courier/studio.db` in the project, where a backup,
+ * The request log, the mock logs, saved sessions, the Playground's drafts
+ * and history are kept in `.courier/studio.db` in the project, where a backup,
  * a copy of the folder or another account on the machine can read them; a
  * session is exported to be handed around; an agent's answer goes on to
  * its model's provider; and a page without the token, or an editor, reads
@@ -43,12 +43,12 @@ export function headersWithoutCredentials(
 }
 
 /**
- * An event, a Playground history entry or one of its chunks, as it leaves
- * the token page: each of its header fields without credentials, its
- * address, its error's text and its cause cut, and everything else — the
- * variables, the answer — as it is.
+ * An event, a Playground history entry or one of its chunks, or the
+ * Playground's drafts, as it leaves the token page: each of its header
+ * fields without credentials, its address, its error's text and its cause
+ * cut, and everything else — the variables, the answer — as it is.
  *
- * @param value - The event or entry
+ * @param value - The event, entry or drafts
  * @returns A copy with its headers redacted, or the value itself when it has none
  * @example
  * ```ts

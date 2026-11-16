@@ -18,7 +18,9 @@ export interface PlaygroundDrafts {
  * sent them as it connects and follows what another page changes, and a
  * page with the token sends what is typed once the typing pauses. Leaving
  * the page, reloading it or opening Studio in another browser keeps what
- * was typed.
+ * was typed. Studio writes them down as it writes the history, each
+ * credential in the headers replaced with `[redacted]`, so a Studio that
+ * restarts has `[redacted]` in its place.
  *
  * @example
  * ```ts

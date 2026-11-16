@@ -30,6 +30,7 @@ import {
   createProcessManager,
   type ProcessManagerEvents,
 } from "../src/server/mock-manager/process-manager";
+import { stopWorker } from "../src/server/mock-manager/stop-worker";
 
 const cleanups: Array<() => Promise<void> | void> = [];
 
@@ -399,7 +400,9 @@ describe("a managed mock worker's log", () => {
       stdio: ["ignore", "ignore", "pipe", "ipc"],
       env: { ...process.env, SHOP_API_KEY: key },
     });
-    cleanups.push(() => void worker.kill());
+    /* Its project is removed once it has exited: Windows keeps a live
+       process's working directory from being removed. */
+    cleanups.push(() => stopWorker(worker, () => worker.kill()));
     let log = "";
     worker.stderr?.on("data", (chunk: Buffer) => {
       log += chunk.toString();

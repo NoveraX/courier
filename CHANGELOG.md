@@ -1,3 +1,28 @@
+## [0.7.1](https://github.com/NoveraX/courier/compare/v0.7.0...v0.7.1) (2026-11-16)
+
+This release keeps a subscription from missing what other replicas publish while Redis takes it or gets it back, and makes what a page and a direct call send and receive agree with what the proxy carries: a recursive JSON answer's type, and a form's fields. Studio no longer writes the credentials typed in its Playground to the project's `.courier/studio.db`.
+
+### Realtime
+
+- **The Redis adapter counts a subscription as made once Redis has answered it.** A topic subscribed to again while its `UNSUBSCRIBE` was still out was confirmed at once, and lost what other replicas published in the next round trip. After a reconnect, the adapter turned `ready`, and each subscription caught up, before Redis had its subscriptions back, so what was published meanwhile was lost. A subscription is now confirmed once Redis answers its `SUBSCRIBE`, and the adapter is `ready` once Redis has answered those it makes as it reaches Redis, 2 seconds after at the latest; `connect()` waits for that too.
+- **A topic's last subscriber leaving is announced once.** A socket that closed while its client was leaving a topic announced the topic's last subscriber twice. The replica then let go of the channel its endpoint's other topics share, so a broadcast to the endpoint from another replica no longer reached them, and, with a topic history, of the topic's own channel before its time.
+- **A stream opened while its client loads ends once.** One whose client could not be loaded, or whose opening threw, told its `close` again when it was closed after; one closed first told the failure after its close.
+
+### Calls through the proxy
+
+- **`Proxied` gives a recursive JSON type back as itself.** A page's client over an endpoint that answers a JSON value — a `JsonValue` type, an ORM's JSON column, `z.json()` — failed to type-check with TS2589; it is now typed as the value itself. A key of an index signature keeps `| undefined`, as JSON leaves such a key out: `Proxied<{ [key: string]: Date | undefined }>` is `{ [key: string]: string | undefined }`.
+- **`formBody` and `formQuery` write the fields as the proxy carries them.** A function or a symbol was sent empty, and an `undefined` item of a list dropped, where a call through the proxy, which carries the fields as JSON gives them back, sends no such field and the item empty. Each value is now written as JSON writes it, and `formQuery` leaves out a field JSON writes as `null`, a `NaN` and a date that is no date among them.
+
+### Studio
+
+- **The Playground's drafts are written down without credentials.** Studio keeps what is typed in the Playground for the project, in `.courier/studio.db`, and wrote it as it was typed: an `Authorization` header lay there in clear text, where the history of the same call keeps it as `[redacted]`. The drafts are now written down as the history is, each credential in their headers kept by name with `[redacted]` for its value, and those an earlier Studio wrote down are written down so as Studio starts. While Studio runs it holds the drafts as they were typed, so a page that reloads, or another browser, still has the credential; once Studio restarts, it is `[redacted]`, to be typed again.
+
+### Docs
+
+- The uploads page says that a streamed upload's last wait holds the backend reading what the connection still buffers, and then its answer, so the call's `timeout` needs room for both.
+- The retry options name what the default leaves out of network failures — a refused certificate and undici's own `headersTimeout` and `bodyTimeout` — and say that a `retryOn` list takes the default's place.
+- The cache's page says what a `"session"` cache placed before `authMiddleware` serves: a signed-in user, the answer a guest's call fetched, with no line in the log while that answer is kept.
+
 ## [0.7.0](https://github.com/NoveraX/courier/compare/v0.6.0...v0.7.0) (2026-11-15)
 
 This release keeps each user's data and credentials to that user: a session cache placed before `authMiddleware`, two visitors' identical reads, a call's session sent to another host, a page on a rebound name served under a name the app serves, renewed credentials merged into the old ones, and the commands replicas exchange, which anyone who could publish on the adapter could send again. Subscriptions end alone and lose nothing as they open, a client that reads slowly loses only a topic's events, a connection limit counts again a connection its store lost, and a replica's memory stays bounded while its Redis does not answer. In Next.js, SvelteKit and Astro, a request's calls see the cookies its code changed. `npx @noverax/courier-cli@latest upgrade` moves every `@noverax` package to 0.7.0 at once; read the breaking changes below first.

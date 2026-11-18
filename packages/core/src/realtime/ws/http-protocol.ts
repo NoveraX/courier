@@ -90,6 +90,8 @@ export const HTTP_REFUSALS = {
   unavailable: "FORWARDING_UNAVAILABLE",
   /** 400: another version of the transport, as a replica a rollout replaces speaks; its client opens another */
   version: "TRANSPORT_VERSION",
+  /** 400: a body that is no request of the transport; its client stops, as at a frame the server cannot read */
+  malformed: "MALFORMED_REQUEST",
 } as const;
 
 /** The names of the events an answer carries besides the frames. */

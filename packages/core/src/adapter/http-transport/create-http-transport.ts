@@ -176,5 +176,5 @@ export function createHTTPTransport(
 }
 
 function malformed(): Response {
-  return errorResponse(400, "Not a request of the HTTP transport", "MALFORMED_REQUEST");
+  return errorResponse(400, "Not a request of the HTTP transport", HTTP_REFUSALS.malformed);
 }

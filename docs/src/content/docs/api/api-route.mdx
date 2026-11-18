@@ -1,4 +1,4 @@
-export const metadata = { title: "createHandler", description: "Universal adapter factory that creates Web Standard handlers for proxy-mode requests from any framework.", mode: "proxy", updated: "2026-11-15" }
+export const metadata = { title: "createHandler", description: "Universal adapter factory that creates Web Standard handlers for proxy-mode requests from any framework.", mode: "proxy", updated: "2026-11-18" }
 
 ## Import
 
@@ -197,7 +197,7 @@ The handler serves an endpoint only when a mark opens it — `.expose()` on the 
 
 ### Origin Validation
 
-The handler refuses a request another site's page made with `403 { success: false, message: "Origin not allowed" }`. The browser's `Sec-Fetch-Site` decides where it is sent; otherwise the `Origin` must be the origin the request was addressed to. Pages on other origins are served when `allowedOrigins` lists them — see [Proxy Mode](/docs/proxy-mode/overview#origin-validation) for the whole rule.
+The handler refuses a request another site's page made with `403 { success: false, message: "Origin not allowed", code: "ORIGIN_NOT_ALLOWED" }`. The browser's `Sec-Fetch-Site` decides where it is sent; otherwise the `Origin` must be the origin the request was addressed to. Pages on other origins are served when `allowedOrigins` lists them — see [Proxy Mode](/docs/proxy-mode/overview#origin-validation) for the whole rule.
 
 ```ts
 const handler = createHandler({ allowedOrigins: ["https://admin.example.com"] })

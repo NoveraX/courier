@@ -31,7 +31,8 @@ export const MISCONFIGURED_REFUSAL = "This server is misconfigured; its log says
  * request is answered 500, so a deployment's first health check finds the
  * mistake. A request addressed to a host the app does not serve is answered
  * 421 before anything else looks at it. A page on an origin the handler
- * does not serve is refused with 403, its preflight too — before the rate
+ * does not serve is refused with 403, under the code `ORIGIN_NOT_ALLOWED`,
+ * its preflight too — before the rate
  * limit counts it, so a page cannot spend its visitors' budget — and told
  * to Studio; a listed origin's preflight is answered. Studio's pass is
  * taken off every request, and with `browsersOnly` a request no browser
@@ -124,7 +125,7 @@ function refuseOrigin(request: Request, dt: StudioHooks, refusals: RefusalLog): 
   });
   dt.onProxyOriginReject?.({ origin: origin ?? "", timestamp: Date.now() });
   discardBody(request);
-  return errorResponse(403, "Origin not allowed");
+  return errorResponse(403, "Origin not allowed", "ORIGIN_NOT_ALLOWED");
 }
 
 /**

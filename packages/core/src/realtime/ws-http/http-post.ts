@@ -170,9 +170,10 @@ export async function post(
 
 /**
  * How an answer came out, as the socket acts on it. A status of an entry's
- * is one of the server's only when its body names the transport's code. A
- * 200 is the transport's only with events, as each of its is: an entry's
- * page, or another app's answer at the path, is no transport.
+ * is one of the server's only when its body names the server's code, and
+ * only such a refusal stops the connection. A 200 is the transport's only
+ * with events, as each of its is: an entry's page, or another app's answer
+ * at the path, is no transport.
  *
  * @param response - The answer, or the one a `refused` event stands for
  * @param signal - The attempt's, which ends the read of a refusal's body
@@ -200,24 +201,47 @@ export async function postedOf(response: Response, signal: AbortSignal): Promise
       afterMs: retryAfterWait(response.headers.get("Retry-After"), Date.now()),
     };
   }
-  const reason = said.message ?? `The server answered ${status}`;
-  return { kind: "refused", code: closeCodeOf(status, said), reason };
+  return { kind: "refused", ...refusedOf(status, said) };
+}
+
+/* What a refusal's JSON body says: the code it names, and its message. */
+interface Said {
+  readonly code?: unknown;
+  readonly message?: string;
 }
 
 /*
- * The code a socket closes with for the same refusal: the server's own, a
- * JSON body with its message, as its sockets' closes say it — a request it
- * cannot read, an origin or a host it does not serve — and a body too large
- * for the server or an entry. Another version of the transport, a replica a
- * rollout replaces, and any entry's refusal close as a socket an entry
- * refuses does, with 1006, and are tried again.
+ * The server's refusals that end a connection for good, by the code their
+ * bodies name, and the close each ends a socket with, as the server's
+ * socket closes for the same: a request it cannot read, 1002, and an
+ * origin or a host it does not serve, 4403 and 4421. Only the server's
+ * word stops a connection: a status, which an entry or a gateway answers
+ * with too, does not, whatever its body says.
  */
-function closeCodeOf(status: number, said: { readonly code?: unknown; readonly message?: string }) {
-  if (status === 413) return 1009;
-  if (said.message === undefined) return 1006;
-  if (status === 400) return said.code === HTTP_REFUSALS.version ? 1006 : 1002;
-  if (status === 403) return 4403;
-  return status === 421 ? 4421 : 1006;
+const FINAL_REFUSALS: ReadonlyMap<unknown, number> = new Map<unknown, number>([
+  [HTTP_REFUSALS.malformed, 1002],
+  ["BODY_MALFORMED", 1002],
+  ["ORIGIN_NOT_ALLOWED", 4403],
+  ["HOST_NOT_ALLOWED", 4421],
+]);
+
+/*
+ * The close a refusal ends a socket with. Any other than those — the
+ * server's that a new connection gets past, as another version of the
+ * transport or frames it did not receive, and every one of an entry's —
+ * closes as a socket the network cut, with 1006, or 1009 for a body too
+ * large, and the connection is made again.
+ */
+function refusedOf(status: number, said: Said): { readonly code: number; readonly reason: string } {
+  const final = FINAL_REFUSALS.get(said.code);
+  if (final !== undefined) {
+    return { code: final, reason: said.message ?? `The server answered ${status}` };
+  }
+  const answered = `The socket's path answered ${status}`;
+  return {
+    code: status === 413 ? 1009 : 1006,
+    reason: said.message === undefined ? answered : `${answered}: ${said.message}`,
+  };
 }
 
 function isEventStream(response: Response): boolean {
@@ -225,11 +249,8 @@ function isEventStream(response: Response): boolean {
   return essence === "text/event-stream";
 }
 
-/* The code and message of a server's JSON refusal; an entry's page says neither. */
-async function refusalOf(
-  response: Response,
-  signal: AbortSignal,
-): Promise<{ readonly code?: unknown; readonly message?: string }> {
+/* The code and message of a JSON refusal; an entry's page says neither. */
+async function refusalOf(response: Response, signal: AbortSignal): Promise<Said> {
   const body = response.body;
   if (body === null) return {};
   if (!response.headers.get("Content-Type")?.includes("json")) {

@@ -8,7 +8,10 @@
  * the socket closes once, and the connection's backoff decides when to try
  * again. One the network cuts once the server has answered it is asked for
  * again, as any answer cut on the way. An answer that is no event stream —
- * a page an entry or another app put there — is no HTTP transport.
+ * a page an entry or another app put there — is no HTTP transport. A
+ * refusal stops the connection only when its body names one of the
+ * server's own codes, as the server's refusal of an origin does: a
+ * gateway's in front of it, in whatever words, is tried again.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -274,6 +277,46 @@ describe("a socket over HTTP", () => {
     expect(states.some((state) => state.phase === "reconnecting")).toBe(false);
     expect(log.heads.filter((head) => head.token === undefined)).toHaveLength(1);
     expect(a.stats().http?.connections).toBe(1);
+  });
+
+  it.each([403, 400, 421])(
+    "comes back after a refusal of %i that names none of the server's codes, as a gateway's in front of it",
+    async (status) => {
+      let refused = 0;
+      const { fetch } = entryTo([serve()], async (head, pass) => {
+        if (head.token !== undefined || refused++ > 0) return pass();
+        return Response.json({ message: "Missing Authentication Token" }, { status });
+      });
+      const { connection, states } = connect(fetch, "poll");
+
+      await expect.poll(() => connection.status).toBe("connected");
+      expect(states.map((state) => state.phase)).not.toContain("failed");
+      expect(states.find((state) => state.phase === "reconnecting")).toMatchObject({
+        cause: {
+          kind: "closed",
+          code: 1006,
+          reason: `The socket's path answered ${status}: Missing Authentication Token`,
+        },
+      });
+    },
+  );
+
+  it("fails with 4403 where the server refuses the page's origin, as a socket's connection does", async () => {
+    const { fetch: entry } = entryTo([serve({ allowedOrigins: ["https://app.example"] })]);
+    const fromAnotherSite: typeof globalThis.fetch = (input, init) => {
+      const headers = new Headers(init?.headers);
+      headers.set("Origin", "https://another.example");
+      headers.set("Sec-Fetch-Site", "cross-site");
+      return entry(input, { ...init, headers });
+    };
+    const { connection } = connect(fromAnotherSite, "poll");
+
+    await expect
+      .poll(() => connection.state)
+      .toMatchObject({
+        phase: "failed",
+        error: { code: 4403, message: "Origin not allowed" },
+      });
   });
 
   it("takes an answer that is no event stream for no HTTP transport at the socket's path", async () => {

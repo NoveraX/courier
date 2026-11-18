@@ -200,7 +200,11 @@ describe("createCourierServer", () => {
       });
 
       expect(res.status).toBe(403);
-      expect(await res.json()).toEqual({ success: false, message: "Origin not allowed" });
+      expect(await res.json()).toEqual({
+        success: false,
+        message: "Origin not allowed",
+        code: "ORIGIN_NOT_ALLOWED",
+      });
     });
 
     it("blocks non-OPTIONS requests from disallowed origin", async () => {

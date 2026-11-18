@@ -54,7 +54,7 @@ export function handleCors(
     /* Refused as the adapters refuse it, so a client reads one answer: a
        preflight asks to read, which a page let through is not granted. */
     if (!allowed || !isAllowedReader(origin)) {
-      sendError(res, 403, "Origin not allowed");
+      sendError(res, 403, "Origin not allowed", "ORIGIN_NOT_ALLOWED");
       return true;
     }
     const requested = requestedHeaders(req);
@@ -71,7 +71,7 @@ export function handleCors(
   }
 
   if (!allowed) {
-    sendError(res, 403, "Origin not allowed");
+    sendError(res, 403, "Origin not allowed", "ORIGIN_NOT_ALLOWED");
     return true;
   }
 

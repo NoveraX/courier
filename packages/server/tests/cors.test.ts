@@ -90,7 +90,11 @@ describe("handleCors — preflight", () => {
 
     handleCors(preflight("http://evil.com"), res, ["http://trusted.com"]);
 
-    expect(JSON.parse(res._body)).toEqual({ success: false, message: "Origin not allowed" });
+    expect(JSON.parse(res._body)).toEqual({
+      success: false,
+      message: "Origin not allowed",
+      code: "ORIGIN_NOT_ALLOWED",
+    });
   });
 
   /** With no origins configured, a foreign one is refused rather than every origin accepted. */
@@ -151,7 +155,11 @@ describe("handleCors — the request itself", () => {
 
     expect(handled).toBe(true);
     expect(res._status).toBe(403);
-    expect(JSON.parse(res._body)).toEqual({ success: false, message: "Origin not allowed" });
+    expect(JSON.parse(res._body)).toEqual({
+      success: false,
+      message: "Origin not allowed",
+      code: "ORIGIN_NOT_ALLOWED",
+    });
     expect(res._headers.Vary).toBe("Origin");
   });
 

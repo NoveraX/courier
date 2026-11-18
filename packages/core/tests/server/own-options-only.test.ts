@@ -437,7 +437,8 @@ function upstream(sent: Sent[]): void {
       members: Object.fromEntries(REQUEST_MEMBERS.map((key) => [key, shown(members?.[key])])),
     });
     if (url.endsWith("/live")) {
-      return new Response("data: 1\n\n", {
+      const signal = init !== undefined && Object.hasOwn(init, "signal") ? init.signal : undefined;
+      return new Response(liveStream("data: 1\n\n", signal), {
         status: 200,
         statusText: "",
         headers: { "content-type": "text/event-stream" },
@@ -448,6 +449,19 @@ function upstream(sent: Sent[]): void {
     headers.append("set-cookie", "upstream_only=1; Path=/");
     return new Response(JSON.stringify({ ok: true }), { status: 200, statusText: "", headers });
   });
+}
+
+/* A live stream: its first event, then open until its request is aborted, which errors it as
+   fetch does. One ended at once would be reconnected, now and then at once, before the call
+   lets go of it. Its source has no prototype, so no key `Object.prototype` is given is read of it. */
+function liveStream(first: string, signal: AbortSignal | null | undefined): ReadableStream {
+  const source: UnderlyingDefaultSource<Uint8Array> = Object.assign(Object.create(null), {
+    start(controller: ReadableStreamDefaultController<Uint8Array>) {
+      controller.enqueue(new TextEncoder().encode(first));
+      signal?.addEventListener("abort", () => controller.error(signal.reason));
+    },
+  });
+  return new ReadableStream(source);
 }
 
 /* What the browser's request being served carries: the session, its token, what `forward` takes. */

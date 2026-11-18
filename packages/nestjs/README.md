@@ -168,6 +168,8 @@ await app.listen(3000)
 
 `courierWSAttach` answers WebSocket upgrades on one path — `/api/ws` unless you pass `path` — and leaves every other path to NestJS gateways and any other WebSocket handler. Point the client at the same path with `proxyPath: { ws: "/api/ws" }`. A message larger than `maxMessageSize` (64 KB by default) is refused with a `4413` error and the connection stays open; a frame larger than 1 MiB, or twice `maxMessageSize` when that is larger, closes the connection with `1009` before it is buffered. Requires the `ws` package.
 
+A client whose network lets no WebSocket through — a corporate proxy, an antivirus that inspects TLS, an entry with WebSockets turned off — keeps the same connection over `POST` requests to that path. `courierWSAttach` takes them off the server ahead of NestJS, so none of your body parsers or routes reads them, whichever was added first. With `http: false` they are yours again, and the client stays on WebSocket.
+
 <br />
 
 ## Shutting down

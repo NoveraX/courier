@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Replication Guide",
   description: "Production-ready multi-replica setup for every supported framework — Next.js, Express, Fastify, Hono, NestJS, and Standalone Server.",
-  updated: "2026-11-15",
+  updated: "2026-11-18",
 }
 
 This guide shows a complete, production-ready realtime setup with Redis adapters for each supported framework.
@@ -302,6 +302,8 @@ const ws = courierWSHandler({
   },
 })
 fastify.get("/ws", { websocket: true }, ws)
+// the same connection over HTTP, for a client whose network lets no WebSocket through
+fastify.post("/ws", ws.http)
 // closes each socket with 1001 within 5 s, and lets go of its pub/sub subscriptions
 fastify.addHook("preClose", () => ws.destroy())
 
@@ -367,6 +369,8 @@ const ws = courierWSHandler({
     console.log("WS closed", { meta, code })
   },
 })
+// the same connection over HTTP, for a client whose network lets no WebSocket through
+app.post("/ws", ws.http)
 app.get("/ws", upgradeWebSocket((c) => ws(c)))
 
 // Health checks

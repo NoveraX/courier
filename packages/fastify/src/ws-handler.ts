@@ -1,5 +1,6 @@
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import {
+  answerTransportRequest,
   DEFAULT_WS_MAX_MESSAGE_SIZE,
   serverOriginOf,
   toWebRequest,
@@ -12,17 +13,27 @@ import type {
   WSHandlerDescriptor,
 } from "@noverax/courier/server";
 import { ConfigurationError, createLogger, createWSHandler } from "@noverax/courier/server";
-import type { FastifyRequest } from "fastify";
+import type { FastifyRequest, RouteShorthandOptionsWithHandler } from "fastify";
 
 const log = createLogger("Fastify");
 
 /**
  * What `courierWSHandler` returns: the route handler for `{ websocket: true }`
- * routes, carrying the handler's `connections`, its `destroy({ timeoutMs })`
- * and its `stats()`.
+ * routes, carrying the handler's `connections`, its `destroy({ timeoutMs })`,
+ * its `stats()`, and `http`, the route of its HTTP transport.
  */
 export type CourierWSRoute = ((socket: WebSocketLike, request: FastifyRequest) => void) &
-  WSHandlerDescriptor;
+  WSHandlerDescriptor & {
+    /**
+     * The route of the HTTP transport, for `POST` on the socket's path —
+     * `fastify.post("/api/ws", ws.http)`: a client whose network lets no
+     * WebSocket through keeps the same connection over requests there. Each
+     * is answered from the route's `onRequest`, its reply hijacked, so no body
+     * parser of Fastify's reads it and no later hook runs; the application's
+     * own `onRequest` hooks see it, as they see the upgrade.
+     */
+    readonly http: RouteShorthandOptionsWithHandler;
+  };
 
 /**
  * Create a Fastify WebSocket route handler for Courier realtime.
@@ -40,9 +51,10 @@ export type CourierWSRoute = ((socket: WebSocketLike, request: FastifyRequest) =
  *
  * @param options - WS handler options (heartbeat, allowedOrigins, etc.)
  * @returns Route handler for `{ websocket: true }` routes, carrying the
- *   handler's `connections`, its `destroy({ timeoutMs })` — call it from an
- *   `onClose` hook, so the handler's connections are closed and its pub/sub
- *   subscriptions let go of — and its `stats()`
+ *   handler's `connections`, its `destroy({ timeoutMs })` — call it from a
+ *   `preClose` hook, so the handler's connections are closed and its pub/sub
+ *   subscriptions let go of before the server waits on its requests — its
+ *   `stats()`, and `http`, the route of its HTTP transport
  *
  * @example
  * ```ts
@@ -53,7 +65,8 @@ export type CourierWSRoute = ((socket: WebSocketLike, request: FastifyRequest) =
  * await fastify.register(fastifyWebsocket, { options: { maxPayload: wsFrameLimit() } });
  * const ws = courierWSHandler();
  * fastify.get("/api/ws", { websocket: true }, ws);
- * fastify.addHook("onClose", () => ws.destroy());
+ * fastify.post("/api/ws", ws.http);
+ * fastify.addHook("preClose", () => ws.destroy());
  * ```
  */
 export function courierWSHandler<TConnect extends ConnectResult = ConnectResult>(
@@ -74,10 +87,26 @@ export function courierWSHandler<TConnect extends ConnectResult = ConnectResult>
     wsHandler.handleSocket(socket, toWebRequest(request.raw));
   };
 
+  const http: RouteShorthandOptionsWithHandler = {
+    onRequest: (request, reply, done) => {
+      reply.hijack();
+      answerTransportRequest(
+        request.raw,
+        reply.raw,
+        (webRequest, peerAddress) => wsHandler.handleHTTP(webRequest, peerAddress),
+        () => announce(serverOriginOf(request.raw.socket)),
+      );
+      done();
+    },
+    /* Never reached: once its reply is hijacked, Fastify runs nothing after `onRequest`. */
+    handler: () => undefined,
+  };
+
   return Object.assign(route, {
     connections: wsHandler.connections,
     destroy: (stop?: { timeoutMs?: number | undefined }) => wsHandler.destroy(stop),
     stats: () => wsHandler.stats(),
+    http,
   });
 }
 

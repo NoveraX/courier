@@ -46,7 +46,7 @@ export function takeTransportRequests(server: Server, taking: TransportRequests)
   const intercept = function (this: Server, event: string | symbol, ...args: unknown[]): boolean {
     const [req, res] = args as [IncomingMessage, ServerResponse];
     if (taken && event === "request" && isTransportRequest(req, taking.path)) {
-      take(req, res, taking);
+      answerTransportRequest(req, res, taking.answer, taking.onRequest);
       return true;
     }
     return Reflect.apply(emit, this, [event, ...args]) as boolean;
@@ -69,9 +69,37 @@ function isTransportRequest(req: IncomingMessage, path: string | undefined): boo
   return type.split(";")[0]?.trim().toLowerCase() === "text/plain";
 }
 
-/* A target no URL reads, a Host none can name, is the client's mistake: answered, never thrown
-   out of the server's emit. */
-function take(req: IncomingMessage, res: ServerResponse, taking: TransportRequests): void {
+/**
+ * Answer one request of the WebSocket handler's HTTP transport on a Node
+ * server's request and response, as `takeTransportRequests` answers each it
+ * takes: for a framework that routes the request itself, and hands it over
+ * before reading its body — Fastify's `onRequest`, its reply hijacked. A
+ * target no URL reads, a Host none can name, is the client's mistake and is
+ * answered 400; a failure before the answer's head is answered 500, and
+ * logged. Nothing is thrown.
+ *
+ * @param req - The request, its body unread
+ * @param res - Its response, which nothing else writes
+ * @param answer - What answers it: the WebSocket handler's `handleHTTP`
+ * @param onRequest - Sees it once it reads as a request
+ *
+ * @example
+ * ```ts
+ * fastify.post("/api/ws", {
+ *   onRequest: async (request, reply) => {
+ *     reply.hijack();
+ *     answerTransportRequest(request.raw, reply.raw, (req, peer) => handler.handleHTTP(req, peer));
+ *   },
+ *   handler: () => undefined,
+ * });
+ * ```
+ */
+export function answerTransportRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  answer: TransportRequests["answer"],
+  onRequest?: TransportRequests["onRequest"],
+): void {
   let request: Request;
   try {
     request = toWebRequest(req, res);
@@ -79,9 +107,8 @@ function take(req: IncomingMessage, res: ServerResponse, taking: TransportReques
     res.writeHead(400, { "Content-Length": "0" }).end();
     return;
   }
-  taking.onRequest?.(req);
-  taking
-    .answer(request, req.socket.remoteAddress)
+  onRequest?.(req);
+  answer(request, req.socket.remoteAddress)
     .then((response) => sendWebResponse(response, res))
     .catch((error: unknown) => {
       log.error("A request of the HTTP transport failed", error);

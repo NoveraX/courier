@@ -12,6 +12,7 @@ export {
   withIncomingRequest,
 } from "./node-request-context";
 export { sendWebResponse } from "./node-response";
+export { answerTransportRequest } from "./node-transport-requests";
 export {
   attachWebSocketUpgrade,
   DEFAULT_WS_PATH,

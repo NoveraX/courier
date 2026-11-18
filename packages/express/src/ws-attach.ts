@@ -21,8 +21,9 @@ export interface CourierWSAttachOptions<TConnect extends ConnectResult = Connect
   extends WSHandlerConfig<TConnect> {
   /**
    * Pathname to answer upgrades on — the `proxyPath.ws` the client connects
-   * to. Upgrades on any other path are left to the application's own
-   * handlers. Defaults to `/api/ws`.
+   * to — and the `POST`s of the HTTP transport. Upgrades and requests on any
+   * other path are left to the application's own handlers. Defaults to
+   * `/api/ws`.
    */
   path?: string | undefined;
 }
@@ -30,6 +31,12 @@ export interface CourierWSAttachOptions<TConnect extends ConnectResult = Connect
 /**
  * Attach Courier WebSocket handler to an HTTP server.
  * Requires `ws` package as peer dependency.
+ *
+ * A client whose network lets no WebSocket through keeps the same
+ * connection over `POST` requests to the socket's path, the handler's
+ * HTTP transport: they are taken off the server ahead of Express and
+ * its body parsers, whichever was added first. With `http: false` they are
+ * the application's, and the client stays on WebSocket.
  *
  * @param server - Node.js HTTP server (e.g. `http.createServer(app)`)
  * @param options - WS handler options (heartbeat, allowedOrigins, etc.) and the `path` to listen on
@@ -78,6 +85,10 @@ export function courierWSAttach<TConnect extends ConnectResult = ConnectResult>(
       announce(serverOriginOf(request.socket));
     },
     onSocket: (socket, request) => wsHandler.handleSocket(socket, request),
+    onHTTP:
+      handlerOptions.http === false
+        ? undefined
+        : (request, peerAddress) => wsHandler.handleHTTP(request, peerAddress),
   });
 
   /* No new socket while the ones held drain; what has not closed by then

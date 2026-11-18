@@ -75,9 +75,20 @@ export type HonoWSEvents = {
 /**
  * What `courierWSHandler` returns: the factory of each connection's events,
  * for `upgradeWebSocket`, carrying the handler's `connections`, its
- * `destroy({ timeoutMs })` and its `stats()`.
+ * `destroy({ timeoutMs })`, its `stats()`, and `http`, the handler of its
+ * HTTP transport.
  */
-export type CourierWSRoute = ((c: Context) => HonoWSEvents) & WSHandlerDescriptor;
+export type CourierWSRoute = ((c: Context) => HonoWSEvents) &
+  WSHandlerDescriptor & {
+    /**
+     * The handler of the HTTP transport, for `POST` on the socket's path —
+     * `app.post("/ws", ws.http)`: a client whose network lets no WebSocket
+     * through keeps the same connection over requests there. It reads the
+     * request's body itself, so route it before any middleware that reads
+     * bodies, which would leave it none.
+     */
+    readonly http: (c: Context) => Promise<Response>;
+  };
 
 /**
  * Create Hono WebSocket event handlers for Courier realtime.
@@ -87,7 +98,8 @@ export type CourierWSRoute = ((c: Context) => HonoWSEvents) & WSHandlerDescripto
  * @returns Factory that produces WSEvents per connection, carrying the
  *   handler's `connections`, its `destroy({ timeoutMs })` — call it as the
  *   server stops, so the handler's connections are closed and its pub/sub
- *   subscriptions let go of — and its `stats()`
+ *   subscriptions let go of — its `stats()`, and `http`, the handler of its
+ *   HTTP transport
  *
  * @example Node.js
  * ```ts
@@ -96,6 +108,7 @@ export type CourierWSRoute = ((c: Context) => HonoWSEvents) & WSHandlerDescripto
  *
  * const wss = new WebSocketServer({ noServer: true });
  * const ws = courierWSHandler();
+ * app.post("/ws", ws.http);
  * app.get("/ws", upgradeWebSocket((c) => ws(c)));
  *
  * serve({ fetch: app.fetch, port: 3001, websocket: { server: wss } });
@@ -133,9 +146,15 @@ export function courierWSHandler<TConnect extends ConnectResult = ConnectResult>
     };
   };
 
+  const http = (c: Context): Promise<Response> => {
+    announce(serverOriginOfHono(c));
+    return wsHandler.handleHTTP(c.req.raw, peerAddressOf(c));
+  };
+
   return Object.assign(route, {
     connections: wsHandler.connections,
     destroy: (stop?: { timeoutMs?: number | undefined }) => wsHandler.destroy(stop),
     stats: () => wsHandler.stats(),
+    http,
   });
 }

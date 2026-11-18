@@ -160,6 +160,7 @@ import { courierSSEHandler, courierWSHandler } from "@noverax/courier-hono"
 app.get("/api/sse", courierSSEHandler())
 
 const ws = courierWSHandler()
+app.post("/api/ws", ws.http)
 app.get("/api/ws", upgradeWebSocket((c) => ws(c)))
 
 const wss = new WebSocketServer({ noServer: true, maxPayload: wsFrameLimit() })
@@ -167,6 +168,8 @@ serve({ fetch: app.fetch, port: 3000, websocket: { server: wss } })
 ```
 
 Point the client at the same paths with `proxyPath: { sse: "/api/sse", ws: "/api/ws" }`.
+
+A client whose network lets no WebSocket through — a corporate proxy, an antivirus that inspects TLS, an entry with WebSockets turned off — keeps the same connection over `POST` requests to the socket's path: route them with `app.post("/api/ws", ws.http)`, as above, ahead of any middleware that reads request bodies — `ws.http` reads the body itself. With `http: false` it answers 404, and the client stays on WebSocket.
 
 What `courierWSHandler()` returns carries the handler's `connections` — to send, broadcast, or close a user's connections on every replica — its `stats()`, and `destroy({ timeoutMs })`. Call `await ws.destroy()` as the server stops, before it closes: each socket is closed with 1001, told when to come back, which a Courier client answers by reconnecting then, and waited for up to 5 seconds, and the handler's pub/sub subscriptions are let go of.
 

@@ -110,13 +110,16 @@ async function resumeOnceTaken(
        this one: the position is read after, and owes the subscription nothing before it. */
     await bridge.taken(topic);
     if (!ctx.topicManager.has(ctx.connectionId, topic)) return false;
-    return bridge.log
-      ? await resumeFromLog(ctx, bridge.log, topic, since, gate)
-      : sendKept(ctx, topic, since);
+    if (bridge.log) return await resumeFromLog(ctx, bridge.log, topic, since, gate);
+    gate.upTo = ctx.registry.positionOf(topic);
+    return sendKept(ctx, topic, since);
   } finally {
     if (ctx.resuming.get(topic) === gate) {
       ctx.resuming.delete(topic);
       for (const [frame, kind] of gate.held) ctx.sendEncoded(frame, kind);
+      /* What an event still on its way owes the subscription follows what the gate held, but
+         none the position it resumes to counts: those were resumed, or are before what it owes. */
+      if (gate.upTo) ctx.registry.sendOwed(topic, ctx.connectionId, gate.upTo);
     }
   }
 }

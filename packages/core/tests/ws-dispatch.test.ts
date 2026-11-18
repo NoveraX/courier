@@ -76,7 +76,11 @@ function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
     requestId: "req-1",
     sources: {},
     pubsub: undefined,
-    registry: { broadcastToTopic: vi.fn(), positionOf: () => ({ seq: 0, epoch: "e1" }) },
+    registry: {
+      broadcastToTopic: vi.fn(),
+      positionOf: () => ({ seq: 0, epoch: "e1" }),
+      sendOwed: () => undefined,
+    },
     bridge: undefined,
     topicManager: {
       has: (connId: string, topic: string) => topicSubs.get(connId)?.has(topic) ?? false,

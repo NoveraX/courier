@@ -22,6 +22,7 @@ import type {
   RegistryEntry,
 } from "./ws-registry-types";
 import { resumableFrom } from "./ws-resume-position";
+import { createTopicFanout } from "./ws-topic-fanout";
 import type { TopicHistory } from "./ws-topic-history";
 import { createTopicSequences } from "./ws-topic-sequences";
 import type { ServerTopicManager } from "./ws-topics";
@@ -66,12 +67,14 @@ export function createConnectionRegistry(
   const { entries } = members;
   let topicManager: ServerTopicManager | undefined;
   const sequences = createTopicSequences();
+  const fanout = createTopicFanout(entries);
 
   const targets: BroadcastTargets = {
     entries,
     get topicManager() {
       return topicManager;
     },
+    fanout,
     sequences,
     history,
   };
@@ -132,6 +135,7 @@ export function createConnectionRegistry(
       topicManager = tm;
     },
     positionOf: (topic) => sequences.position(topic),
+    sendOwed: (topic, connectionId, resumedTo) => fanout.sendOwed(topic, connectionId, resumedTo),
     forgetTopic(topic) {
       sequences.forget(topic);
       history?.drop(topic);

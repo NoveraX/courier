@@ -69,7 +69,7 @@ export interface ConnectionRegistry {
   send(connectionId: string, data: unknown): void;
   /** Broadcast a data message to all connections (optionally exclude one). Yields to event loop for large audiences. */
   broadcast(data: unknown, exclude?: string): Promise<void>;
-  /** Broadcast to all connections subscribed to a topic. Yields to event loop for large audiences. */
+  /** Broadcast to all connections subscribed to a topic, each of which has the topic's broadcasts in the order they were made. Yields to event loop for large audiences. */
   broadcastToTopic(topic: string, data: unknown, exclude?: string): Promise<void>;
   /** Broadcast to all qualified topics matching a base topic (e.g. "api.chat.room" matches 'api.chat.room#{"room":"a"}'). Yields to event loop for large audiences. */
   broadcastToBaseTopic(baseTopic: string, data: unknown, exclude?: string): Promise<void>;
@@ -166,6 +166,13 @@ export interface InternalConnectionRegistry extends ConnectionRegistry {
   setTopicManager(tm: ServerTopicManager): void;
   /** Where a topic's sequence stands on this replica: what `subscribed` states */
   positionOf(topic: string): TopicPosition;
+  /**
+   * Send a connection now, in their order, what the topic's events on their
+   * way to its subscribers still owe it — but those `resumedTo` counts, which
+   * resuming its subscription sent it or which are before where it started:
+   * what `subscribed` then states was all sent it
+   */
+  sendOwed(topic: string, connectionId: string, resumedTo?: TopicPosition): void;
   /** A topic no subscriber holds any more: its sequence and its history are let go of */
   forgetTopic(topic: string): void;
   /**

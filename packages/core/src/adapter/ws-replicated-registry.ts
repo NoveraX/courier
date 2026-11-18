@@ -80,6 +80,7 @@ export function replicateRegistry(
     reach: (selection) => registry.reach(selection),
     setTopicManager: (topicManager) => registry.setTopicManager(topicManager),
     positionOf: (topic) => registry.positionOf(topic),
+    sendOwed: (topic, connectionId, resumedTo) => registry.sendOwed(topic, connectionId, resumedTo),
     forgetTopic: (topic) => registry.forgetTopic(topic),
     eventsAfter: (topic, since) => registry.eventsAfter(topic, since),
     catchUp: () => registry.catchUp(),

@@ -1,20 +1,16 @@
 import { encodeMessage } from "../realtime/ws/ws-protocol";
 import type { RegistryEntry } from "./ws-registry-types";
+import { BATCH_SIZE, type TopicFanout, yieldTick } from "./ws-topic-fanout";
 import type { TopicHistory } from "./ws-topic-history";
 import type { TopicPosition, TopicSequences } from "./ws-topic-sequences";
 import type { ServerTopicManager } from "./ws-topics";
-
-/**
- * Yield to the event loop between broadcast batches.
- * Prevents blocking on 1000+ subscribers.
- */
-const BATCH_SIZE = 512;
-const yieldTick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
 /** What a broadcast reaches: the live connections, and who is subscribed to what. */
 export interface BroadcastTargets {
   readonly entries: ReadonlyMap<string, RegistryEntry>;
   readonly topicManager: ServerTopicManager | undefined;
+  /** What sends each topic's events to its subscribers, in the order of their numbers */
+  readonly fanout: TopicFanout;
   /** The numbers of each topic's events */
   readonly sequences: TopicSequences;
   /** The events kept to resume subscriptions from, when the handler keeps history */
@@ -92,9 +88,10 @@ export async function broadcastToTopic(
 
 /**
  * Send a frame of a topic's sequence — an event, numbered — to every
- * subscriber of the topic as such, which one resuming holds until what it
- * missed is sent; the one left out, when it is a subscriber, is sent
- * `skip` with the number instead, so its count stays whole.
+ * subscriber the topic has now, as such, once the topic's events before it
+ * were sent: one resuming holds it until what it missed is sent; the one
+ * left out, when it is a subscriber, is sent `skip` with the number
+ * instead, in its turn, so its count stays whole.
  *
  * @param targets - The connections and their subscriptions
  * @param topic - The qualified topic
@@ -116,15 +113,7 @@ export async function deliverToTopic(
 ): Promise<void> {
   const subscriberIds = targets.topicManager?.subscribers(topic);
   if (!subscriberIds?.size) return;
-  if (exclude !== undefined && subscriberIds.has(exclude)) {
-    const skip = encodeMessage({ type: "skip", topic, seq: position.seq });
-    targets.entries.get(exclude)?.sendTopicEvent(topic, position, skip);
-  }
-  const batch: Batch = { sent: 0 };
-  for (const id of [...subscriberIds]) {
-    if (id !== exclude) targets.entries.get(id)?.sendTopicEvent(topic, position, encoded);
-    if (++batch.sent % BATCH_SIZE === 0) await yieldTick();
-  }
+  await targets.fanout.deliver(topic, subscriberIds, position, encoded, exclude);
 }
 
 /**

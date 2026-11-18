@@ -176,8 +176,10 @@ async function openSubscription(
   }
 
   /* Sent once the channel or the push has begun, with where the topic's
-     sequence stands: every event it counted reached the subscription, live,
-     as it was registered before the handler ran. */
+     sequence stands: every event it counts reached the subscription — live,
+     as it was registered before the handler ran, or resumed — an event still
+     on its way to the topic's subscribers sent it first. */
+  ctx.registry.sendOwed(subscribedTopic, ctx.connectionId);
   const { seq, epoch } = ctx.registry.positionOf(subscribedTopic);
   ctx.sendMessage({
     type: "subscribed",

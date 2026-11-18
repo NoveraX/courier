@@ -18,6 +18,8 @@ export type {
   ConnectResult,
   DisconnectOptions,
   HandlerConfig,
+  HTTPTransportOptions,
+  HTTPTransportStats,
   MemoryRateLimitOptions,
   MetaValue,
   NoConnectionMeta,

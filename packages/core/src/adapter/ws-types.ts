@@ -9,6 +9,7 @@ import type {
 } from "../realtime/adapters";
 import type { WSAuthParams } from "../realtime/ws/ws-credentials";
 import type { ConnectionMeta, ConnectResult } from "./connection-meta";
+import type { HTTPTransportOptions } from "./http-transport/http-terms";
 import type { AllowedHostsSetting, AllowedOriginsSetting } from "./runtime-policy";
 import type { SubscriptionTracker } from "./ws-context";
 import type { WSHandlerStats } from "./ws-handler-stats";
@@ -39,6 +40,17 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
   pubsub?: PubSubAdapter | undefined;
   /** How the replicas sharing `pubsub` trust the commands they send each other */
   cluster?: ClusterOptions | undefined;
+  /**
+   * The HTTP transport, for a client whose network lets no WebSocket
+   * through — a proxy, a firewall or a CDN that refuses the upgrade or holds
+   * the socket's frames back: on unless `false`. Such a client falls back to
+   * it on its own and keeps the same connection over `POST` requests to the
+   * socket's path — a stream of the server's frames where its network passes
+   * one, polls where it does not — admitted, limited, heard and closed as a
+   * socket is. A client whose socket works sends it no request. `holdMs`
+   * and `streamMs` set how long a poll is held and a stream runs.
+   */
+  http?: false | HTTPTransportOptions | undefined;
   /**
    * Keep each topic's recent events, so a subscription that comes back —
    * its client lost the connection — is sent what it missed instead of
@@ -332,6 +344,16 @@ export interface WSHandler {
    *   socket itself, without stopping the handler
    */
   handleSocket(ws: WebSocketLike, request: Request, peerAddress?: string): () => void;
+  /**
+   * Answer a request of the HTTP transport: a `POST` to the path the
+   * handler's sockets are upgraded on, from a client whose network let no
+   * socket through. Its connection is the handler's as a socket's is, held
+   * to the same hosts, origins and limits. Without the transport —
+   * `http: false` — every request is answered 404.
+   *
+   * `peerAddress` is as `handleSocket`'s.
+   */
+  handleHTTP(request: Request, peerAddress?: string): Promise<Response>;
   /** Registry of active connections with send/broadcast/disconnect API */
   readonly connections: ConnectionRegistry;
   /**

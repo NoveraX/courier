@@ -101,6 +101,7 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
     isAccepting: () => !shuttingDown,
     createServer: async (serverOptions) => new (await loadWs()).WebSocketServer(serverOptions),
     onSocket: (socket, request) => wsHandler.handleSocket(socket, request),
+    onHTTP: (request, peerAddress) => wsHandler.handleHTTP(request, peerAddress),
   });
 
   /* A library does not decide that the host process should end. A failed

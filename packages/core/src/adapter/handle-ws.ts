@@ -1,10 +1,16 @@
 import { LIMITS } from "../limits";
+import type { RefusalLog } from "../logger/refusal-log";
 import { createRefusalLog } from "../logger/refusal-log";
 import { provideServerCapabilities } from "../server/provide-server-capabilities";
 import { prepareSources } from "../server/sources";
 import { studioHooks } from "../studio";
 import { ownFields } from "../utils/own";
 import type { ConnectResult } from "./connection-meta";
+import { gateEntry } from "./entry-gate";
+import { createHTTPTransport, type HTTPTransport } from "./http-transport/create-http-transport";
+import { httpTermsOf } from "./http-transport/http-terms";
+import { errorResponse } from "./parse";
+import { rememberPeerAddress } from "./peer-address";
 import { assertListedSettings } from "./runtime-policy";
 import { assertHandlerTerms } from "./ws-client-terms";
 import { createHandlerCounters, type WSHandlerStats } from "./ws-handler-stats";
@@ -29,11 +35,16 @@ export type { WSSocketContext } from "./ws-context";
  * global registry when each connection opens; call `await attachRuntime()`
  * in your server instrumentation to populate it before the first request.
  *
+ * Its connections are sockets, and, unless `config.http` is `false`,
+ * connections over HTTP for clients whose network lets no socket through:
+ * an adapter hands `handleHTTP` the `POST` requests to the socket's path.
+ *
  * @param config - Handler configuration (pubsub, heartbeat, lifecycle hooks, etc.)
- * @returns WSHandler with handleSocket and connections registry
+ * @returns WSHandler with handleSocket, handleHTTP and connections registry
  * @throws ConfigurationError when `config.sources` is not a dictionary of sources,
- *   `config.cluster.secret` is shorter than 32 bytes, or the heartbeat or `maxMessageSize` it
- *   would tell each client is one no client keeps
+ *   `config.cluster.secret` is shorter than 32 bytes, the heartbeat or `maxMessageSize` it
+ *   would tell each client is one no client keeps, or a wait of `config.http` is none a timer
+ *   keeps
  * @example
  * const ws = createWSHandler({
  *   onConnect: ({ connectionId, request }) => ({ userId: extractUser(request) }),
@@ -51,6 +62,7 @@ export function createWSHandler(given?: WSHandlerConfig): WSHandler {
   provideServerCapabilities();
   assertListedSettings(config, "createWSHandler");
   assertHandlerTerms(config);
+  const httpTerms = httpTermsOf(config);
   if (config.sources !== undefined) {
     prepareSources(config.sources, "createWSHandler", "createWSHandler({ sources: { api } })");
   }
@@ -90,6 +102,7 @@ export function createWSHandler(given?: WSHandlerConfig): WSHandler {
     },
     stopping: () => stopping !== undefined,
   });
+  const http = httpTerms && createHTTPTransport(httpTerms, handleSocket);
 
   // Wire Studio playground WS send — allows playground to relay messages to active connections
   studioHooks.sendWSMessage = (connectionId, topic, data) => {
@@ -103,6 +116,7 @@ export function createWSHandler(given?: WSHandlerConfig): WSHandler {
      the pub/sub adapter are let go of without waiting on it. */
   async function stop(timeoutMs: number): Promise<void> {
     await live.closeAll(shutdownClose, timeoutMs);
+    http?.destroy();
     studioHooks.sendWSMessage = undefined;
     limiter?.destroy();
     retention.destroy();
@@ -125,8 +139,33 @@ export function createWSHandler(given?: WSHandlerConfig): WSHandler {
       droppedFrames: counters.droppedFrames,
       stopping: stopping !== undefined,
       pubsub: config.pubsub?.stats(),
+      http: http?.stats(),
     };
   }
 
-  return { handleSocket, connections, destroy, stats };
+  const handleHTTP = httpEntryOf(http, config, refusals);
+  return { handleSocket, handleHTTP, connections, destroy, stats };
+}
+
+/* The HTTP transport's entry, held to the hosts and origins the handler's sockets are; without
+   the transport, nothing is there. */
+function httpEntryOf(
+  http: HTTPTransport | undefined,
+  config: WSHandlerConfig,
+  refusals: RefusalLog,
+): WSHandler["handleHTTP"] {
+  if (http === undefined) {
+    return async () => errorResponse(404, "This handler has no HTTP transport", "NOT_FOUND");
+  }
+  const { allowedHosts, allowedOrigins } = config;
+  const gated = gateEntry(
+    (request) => http.handle(request),
+    { allowedHosts, allowedOrigins },
+    studioHooks,
+    refusals,
+  );
+  return (request, peerAddress) => {
+    rememberPeerAddress(request, peerAddress);
+    return gated(request);
+  };
 }

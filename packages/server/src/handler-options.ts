@@ -123,6 +123,7 @@ export function wsHandlerOptions(
     allowedHosts: settings.allowedHosts,
     pubsub: config.pubsub,
     cluster: config.cluster,
+    http: config.http,
     history: config.history,
     heartbeatIntervalMs: config.heartbeatIntervalMs,
     heartbeatTimeoutMs: config.heartbeatTimeoutMs,

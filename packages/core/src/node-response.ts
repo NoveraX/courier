@@ -1,0 +1,134 @@
+import type { ServerResponse } from "node:http";
+import { createLogger } from "./logger";
+import { isCancellation } from "./utils/abort";
+import { defineOwn } from "./utils/define-own";
+
+const log = createLogger("Node");
+
+/**
+ * Wait until a response the socket could not take at once has been written
+ * out, or its client has gone.
+ */
+function drained(nodeRes: ServerResponse): Promise<void> {
+  if (nodeRes.destroyed) return Promise.resolve();
+  return new Promise((resolve) => {
+    const done = () => {
+      nodeRes.off("drain", done);
+      nodeRes.off("close", done);
+      resolve();
+    };
+    nodeRes.on("drain", done);
+    nodeRes.on("close", done);
+  });
+}
+
+/**
+ * Send a Web Standard Response to a Node.js ServerResponse.
+ * Handles streaming bodies and set-cookie headers, and keeps a `Vary` the
+ * Node response already carries beside the one the answer brings.
+ *
+ * The body is read no faster than the client reads it: an SSE stream whose
+ * client stopped reading would otherwise be buffered in memory without
+ * bound, and its generator would never learn to pause. A body that breaks
+ * off while its client is still reading cuts the connection, so the part
+ * sent is never taken for the whole answer.
+ *
+ * @param webRes - The response to send
+ * @param nodeRes - The Node response to write it to
+ * @returns Once the body is written, or the client has gone
+ * @throws The body's own error when it breaks off, once the connection is cut
+ * @example
+ * ```ts
+ * createServer(async (req, res) => {
+ *   try {
+ *     await sendWebResponse(await handler(toWebRequest(req, res)), res);
+ *   } catch (error) {
+ *     console.error(error);
+ *     if (!res.headersSent) res.writeHead(500).end();
+ *   }
+ * });
+ * ```
+ */
+export async function sendWebResponse(webRes: Response, nodeRes: ServerResponse): Promise<void> {
+  const headersObj: Record<string, string | string[]> = {};
+  for (const [key, value] of webRes.headers.entries()) {
+    defineOwn(headersObj, key, key === "set-cookie" ? webRes.headers.getSetCookie() : value);
+  }
+  /* writeHead's headers replace the ones set before it, so a `Vary` set
+     before it — the `Origin` a CORS grant depends on — is joined with the
+     answer's own rather than lost to it. */
+  const varied = nodeRes.getHeader("vary");
+  const vary = varied === undefined ? "" : joinedVary(varied, webRes.headers.get("vary"));
+  if (vary !== "") headersObj.vary = vary;
+
+  nodeRes.writeHead(webRes.status, headersObj);
+  if (webRes.body) await writeBody(webRes.body, nodeRes);
+  nodeRes.end();
+}
+
+/* Write a body as its client reads it. Ended after a body that broke off, the
+   answer would pass for whole: a chunked one cut short reads as complete, and
+   one of a stated length keeps its client waiting for the rest. So the
+   connection is cut first, and only then is the response ended, which writes
+   nothing more yet tells a framework that reads an ended response as answered
+   — Fastify, middie, an adapter of an older release — not to answer it again
+   over the head already sent. */
+async function writeBody(
+  body: NonNullable<Response["body"]>,
+  nodeRes: ServerResponse,
+): Promise<void> {
+  const reader = body.getReader();
+  /* A client that leaves mid-stream stops the body too — a streamed upstream
+     response is then no longer downloaded for nobody. The listener goes once
+     the body is written: a later close would cancel a reader already let go. */
+  const onClose = () => {
+    if (nodeRes.writableFinished) return;
+    reader.cancel().catch(noteUnstoppedBody);
+  };
+  nodeRes.once("close", onClose);
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) return;
+      if (!nodeRes.write(value)) await drained(nodeRes);
+    }
+  } catch (error) {
+    /* The client left, and the proxy stopped the body along with the upstream
+       call behind it: there is nobody to deliver to, and nothing failed. */
+    if (nodeRes.destroyed && !nodeRes.writableFinished) {
+      log.debug("The client left while its response was streaming", error);
+      return;
+    }
+    nodeRes.destroy();
+    /* Cut short, the body no longer has the length it stated. */
+    nodeRes.strictContentLength = false;
+    nodeRes.end();
+    throw error;
+  } finally {
+    nodeRes.off("close", onClose);
+    reader.releaseLock();
+  }
+}
+
+/* Two `Vary` values as one that names each field once; `*` stands for all of them. */
+function joinedVary(varied: number | string | readonly string[], own: string | null): string {
+  const fields = `${varied},${own ?? ""}`
+    .split(",")
+    .map((field) => field.trim())
+    .filter((field) => field !== "");
+  if (fields.includes("*")) return "*";
+  const named = fields.map((field) => field.toLowerCase());
+  return fields.filter((field, at) => named.indexOf(field.toLowerCase()) === at).join(", ");
+}
+
+/**
+ * Note a response body the client's departure could not cancel.
+ *
+ * The proxy stops its upstream call when the same client leaves, so the body
+ * has usually ended already and refuses the cancel with that abort. Anything
+ * else may be a body still running for nobody.
+ */
+function noteUnstoppedBody(error: unknown): void {
+  if (isCancellation(error)) log.debug("The response body had already stopped", error);
+  else log.warn("Could not stop the response body", error);
+}

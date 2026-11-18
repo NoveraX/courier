@@ -1,10 +1,11 @@
 import type { IncomingMessage, Server } from "node:http";
 import type { Duplex } from "node:stream";
 import { closeWithNotice } from "./adapter/ws-close";
+import { wsFrameLimit } from "./adapter/ws-frame-limit";
 import { shutdownClose } from "./adapter/ws-shutdown";
-import { LIMITS } from "./limits";
 import { createLogger } from "./logger";
 import { toWebRequest } from "./node-request";
+import { takeTransportRequests } from "./node-transport-requests";
 import type { WebSocketLike } from "./realtime/adapters";
 import { parseUrl } from "./utils/parse-url";
 import { socketError } from "./utils/socket-error";
@@ -13,35 +14,6 @@ const log = createLogger("WS");
 
 /** The path a Node adapter answers WebSocket upgrades on unless told otherwise. */
 export const DEFAULT_WS_PATH = "/api/ws";
-
-/** The largest WebSocket message, in bytes, a handler accepts unless told otherwise. */
-export const DEFAULT_WS_MAX_MESSAGE_SIZE: number = LIMITS.MAX_MESSAGE_SIZE;
-
-/** The frame limit when the message limit is no more than half of it (1 MiB). */
-const DEFAULT_WS_FRAME_LIMIT = 1_048_576;
-
-/**
- * The largest WebSocket frame to read at all, for a handler that accepts
- * messages up to `maxMessageSize`; `ws` closes the connection with 1009 on a
- * bigger one, before buffering it.
- *
- * It sits well above the message limit — 1 MiB, or twice `maxMessageSize`
- * when that is larger — so a message over that limit reaches the handler,
- * which refuses the one message with a 4413 error on a connection that stays
- * open, rather than closing the socket and every subscription on it.
- *
- * @param maxMessageSize - The handler's message limit, in bytes (default 64 KB)
- * @returns The frame limit in bytes
- *
- * @example
- * ```ts
- * wsFrameLimit(); // 1_048_576
- * wsFrameLimit(4_194_304); // 8_388_608
- * ```
- */
-export function wsFrameLimit(maxMessageSize: number = DEFAULT_WS_MAX_MESSAGE_SIZE): number {
-  return Math.max(DEFAULT_WS_FRAME_LIMIT, 2 * maxMessageSize);
-}
 
 /** A connection `ws` accepted: what the handler uses, and a way to end it without the closing handshake. */
 interface UpgradedSocket extends WebSocketLike {
@@ -84,14 +56,26 @@ export interface WebSocketUpgradeOptions {
    */
   // biome-ignore lint/suspicious/noConfusingVoidType: an onSocket with no return statement returns `void`, which `undefined` does not take
   onSocket: (socket: WebSocketLike, request: Request) => (() => void) | void;
-  /** Sees each upgrade request Courier answers, before it is accepted. */
+  /** Sees each request Courier answers: an upgrade before it is accepted, and each of `onHTTP`'s. */
   onRequest?: ((request: IncomingMessage) => void) | undefined;
   /** While this returns false — a server shutting down — upgrades get a 503. */
   isAccepting?: (() => boolean) | undefined;
+  /**
+   * Answers the handler's HTTP transport — `handleHTTP` of Courier's
+   * handler: a client whose network lets no socket through keeps the same
+   * connection over `POST` requests to `path`, taken ahead of every other
+   * handler of the server, whichever was added first. Without a `path`,
+   * every `POST` whose body is `text/plain` is taken, as the transport's
+   * always is and the proxy's never is. They are answered while the server
+   * stops too, so a connection it closes hears why.
+   */
+  onHTTP?: ((request: Request, peerAddress?: string) => Promise<Response>) | undefined;
 }
 
 /**
- * Answer WebSocket upgrades on a Node HTTP server.
+ * Answer WebSocket upgrades on a Node HTTP server, and with `onHTTP` the
+ * requests of the handler's HTTP transport, ahead of the server's own
+ * handlers.
  *
  * Only upgrades to `path` are taken: an application with a WebSocket of its
  * own would otherwise have two handlers accept the same socket, and `ws`
@@ -111,8 +95,9 @@ export interface WebSocketUpgradeOptions {
  *
  * @param server - The HTTP server the application listens with
  * @param options - Path, frame limit and what to do with a connection
- * @returns A function that detaches the handler, closes the connections it
- *   accepted, ends those that did not answer their close, and closes the
+ * @returns A function that detaches the handler — the server's own
+ *   handlers see the transport's requests again — closes the connections
+ *   it accepted, ends those that did not answer their close, and closes the
  *   `ws` server
  *
  * @example
@@ -121,6 +106,7 @@ export interface WebSocketUpgradeOptions {
  *   path: "/api/ws",
  *   createServer: async (o) => new (await import("ws")).WebSocketServer(o),
  *   onSocket: (socket, request) => handler.handleSocket(socket, request),
+ *   onHTTP: (request, peer) => handler.handleHTTP(request, peer),
  * });
  * ```
  */
@@ -197,7 +183,15 @@ export function attachWebSocketUpgrade(
   }
 
   server.on("upgrade", onUpgrade);
+  const release =
+    options.onHTTP &&
+    takeTransportRequests(server, {
+      path: options.path,
+      answer: options.onHTTP,
+      onRequest: options.onRequest,
+    });
   return () => {
+    release?.();
     server.off("upgrade", onUpgrade);
     for (const [ws, close] of accepted) {
       if (ws.readyState !== 1) ws.terminate();

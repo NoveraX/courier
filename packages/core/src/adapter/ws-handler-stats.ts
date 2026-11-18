@@ -1,4 +1,5 @@
 import type { PubSubStats } from "../realtime/adapters";
+import type { HTTPTransportStats } from "./http-transport/create-http-transport";
 
 /** What a WebSocket handler holds and has done, as a metrics scrape or a health check reads it. */
 export interface WSHandlerStats {
@@ -18,6 +19,8 @@ export interface WSHandlerStats {
   readonly stopping: boolean;
   /** The pub/sub adapter's own, when the handler has one */
   readonly pubsub: PubSubStats | undefined;
+  /** Its connections over HTTP, when the handler has the HTTP transport */
+  readonly http: HTTPTransportStats | undefined;
 }
 
 /** The counts a handler keeps as it runs. */

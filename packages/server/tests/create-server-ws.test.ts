@@ -155,6 +155,32 @@ describe("WebSocket options", () => {
   });
 });
 
+describe("the HTTP transport of a standalone server", () => {
+  /* A client that could not hold a socket opens the same connection with a POST, on any path. */
+  function openOverHTTP(url: string): Promise<Response> {
+    return fetch(url.replace("ws", "http"), {
+      method: "POST",
+      headers: { "content-type": "text/plain;charset=UTF-8" },
+      body: `${JSON.stringify({ op: "poll", v: 1 })}\n${AUTH}`,
+    });
+  }
+
+  it("answers on the port of its sockets, ahead of the proxy", async () => {
+    const response = await openOverHTTP(`${await serve({})}/ws`);
+    const body = await response.text();
+
+    expect(response.headers.get("content-type")).toBe("text/event-stream");
+    expect(body).toMatch(/^event: open\n/);
+    expect(body).toContain('"type":"auth_ok"');
+  });
+
+  it("answers 404 with http: false", async () => {
+    const response = await openOverHTTP(await serve({ http: false }));
+
+    expect(response.status).toBe(404);
+  });
+});
+
 describe("the metadata a standalone server's hooks receive", () => {
   it("is typed from what onConnect and onSSEConnect return", () => {
     /* Only compiled: a server made here would listen on a port. */

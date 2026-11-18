@@ -28,6 +28,7 @@ vi.mock("@noverax/courier/server", async (importOriginal) => {
     })),
     createWSHandler: vi.fn(() => ({
       handleSocket: vi.fn(),
+      handleHTTP: vi.fn(),
       connections: {
         count: 0,
         get: vi.fn(),
@@ -89,6 +90,7 @@ function createMockHandlerResult(overrides: Record<string, unknown> = {}) {
 function createMockWSResult(handleSocket = vi.fn()) {
   return {
     handleSocket,
+    handleHTTP: vi.fn(),
     connections: {
       count: 0,
       get: vi.fn(),

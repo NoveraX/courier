@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Standalone Server",
   description: "Run a dedicated Courier HTTP + WebSocket server with createCourierServer — health checks, CORS, graceful shutdown, and connection registries.",
-  updated: "2026-11-15",
+  updated: "2026-11-18",
 }
 
 ## Installation
@@ -124,6 +124,7 @@ const server = await createCourierServer({
   authorize: ({ meta, topic }) => canSubscribe(meta, topic),        // per subscription
   authorizeMessage: ({ meta, topic }) => canSend(meta, topic),      // per channel message
   maxPayload: 1_048_576,             // larger frames close the socket with 1009, unbuffered (default: 1MB, or 2× maxMessageSize)
+  http: { holdMs: 25_000, streamMs: 60_000 }, // the socket over HTTP requests: a poll held, a stream run this long; false turns it off (default: on)
 
   // Lifecycle
   signals: true,                     // handle SIGTERM/SIGINT, and Ctrl+Break and the console closing on Windows (default: true)

@@ -194,6 +194,8 @@
       "ForwardOptions",
       "GroupClient",
       "GroupOptions",
+      "HTTPTransportOptions",
+      "HTTPTransportStats",
       "HandlerConfig",
       "HeaderReader",
       "HttpResponse",

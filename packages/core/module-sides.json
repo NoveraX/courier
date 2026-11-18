@@ -40,8 +40,10 @@
     "node-request.js": "A Node request as a web request",
     "node-request-body.js": "A Node request's body as a stream",
     "node-request-context.js": "The request a Node server serves",
+    "node-response.js": "A web response written to a Node response",
     "node-set-cookie.js": "Cookies on a Node response",
     "node-websocket.js": "A Node server's WebSocket",
+    "node-transport-requests.js": "The WebSocket handler's HTTP transport, taken off a Node server ahead of its own handlers",
     "socket-origin.js": "The address a socket server answers at",
     "web-request-context.js": "The request a web server serves",
     "discover-app-origin.js": "The address the application listens at"

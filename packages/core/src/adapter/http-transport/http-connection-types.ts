@@ -1,5 +1,5 @@
 import type { WebSocketLike } from "../../realtime/adapters";
-import type { DeliveryKind } from "./http-delivery";
+import type { Delivery, DeliveryKind } from "./http-delivery";
 
 /** A connection over HTTP: a socket to its handler, and what the transport's requests do to it. */
 export interface HTTPConnection extends WebSocketLike {
@@ -9,12 +9,12 @@ export interface HTTPConnection extends WebSocketLike {
   /** Whether it holds a poll that waits for a frame */
   readonly holding: boolean;
   /**
-   * Answer a `stream` or a `poll`, in place of the answer held before: its
-   * body carries every frame after `ack`, the first answer the connection's
+   * Answer a `stream` or a `poll`, in place of the answer held before: it
+   * carries every frame after `ack`, the first answer the connection's
    * token before them. A poll with nothing to carry is held `holdMs` at most,
    * the transport's own wait unless given.
    */
-  deliver(kind: DeliveryKind, ack: number, holdMs?: number): ReadableStream<Uint8Array>;
+  deliver(kind: DeliveryKind, ack: number, holdMs?: number): Delivery;
   /** Take the client's frames, the first numbered `seq`; false when some before it are missing */
   receive(seq: number, frames: readonly string[]): boolean;
   /** The client has taken every frame up to `ack` */

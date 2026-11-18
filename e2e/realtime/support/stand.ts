@@ -170,7 +170,7 @@ async function startReplica(origin: string) {
     path: "/ws",
     createServer: (options) => new WebSocketServer(options),
     onSocket: (socket, request) => handler.handleSocket(socket, request),
-    onHTTP: (request, peerAddress) => handler.handleHTTP(request, peerAddress),
+    httpTransport: handler,
   });
   const port = await listen(server);
   let n = 0;

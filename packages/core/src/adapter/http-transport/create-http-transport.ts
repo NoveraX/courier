@@ -5,9 +5,9 @@ import {
   HTTP_TRANSPORT_VERSION,
   type HTTPFallbackCause,
 } from "../../realtime/ws/http-protocol";
-import { errorResponse } from "../parse";
-import { readBodyText } from "../read-body-text";
-import { answeredOf, answerHeld, events, gone } from "./http-answers";
+import type { BodyLimits } from "../read-body";
+import type { BodyText } from "../read-body-text";
+import { answeredOf, answerHeld, events, gone, type HTTPAnswer, refusal } from "./http-answers";
 import { createHTTPConnection } from "./http-connection";
 import type { HTTPConnection, HTTPCounts } from "./http-connection-types";
 import type { DeliveryKind } from "./http-delivery";
@@ -35,10 +35,21 @@ export interface HTTPTransportStats {
   readonly fallbacks: Readonly<Record<HTTPFallbackCause, number>>;
 }
 
+/** A request of the HTTP transport, as the server that read it hands it over. */
+export interface TransportRequest {
+  readonly method: string;
+  /** Its body as text, held to `limits` */
+  text(limits: BodyLimits): Promise<BodyText>;
+  /** The request a connection it opens is opened with, as a socket is with its upgrade */
+  opening(): Request;
+  /** The address it came from, where its server knows it */
+  readonly peerAddress: string | undefined;
+}
+
 /** A handler's HTTP transport: its requests answered, its connections held. */
 export interface HTTPTransport {
   /** Answer one request of the transport, which the handler's gate let through */
-  handle(request: Request): Promise<Response>;
+  answer(request: TransportRequest): Promise<HTTPAnswer>;
   stats(): HTTPTransportStats;
   /** End the connections still held: the handler has stopped, and has told their clients so */
   destroy(): void;
@@ -69,12 +80,12 @@ export interface HTTPCluster {
  * @example
  * ```ts
  * const http = createHTTPTransport(httpTermsOf(config), handleSocket, { pubsub, secret, refusals });
- * const response = await http.handle(request);
+ * const answer = await http.answer(request);
  * ```
  */
 export function createHTTPTransport(
   terms: HTTPTerms,
-  handleSocket: (ws: WebSocketLike, request: Request) => unknown,
+  handleSocket: (ws: WebSocketLike, request: Request, peerAddress?: string) => unknown,
   cluster?: HTTPCluster,
 ): HTTPTransport {
   const tokens = createTokens(cluster?.secret);
@@ -90,16 +101,20 @@ export function createHTTPTransport(
   };
   let forwarded = 0;
 
-  async function open(kind: DeliveryKind, frames: readonly string[], request: Request) {
+  async function open(
+    kind: DeliveryKind,
+    frames: readonly string[],
+    request: TransportRequest,
+  ): Promise<HTTPAnswer> {
     /* Heard before its client has the token, so no request for it can be sent on unheard. */
     await forwarding?.listen();
     const token = await tokens.mint();
     const connection = createHTTPConnection(token, terms, counts, () => held.delete(token));
     held.set(token, connection);
-    const body = connection.deliver(kind, 0);
-    handleSocket(connection, request);
+    const delivery = connection.deliver(kind, 0);
+    handleSocket(connection, request.opening(), request.peerAddress);
     connection.receive(1, frames);
-    return events(body);
+    return events(delivery);
   }
 
   /* A request another replica sent on: a stream is held as a poll, so frames leave here only on
@@ -114,13 +129,17 @@ export function createHTTPTransport(
       return answeredOf(answerHeld(connection, head, frames));
     }
     connection.presented();
-    const body = connection.deliver("poll", head.ack ?? 0, Math.min(wait, terms.holdMs));
+    const delivery = connection.deliver("poll", head.ack ?? 0, Math.min(wait, terms.holdMs));
     if (connection.holding) taken();
-    return { status: 200, body: await new Response(body).text() };
+    return answeredOf(events(delivery));
   }
 
   /* Answered here when the connection is, sent on to its holder when another replica is. */
-  async function answerToken({ head, frames }: HTTPRequest, token: string, text: string) {
+  async function answerToken(
+    { head, frames }: HTTPRequest,
+    token: string,
+    text: string,
+  ): Promise<HTTPAnswer> {
     const connection = held.get(token);
     if (connection !== undefined) return answerHeld(connection, head, frames);
     if (forwarding === undefined) return gone();
@@ -131,19 +150,19 @@ export function createHTTPTransport(
   }
 
   return {
-    async handle(request) {
+    async answer(request) {
       if (request.method !== "POST") {
-        return errorResponse(405, "The HTTP transport takes POST requests", "METHOD_NOT_ALLOWED");
+        return refusal(405, "The HTTP transport takes POST requests", "METHOD_NOT_ALLOWED");
       }
-      const body = await readBodyText(request, { maxBytes: terms.maxBodyBytes });
-      if (!body.ok) return errorResponse(body.error.status, body.error.message, body.error.code);
+      const body = await request.text({ maxBytes: terms.maxBodyBytes });
+      if (!body.ok) return refusal(body.error.status, body.error.message, body.error.code);
       const read = readHTTPRequest(body.text);
       if (read === undefined) return malformed();
       const { head, frames } = read;
       if (head.token !== undefined) return answerToken(read, head.token, body.text);
       if (head.op === "send" || head.op === "close") return malformed();
       if (head.v !== HTTP_TRANSPORT_VERSION) {
-        return errorResponse(
+        return refusal(
           400,
           `This server speaks version ${HTTP_TRANSPORT_VERSION} of the HTTP transport`,
           HTTP_REFUSALS.version,
@@ -175,6 +194,6 @@ export function createHTTPTransport(
   };
 }
 
-function malformed(): Response {
-  return errorResponse(400, "Not a request of the HTTP transport", HTTP_REFUSALS.malformed);
+function malformed(): HTTPAnswer {
+  return refusal(400, "Not a request of the HTTP transport", HTTP_REFUSALS.malformed);
 }

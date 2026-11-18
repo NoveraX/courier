@@ -90,11 +90,8 @@ export function courierWSHandler<TConnect extends ConnectResult = ConnectResult>
   const http: RouteShorthandOptionsWithHandler = {
     onRequest: (request, reply, done) => {
       reply.hijack();
-      answerTransportRequest(
-        request.raw,
-        reply.raw,
-        (webRequest, peerAddress) => wsHandler.handleHTTP(webRequest, peerAddress),
-        () => announce(serverOriginOf(request.raw.socket)),
+      answerTransportRequest(request.raw, reply.raw, wsHandler, () =>
+        announce(serverOriginOf(request.raw.socket)),
       );
       done();
     },

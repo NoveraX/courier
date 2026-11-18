@@ -64,7 +64,7 @@ const handler = createWSHandler({
 
 const server = http.createServer((req, res) => {
   if (req.method === "POST" && req.url?.split("?")[0] === "/ws") {
-    answerTransportRequest(req, res, (request, peer) => handler.handleHTTP(request, peer));
+    answerTransportRequest(req, res, handler);
     return;
   }
   res.writeHead(404, { "Content-Length": "0" }).end();

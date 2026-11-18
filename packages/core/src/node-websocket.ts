@@ -3,6 +3,7 @@ import type { Duplex } from "node:stream";
 import { closeWithNotice } from "./adapter/ws-close";
 import { wsFrameLimit } from "./adapter/ws-frame-limit";
 import { shutdownClose } from "./adapter/ws-shutdown";
+import type { WSHandler } from "./adapter/ws-types";
 import { createLogger } from "./logger";
 import { toWebRequest } from "./node-request";
 import { takeTransportRequests } from "./node-transport-requests";
@@ -56,25 +57,29 @@ export interface WebSocketUpgradeOptions {
    */
   // biome-ignore lint/suspicious/noConfusingVoidType: an onSocket with no return statement returns `void`, which `undefined` does not take
   onSocket: (socket: WebSocketLike, request: Request) => (() => void) | void;
-  /** Sees each request Courier answers: an upgrade before it is accepted, and each of `onHTTP`'s. */
+  /** Sees each request Courier answers: an upgrade before it is accepted, and each of its HTTP transport's. */
   onRequest?: ((request: IncomingMessage) => void) | undefined;
   /** While this returns false — a server shutting down — upgrades get a 503. */
   isAccepting?: (() => boolean) | undefined;
   /**
-   * Answers the handler's HTTP transport — `handleHTTP` of Courier's
-   * handler: a client whose network lets no socket through keeps the same
-   * connection over `POST` requests to `path`, taken ahead of every other
-   * handler of the server, whichever was added first. Without a `path`,
-   * every `POST` whose body is `text/plain` is taken, as the transport's
-   * always is and the proxy's never is. They are answered while the server
-   * stops too, so a connection it closes hears why.
+   * The Courier handler whose HTTP transport answers here — the one
+   * `onSocket` hands its sockets to: a client whose network lets no socket
+   * through keeps the same connection over `POST` requests to `path`, taken
+   * ahead of every other handler of the server, whichever was added first,
+   * and answered on Node's own request and response, with no web `Request`
+   * or `Response` made for them. Without a `path`, every `POST` whose body
+   * is `text/plain` is taken, as the transport's always is and the proxy's
+   * never is. They are answered while the server stops too, so a connection
+   * it closes hears why. A handler made with `http: false` answers each 404,
+   * as its `handleHTTP` does; without this option they are the server's own
+   * handlers' to answer.
    */
-  onHTTP?: ((request: Request, peerAddress?: string) => Promise<Response>) | undefined;
+  httpTransport?: WSHandler | undefined;
 }
 
 /**
- * Answer WebSocket upgrades on a Node HTTP server, and with `onHTTP` the
- * requests of the handler's HTTP transport, ahead of the server's own
+ * Answer WebSocket upgrades on a Node HTTP server, and with `httpTransport`
+ * the requests of the handler's HTTP transport, ahead of the server's own
  * handlers.
  *
  * Only upgrades to `path` are taken: an application with a WebSocket of its
@@ -106,7 +111,7 @@ export interface WebSocketUpgradeOptions {
  *   path: "/api/ws",
  *   createServer: async (o) => new (await import("ws")).WebSocketServer(o),
  *   onSocket: (socket, request) => handler.handleSocket(socket, request),
- *   onHTTP: (request, peer) => handler.handleHTTP(request, peer),
+ *   httpTransport: handler,
  * });
  * ```
  */
@@ -184,10 +189,10 @@ export function attachWebSocketUpgrade(
 
   server.on("upgrade", onUpgrade);
   const release =
-    options.onHTTP &&
+    options.httpTransport &&
     takeTransportRequests(server, {
       path: options.path,
-      answer: options.onHTTP,
+      handler: options.httpTransport,
       onRequest: options.onRequest,
     });
   return () => {

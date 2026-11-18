@@ -9,7 +9,7 @@
  * a user's data.
  */
 
-import { answerInit } from "../utils/answer-init";
+import type { EntryRequest } from "./entry-request";
 import { isOriginListed } from "./origin-policy";
 
 /** How long a browser may reuse a preflight's answer, in seconds. */
@@ -24,81 +24,118 @@ const PREFLIGHT_MAX_AGE = "600";
  *
  * @example
  * ```ts
- * if (isPreflight(request) && !answerPreflight(request, allowedOrigins)) refuse(request);
+ * if (isPreflight(request) && !preflightGrant(request, allowedOrigins)) refuse(request);
  * ```
  */
-export function isPreflight(request: Request): boolean {
+export function isPreflight(request: EntryRequest): boolean {
   return (
     request.method === "OPTIONS" &&
-    !!request.headers.get("Origin") &&
-    request.headers.has("Access-Control-Request-Method")
+    !!request.headers.get("origin") &&
+    request.headers.has("access-control-request-method")
   );
 }
 
 /**
- * Answer a CORS preflight from a listed origin. A preflight from any other
- * is the caller's to refuse, as it refuses that page's calls.
+ * What a CORS preflight from a listed origin is answered with, a 204's
+ * headers. A preflight from any other is the caller's to refuse, as it
+ * refuses that page's calls.
  *
  * @param request - The incoming request
  * @param allowedOrigins - The configured origins
- * @returns The answer, or `undefined` when the request is not a preflight
- * from an origin `allowedOrigins` lists
+ * @returns The headers, by their names in lower case, or `undefined` when the
+ * request is not a preflight from an origin `allowedOrigins` lists
  *
  * @example
  * ```ts
- * const preflight = answerPreflight(request, ["https://admin.example.com"]);
- * if (preflight) return preflight;
+ * const granted = preflightGrant(request, ["https://admin.example.com"]);
+ * if (granted) return new Response(null, { status: 204, headers: granted });
  * ```
  */
-export function answerPreflight(
-  request: Request,
+export function preflightGrant(
+  request: EntryRequest,
   allowedOrigins?: readonly string[],
-): Response | undefined {
-  const origin = request.headers.get("Origin");
+): Record<string, string> | undefined {
+  const origin = request.headers.get("origin");
   if (!origin || !isPreflight(request) || !isOriginListed(origin, allowedOrigins)) return undefined;
 
   /* A listed origin is trusted with the proxy, so it may send whatever the
      proxy's own allowlists then decide to carry upstream. */
-  const headers = new Headers({
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Credentials": "true",
-    "Access-Control-Allow-Methods": "GET, POST",
-    "Access-Control-Max-Age": PREFLIGHT_MAX_AGE,
-    Vary: "Origin, Access-Control-Request-Method, Access-Control-Request-Headers",
-  });
-  const requested = request.headers.get("Access-Control-Request-Headers");
-  if (requested) headers.set("Access-Control-Allow-Headers", requested);
-  return new Response(null, answerInit(204, headers));
+  const headers: Record<string, string> = {
+    "access-control-allow-origin": origin,
+    "access-control-allow-credentials": "true",
+    "access-control-allow-methods": "GET, POST",
+    "access-control-max-age": PREFLIGHT_MAX_AGE,
+    vary: "Origin, Access-Control-Request-Method, Access-Control-Request-Headers",
+  };
+  const requested = request.headers.get("access-control-request-headers");
+  if (requested) headers["access-control-allow-headers"] = requested;
+  return headers;
 }
 
 /**
- * Give a listed origin permission to read an answer.
+ * The listed origin a request comes from: the page its answer is to let
+ * read it.
  *
- * @param request - The request the answer is for
- * @param response - The answer
+ * @param request - The incoming request
  * @param allowedOrigins - The configured origins
- * @returns The answer, with the permission when the request's origin is listed
+ * @returns The origin, or `undefined` for a request from no listed one
  *
  * @example
  * ```ts
- * return withCorsHeaders(request, await handleGet(request), allowedOrigins);
+ * const reader = listedReader(request, ["https://admin.example.com"]);
  * ```
  */
-export function withCorsHeaders(
-  request: Request,
-  response: Response,
+export function listedReader(
+  request: EntryRequest,
   allowedOrigins?: readonly string[],
-): Response {
-  const origin = request.headers.get("Origin");
-  if (!origin || !isOriginListed(origin, allowedOrigins)) return response;
+): string | undefined {
+  const origin = request.headers.get("origin");
+  return origin && isOriginListed(origin, allowedOrigins) ? origin : undefined;
+}
 
+/**
+ * What lets a page read an answer: the headers to set on it, given the
+ * names of those it has, and `Origin` added to its `Vary`. A page on
+ * another origin reads only the headers it is told it may, never a cookie.
+ *
+ * @param reader - The listed origin of the page
+ * @param names - The names of the answer's own headers, in lower case
+ * @returns The headers to set, by their names in lower case
+ *
+ * @example
+ * ```ts
+ * readGrant("https://admin.example.com", ["content-type"]);
+ * // { "access-control-allow-origin": "https://admin.example.com", …, "access-control-expose-headers": "content-type" }
+ * ```
+ */
+export function readGrant(reader: string, names: Iterable<string>): Record<string, string> {
+  const grant: Record<string, string> = {
+    "access-control-allow-origin": reader,
+    "access-control-allow-credentials": "true",
+  };
+  const readable = [...names].filter((name) => name !== "set-cookie").sort();
+  if (readable.length > 0) grant["access-control-expose-headers"] = readable.join(", ");
+  return grant;
+}
+
+/**
+ * A web answer a listed origin may read, by `readGrant`.
+ *
+ * @param response - The answer
+ * @param reader - The listed origin of the page that asked
+ * @returns The answer, with the permission
+ *
+ * @example
+ * ```ts
+ * return reader === undefined ? response : withReadGrant(response, reader);
+ * ```
+ */
+export function withReadGrant(response: Response, reader: string): Response {
   const headers = new Headers(response.headers);
-  headers.set("Access-Control-Allow-Origin", origin);
-  headers.set("Access-Control-Allow-Credentials", "true");
+  for (const [name, value] of Object.entries(readGrant(reader, response.headers.keys()))) {
+    headers.set(name, value);
+  }
   headers.append("Vary", "Origin");
-  /* A page on another origin reads only the headers it is told it may. */
-  const readable = [...response.headers.keys()].filter((name) => name !== "set-cookie");
-  if (readable.length > 0) headers.set("Access-Control-Expose-Headers", readable.join(", "));
 
   return new Response(response.body, {
     status: response.status,

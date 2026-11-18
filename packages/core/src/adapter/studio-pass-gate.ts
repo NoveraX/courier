@@ -1,5 +1,6 @@
 import { isDevelopment } from "../utils/development";
 import { isStudioPassShape, STUDIO_PASS_HEADER, STUDIO_PASS_REDEEMER } from "../utils/studio-pass";
+import type { EntryHeaders } from "./entry-request";
 
 /**
  * Take Studio's pass off a request, so nothing past the proxy's gate — the
@@ -9,21 +10,21 @@ import { isStudioPassShape, STUDIO_PASS_HEADER, STUDIO_PASS_REDEEMER } from "../
  * over, keeps the header; its pass is then not given back, so it is never
  * redeemed for a request that would carry it further.
  *
- * @param request - The request the proxy received
+ * @param request - The request the proxy received: a web one, or one as its gate reads it
  * @returns The pass, when the request carried one and it was taken off
  * @example
  * ```ts
  * const pass = takeStudioPass(request);
  * ```
  */
-export function takeStudioPass(request: Request): string | undefined {
+export function takeStudioPass(request: { readonly headers: EntryHeaders }): string | undefined {
   const pass = request.headers.get(STUDIO_PASS_HEADER);
   if (pass === null) return undefined;
   return removed(request.headers) ? pass : undefined;
 }
 
 /* Immutable headers throw on delete: the recovery is to leave the pass unused. */
-function removed(headers: Headers): boolean {
+function removed(headers: EntryHeaders): boolean {
   try {
     headers.delete(STUDIO_PASS_HEADER);
   } catch {

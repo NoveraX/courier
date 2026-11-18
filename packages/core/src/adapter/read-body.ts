@@ -19,7 +19,7 @@ import { UNQUEUED } from "../utils/own";
 import { BodyError } from "./body-error";
 import { declaredLength } from "./declared-length";
 import { discardBody } from "./discard-body";
-import { readChunk } from "./read-chunk";
+import { clientLeft, readChunk } from "./read-chunk";
 
 /** What a request body is held to while it is read. */
 export interface BodyLimits {
@@ -101,7 +101,7 @@ export function requestBodyStream(
           assertUncompressed(request.headers);
           declared = declaredLength(request.headers);
           if (declared !== undefined && declared > limits.maxBytes) {
-            throw tooLarge(limits.maxBytes);
+            throw tooLargeBody(limits.maxBytes);
           }
         } catch (error) {
           handOn();
@@ -112,7 +112,7 @@ export function requestBodyStream(
         const body = request.body;
         if (body === null) {
           finished = true;
-          if (declared !== undefined && declared > 0) throw incomplete(0, declared);
+          if (declared !== undefined && declared > 0) throw incompleteBody(0, declared);
           return controller.close();
         }
         reader ??= body.getReader();
@@ -128,12 +128,14 @@ export function requestBodyStream(
         if (next.done) {
           finished = true;
           reader.releaseLock();
-          if (declared !== undefined && received < declared) throw incomplete(received, declared);
+          if (declared !== undefined && received < declared) {
+            throw incompleteBody(received, declared);
+          }
           return controller.close();
         }
         received += next.value.byteLength;
-        if (declared !== undefined && received > declared) refuse(overlong(declared));
-        if (received > limits.maxBytes) refuse(tooLarge(limits.maxBytes));
+        if (declared !== undefined && received > declared) refuse(overlongBody(declared));
+        if (received > limits.maxBytes) refuse(tooLargeBody(limits.maxBytes));
         controller.enqueue(next.value);
       },
       cancel() {
@@ -144,9 +146,18 @@ export function requestBodyStream(
   );
 }
 
-/* A compressed body is refused by name: read as it stands, it failed as an
-   unreadable form or as JSON that does not parse. */
-function assertUncompressed(headers: Headers): void {
+/**
+ * Refuse a compressed body by name: read as it stands, it failed as an
+ * unreadable form or as JSON that does not parse.
+ *
+ * @param headers - The request's headers: a web request's, or a view of a Node request's
+ * @throws BodyError `BODY_ENCODING_UNSUPPORTED` for a body with a `Content-Encoding`
+ * @example
+ * ```ts
+ * assertUncompressed(request.headers);
+ * ```
+ */
+export function assertUncompressed(headers: Pick<Headers, "get">): void {
   const encoding = headers.get("content-encoding")?.trim().toLowerCase();
   if (encoding === undefined || encoding === "" || encoding === "identity") return;
   throw new BodyError(
@@ -162,15 +173,36 @@ function assertUncompressed(headers: Headers): void {
  */
 function bodyError(request: Request, error: unknown): BodyError {
   if (error instanceof BodyError) return error;
-  if (request.signal.aborted || connectionGone(error)) {
-    return new BodyError("BODY_ABORTED", "The client stopped sending its request body", {
-      cause: error,
-    });
-  }
+  if (request.signal.aborted || connectionGone(error)) return clientLeft(error);
+  return unreadableBody(error);
+}
+
+/**
+ * The refusal of a body whose read failed while its client was still there:
+ * a framework's own body limit, a broken chunked encoding.
+ *
+ * @param error - What the read failed with
+ * @returns The refusal, `BODY_UNREADABLE`
+ * @example
+ * ```ts
+ * req.once("error", (error) => refuse(connectionGone(error) ? clientLeft(error) : unreadableBody(error)));
+ * ```
+ */
+export function unreadableBody(error: unknown): BodyError {
   return new BodyError("BODY_UNREADABLE", "Request body could not be read", { cause: error });
 }
 
-function connectionGone(error: unknown): boolean {
+/**
+ * Whether a read failed because the connection went from under it.
+ *
+ * @param error - What the read failed with
+ * @returns `true` for a connection reset or aborted
+ * @example
+ * ```ts
+ * connectionGone(Object.assign(new Error("aborted"), { code: "ECONNRESET" })); // → true
+ * ```
+ */
+export function connectionGone(error: unknown): boolean {
   return (
     typeof error === "object" &&
     error !== null &&
@@ -179,18 +211,50 @@ function connectionGone(error: unknown): boolean {
   );
 }
 
-function tooLarge(limit: number): BodyError {
+/**
+ * The refusal of a body larger than its limit, declared so or sent so.
+ *
+ * @param limit - The largest body taken, in bytes
+ * @returns The refusal, `BODY_TOO_LARGE`
+ * @example
+ * ```ts
+ * tooLargeBody(1_048_576).message; // "Request body exceeds 1048576 bytes"
+ * ```
+ */
+export function tooLargeBody(limit: number): BodyError {
   return new BodyError("BODY_TOO_LARGE", `Request body exceeds ${limit} bytes`);
 }
 
-function overlong(declared: number): BodyError {
+/**
+ * The refusal of a body longer than its `Content-Length` declares.
+ *
+ * @param declared - The length declared, in bytes
+ * @returns The refusal, `BODY_MALFORMED`
+ * @example
+ * ```ts
+ * if (received > declared) refuse(overlongBody(declared));
+ * ```
+ */
+export function overlongBody(declared: number): BodyError {
   return new BodyError(
     "BODY_MALFORMED",
     `The request body is longer than the ${declared} bytes its Content-Length declares`,
   );
 }
 
-function incomplete(received: number, declared: number): BodyError {
+/**
+ * The refusal of a body that ended short of its `Content-Length`: something
+ * in front of the route cut it short.
+ *
+ * @param received - The bytes that came
+ * @param declared - The length declared
+ * @returns The refusal, `BODY_INCOMPLETE`
+ * @example
+ * ```ts
+ * if (received < declared) refuse(incompleteBody(received, declared));
+ * ```
+ */
+export function incompleteBody(received: number, declared: number): BodyError {
   return new BodyError(
     "BODY_INCOMPLETE",
     `The request body ended after ${received} of the ${declared} bytes its Content-Length declares: ` +

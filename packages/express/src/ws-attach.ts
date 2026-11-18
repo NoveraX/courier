@@ -85,10 +85,8 @@ export function courierWSAttach<TConnect extends ConnectResult = ConnectResult>(
       announce(serverOriginOf(request.socket));
     },
     onSocket: (socket, request) => wsHandler.handleSocket(socket, request),
-    onHTTP:
-      handlerOptions.http === false
-        ? undefined
-        : (request, peerAddress) => wsHandler.handleHTTP(request, peerAddress),
+    /* Without the transport, a POST to the socket's path stays the application's to answer. */
+    httpTransport: handlerOptions.http === false ? undefined : wsHandler,
   });
 
   /* No new socket while the ones held drain; what has not closed by then

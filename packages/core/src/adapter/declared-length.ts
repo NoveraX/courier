@@ -11,7 +11,7 @@ const DIGITS = /^\d+$/;
  * any length it also names is not its own (RFC 9112 §6.3). `Number()` alone
  * would have read an empty header as 0 and `" 1e3"` as 1000.
  *
- * @param headers - The request's headers
+ * @param headers - The request's headers: a web request's, or a view of a Node request's
  * @returns The declared length in bytes, or `undefined` when none frames the body
  * @throws BodyError `BODY_MALFORMED` when the header is not a length
  *
@@ -21,7 +21,7 @@ const DIGITS = /^\d+$/;
  * declaredLength(new Headers({ "transfer-encoding": "chunked" })); // → undefined
  * ```
  */
-export function declaredLength(headers: Headers): number | undefined {
+export function declaredLength(headers: Pick<Headers, "get" | "has">): number | undefined {
   const header = headers.get("content-length");
   if (header === null || headers.has("transfer-encoding")) return undefined;
 

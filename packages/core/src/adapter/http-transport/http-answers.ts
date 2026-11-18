@@ -1,18 +1,33 @@
 import { HTTP_REFUSALS, type HTTPRequestHead } from "../../realtime/ws/http-protocol";
-import { answerInit } from "../../utils/answer-init";
-import { errorResponse } from "../parse";
+import { errorFields } from "../parse";
 import type { HTTPConnection } from "./http-connection-types";
+import type { Delivery } from "./http-delivery";
 import type { Answered, Unanswered } from "./http-forwarding";
 
+/**
+ * An answer of the HTTP transport, as any server writes it: a web
+ * `Response`, or Node's own response, which no web object is made for.
+ */
+export interface HTTPAnswer {
+  readonly status: number;
+  /** Its headers, by their names in lower case */
+  readonly headers: Readonly<Record<string, string>>;
+  /** Events written as they come, a whole text, or nothing */
+  readonly body: Delivery | string | undefined;
+}
+
 /* An event stream no proxy holds back or rewrites, and no cache keeps. */
-const EVENT_STREAM = {
-  "Content-Type": "text/event-stream",
-  "Cache-Control": "no-store, no-transform",
-  "X-Accel-Buffering": "no",
+const EVENT_STREAM: Readonly<Record<string, string>> = {
+  "content-type": "text/event-stream",
+  "cache-control": "no-store, no-transform",
+  "x-accel-buffering": "no",
 };
 
+const JSON_BODY: Readonly<Record<string, string>> = { "content-type": "application/json" };
+
 /**
- * An answer of events: a stream's, or a poll's.
+ * An answer of events: a stream's or a poll's as the connection writes it,
+ * or a whole one another replica gave back.
  *
  * @param body - Its events
  * @returns The answer
@@ -21,8 +36,46 @@ const EVENT_STREAM = {
  * return events(connection.deliver("stream", ack));
  * ```
  */
-export function events(body: BodyInit): Response {
-  return new Response(body, answerInit(200, EVENT_STREAM));
+export function events(body: Delivery | string): HTTPAnswer {
+  return { status: 200, headers: EVENT_STREAM, body };
+}
+
+/**
+ * An answer with nothing to say: what a `send` and a `close` are answered.
+ *
+ * @returns The answer, 204
+ * @example
+ * ```ts
+ * return empty();
+ * ```
+ */
+export function empty(): HTTPAnswer {
+  return { status: 204, headers: {}, body: undefined };
+}
+
+/**
+ * A refusal, as the JSON a proxy's client reads: what `errorResponse`
+ * answers, for any server.
+ *
+ * @param status - The status
+ * @param message - What the client did wrong, and how to put it right
+ * @param code - A stable name for the refusal
+ * @param retryAfter - Seconds to wait before trying again, for a refusal that passes
+ * @returns The answer
+ * @example
+ * ```ts
+ * return refusal(409, "Frames before these were not received", "SEQUENCE_GAP");
+ * ```
+ */
+export function refusal(
+  status: number,
+  message: string,
+  code?: string,
+  retryAfter?: number,
+): HTTPAnswer {
+  const headers =
+    retryAfter === undefined ? JSON_BODY : { ...JSON_BODY, "retry-after": String(retryAfter) };
+  return { status, headers, body: JSON.stringify(errorFields(message, code)) };
 }
 
 /**
@@ -34,8 +87,8 @@ export function events(body: BodyInit): Response {
  * if (connection === undefined) return gone();
  * ```
  */
-export function gone(): Response {
-  return errorResponse(410, "No such connection: open another", HTTP_REFUSALS.gone);
+export function gone(): HTTPAnswer {
+  return refusal(410, "No such connection: open another", HTTP_REFUSALS.gone);
 }
 
 /**
@@ -56,7 +109,7 @@ export function answerHeld(
   connection: HTTPConnection,
   head: HTTPRequestHead,
   frames: readonly string[],
-): Response {
+): HTTPAnswer {
   const ack = head.ack ?? 0;
   connection.presented();
   switch (head.op) {
@@ -65,26 +118,39 @@ export function answerHeld(
       return events(connection.deliver(head.op, ack));
     case "send":
       connection.acknowledge(ack);
-      if (connection.receive(head.seq ?? 1, frames)) return new Response(null, answerInit(204));
-      return errorResponse(409, "Frames before these were not received", "SEQUENCE_GAP");
+      if (connection.receive(head.seq ?? 1, frames)) return empty();
+      return refusal(409, "Frames before these were not received", "SEQUENCE_GAP");
     case "close":
       connection.peerClose(head.code ?? 1005);
-      return new Response(null, answerInit(204));
+      return empty();
   }
 }
 
 /**
- * An answer as a holder sends it back to the replica that asked: its status and its body, whole.
+ * An answer as a holder sends it back to the replica that asked: its
+ * status and its body, whole — events once the answer has ended.
  *
- * @param response - The holder's answer
+ * @param answer - The holder's answer
  * @returns What travels back
  * @example
  * ```ts
  * return answeredOf(answerHeld(connection, head, frames));
  * ```
  */
-export async function answeredOf(response: Response): Promise<Answered> {
-  return { status: response.status, body: await response.text() };
+export function answeredOf(answer: HTTPAnswer): Answered | Promise<Answered> {
+  const { status, body } = answer;
+  if (body === undefined || typeof body === "string") return { status, body: body ?? "" };
+  return new Promise((resolve) => {
+    const decoder = new TextDecoder();
+    const texts: string[] = [];
+    body.attach({
+      write: (bytes) => texts.push(decoder.decode(bytes, { stream: true })),
+      end: (last) => {
+        texts.push(decoder.decode(last));
+        resolve({ status, body: texts.join("") });
+      },
+    });
+  });
 }
 
 /**
@@ -97,28 +163,20 @@ export async function answeredOf(response: Response): Promise<Answered> {
  * @returns The answer for the client
  * @example
  * ```ts
- * return responseOf(await forwarding.forward(holder, body, 0));
+ * return answerOf(await forwarding.forward(holder, body, 0));
  * ```
  */
-export function responseOf(answer: Answered | Unanswered): Response {
+export function answerOf(answer: Answered | Unanswered): HTTPAnswer {
   if ("failed" in answer) {
     return answer.failed === "unreachable"
-      ? errorResponse(
+      ? refusal(
           504,
           "The replica that holds the connection did not answer",
           HTTP_REFUSALS.unreachable,
         )
-      : errorResponse(
-          503,
-          "The replicas cannot reach each other now",
-          HTTP_REFUSALS.unavailable,
-          1,
-        );
+      : refusal(503, "The replicas cannot reach each other now", HTTP_REFUSALS.unavailable, 1);
   }
   if (answer.status === 200) return events(answer.body);
-  if (answer.status === 204) return new Response(null, answerInit(204));
-  return new Response(
-    answer.body,
-    answerInit(answer.status, { "Content-Type": "application/json" }),
-  );
+  if (answer.status === 204) return empty();
+  return { status: answer.status, headers: JSON_BODY, body: answer.body };
 }

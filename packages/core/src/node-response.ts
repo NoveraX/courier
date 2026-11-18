@@ -110,8 +110,24 @@ async function writeBody(
   }
 }
 
-/* Two `Vary` values as one that names each field once; `*` stands for all of them. */
-function joinedVary(varied: number | string | readonly string[], own: string | null): string {
+/**
+ * Two `Vary` values as one that names each field once; `*` stands for all
+ * of them: what an answer written with `writeHead` says, beside the `Vary`
+ * its Node response already carries — the `Origin` a CORS grant set before
+ * it depends on — which `writeHead`'s own would replace.
+ *
+ * @param varied - The `Vary` the Node response carries
+ * @param own - The answer's own, if any
+ * @returns The two as one
+ * @example
+ * ```ts
+ * joinedVary("Origin", "Accept-Encoding, origin"); // "Origin, Accept-Encoding"
+ * ```
+ */
+export function joinedVary(
+  varied: number | string | readonly string[],
+  own: string | null | undefined,
+): string {
   const fields = `${varied},${own ?? ""}`
     .split(",")
     .map((field) => field.trim())

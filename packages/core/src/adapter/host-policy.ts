@@ -29,6 +29,7 @@
 
 import { nodeEnvironment } from "../utils/environment";
 import { parseUrl } from "../utils/parse-url";
+import type { EntryRequest } from "./entry-request";
 import { type HostNames, isHostNamed } from "./host-names";
 import { type AllowedHostsSetting, readAllowedHosts, reportUnreadSetting } from "./runtime-policy";
 
@@ -37,7 +38,7 @@ import { type AllowedHostsSetting, readAllowedHosts, reportUnreadSetting } from 
  * its URL names, as the adapter built it — from a proxy's `X-Forwarded-Host`
  * where it believes one — or the one its own `Host` names.
  *
- * @param request - The incoming request
+ * @param request - The incoming request: a web one, or one as the gate reads it
  * @param hosts - The names `readAllowedHosts` read, or none when nothing sets them
  * @returns The first name not served, or `undefined` when the request may proceed
  *
@@ -49,8 +50,11 @@ import { type AllowedHostsSetting, readAllowedHosts, reportUnreadSetting } from 
  * unservedHost(rebound, undefined); // "rebound.example:3000" outside production
  * ```
  */
-export function unservedHost(request: Request, hosts: HostNames | undefined): string | undefined {
-  const addressed = new URL(request.url).host;
+export function unservedHost(
+  request: EntryRequest | Request,
+  hosts: HostNames | undefined,
+): string | undefined {
+  const addressed = (typeof request.url === "string" ? new URL(request.url) : request.url).host;
   if (!isHostServed(addressed, hosts)) return addressed;
   const sent = request.headers.get("host");
   return sent === null || sent === addressed || isHostServed(sent, hosts) ? undefined : sent;

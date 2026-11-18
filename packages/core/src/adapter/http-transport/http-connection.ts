@@ -27,7 +27,7 @@ import type { HTTPTerms } from "./http-terms";
  * @example
  * ```ts
  * const connection = createHTTPConnection(token, terms, counts, () => held.delete(token));
- * const body = connection.deliver("stream", 0);
+ * const delivery = connection.deliver("stream", 0);
  * handleSocket(connection, request);
  * ```
  */
@@ -89,11 +89,7 @@ export function createHTTPConnection(
     listeners.closed(code);
   }
 
-  function deliver(
-    kind: DeliveryKind,
-    ack: number,
-    holdMs = terms.holdMs,
-  ): ReadableStream<Uint8Array> {
+  function deliver(kind: DeliveryKind, ack: number, holdMs = terms.holdMs): Delivery {
     kept.acknowledge(ack);
     const previous = delivery;
     delivery = undefined;
@@ -120,7 +116,7 @@ export function createHTTPConnection(
       });
     } else if (unsent) carried();
     else arm(holdMs, () => next.end());
-    return next.body;
+    return next;
   }
 
   return {

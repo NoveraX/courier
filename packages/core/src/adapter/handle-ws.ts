@@ -1,16 +1,19 @@
 import { LIMITS } from "../limits";
-import type { RefusalLog } from "../logger/refusal-log";
 import { createRefusalLog } from "../logger/refusal-log";
 import { provideServerCapabilities } from "../server/provide-server-capabilities";
 import { prepareSources } from "../server/sources";
 import { studioHooks } from "../studio";
 import { ownFields } from "../utils/own";
 import type { ConnectResult } from "./connection-meta";
-import { gateEntry } from "./entry-gate";
-import { createHTTPTransport, type HTTPTransport } from "./http-transport/create-http-transport";
+import { createHTTPTransport } from "./http-transport/create-http-transport";
+import {
+  createHTTPEntry,
+  type HTTPEntry,
+  NO_HTTP_TRANSPORT,
+  registerHTTPEntry,
+} from "./http-transport/http-entry";
 import { httpTermsOf } from "./http-transport/http-terms";
-import { errorResponse } from "./parse";
-import { rememberPeerAddress } from "./peer-address";
+import { responseOf, webExchange } from "./http-transport/web-exchange";
 import { assertListedSettings } from "./runtime-policy";
 import { assertHandlerTerms } from "./ws-client-terms";
 import { createHandlerCounters, type WSHandlerStats } from "./ws-handler-stats";
@@ -37,7 +40,10 @@ export type { WSSocketContext } from "./ws-context";
  *
  * Its connections are sockets, and, unless `config.http` is `false`,
  * connections over HTTP for clients whose network lets no socket through:
- * an adapter hands `handleHTTP` the `POST` requests to the socket's path.
+ * an adapter hands `handleHTTP` the `POST` requests to the socket's path,
+ * or on Node answers them with the handler on Node's own request and
+ * response — `attachWebSocketUpgrade` given `httpTransport`,
+ * `answerTransportRequest`.
  *
  * @param config - Handler configuration (pubsub, heartbeat, lifecycle hooks, etc.)
  * @returns WSHandler with handleSocket, handleHTTP and connections registry
@@ -150,29 +156,23 @@ export function createWSHandler(given?: WSHandlerConfig): WSHandler {
     };
   }
 
-  const handleHTTP = httpEntryOf(http, config, refusals);
-  return { handleSocket, handleHTTP, connections, destroy, stats };
+  /* The HTTP transport's entry, held to the hosts and origins the handler's sockets are. */
+  const { allowedHosts, allowedOrigins } = config;
+  const entry =
+    http && createHTTPEntry(http, { allowedHosts, allowedOrigins }, studioHooks, refusals);
+  const handler: WSHandler = {
+    handleSocket,
+    handleHTTP: webEntryOf(entry),
+    connections,
+    destroy,
+    stats,
+  };
+  if (entry !== undefined) registerHTTPEntry(handler, entry);
+  return handler;
 }
 
-/* The HTTP transport's entry, held to the hosts and origins the handler's sockets are; without
-   the transport, nothing is there. */
-function httpEntryOf(
-  http: HTTPTransport | undefined,
-  config: WSHandlerConfig,
-  refusals: RefusalLog,
-): WSHandler["handleHTTP"] {
-  if (http === undefined) {
-    return async () => errorResponse(404, "This handler has no HTTP transport", "NOT_FOUND");
-  }
-  const { allowedHosts, allowedOrigins } = config;
-  const gated = gateEntry(
-    (request) => http.handle(request),
-    { allowedHosts, allowedOrigins },
-    studioHooks,
-    refusals,
-  );
-  return (request, peerAddress) => {
-    rememberPeerAddress(request, peerAddress);
-    return gated(request);
-  };
+/* The entry, for a web request; without the transport, nothing is there. */
+function webEntryOf(entry: HTTPEntry | undefined): WSHandler["handleHTTP"] {
+  if (entry === undefined) return async () => responseOf(NO_HTTP_TRANSPORT);
+  return async (request, peerAddress) => responseOf(await entry(webExchange(request, peerAddress)));
 }

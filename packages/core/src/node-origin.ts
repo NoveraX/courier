@@ -1,6 +1,7 @@
 import type { IncomingMessage } from "node:http";
 
 import { isLocalAddress } from "./utils/local-address";
+import { parseUrl } from "./utils/parse-url";
 
 /**
  * The scheme and host a Node request was addressed to, as its client saw them.
@@ -41,6 +42,24 @@ export function addressedTo(nodeReq: IncomingMessage): {
     protocol: proto === "https" || proto === "http" ? proto : direct.protocol,
     host: host || direct.host,
   };
+}
+
+/**
+ * The URL a Node request was addressed to, as its client saw it: its target
+ * read against the scheme and host of {@link addressedTo} — the URL
+ * `toWebRequest` gives the request.
+ *
+ * @param nodeReq - The incoming request
+ * @returns The URL, or `undefined` for a target, or a host, no URL reads
+ * @example
+ * ```ts
+ * const url = addressedURL(req);
+ * if (url === undefined) return res.writeHead(400).end();
+ * ```
+ */
+export function addressedURL(nodeReq: IncomingMessage): URL | undefined {
+  const { protocol, host = "localhost" } = addressedTo(nodeReq);
+  return parseUrl(nodeReq.url ?? "/", `${protocol}://${host}`);
 }
 
 /** The client-facing value of a forwarded header: the first of a chain. */

@@ -1,5 +1,29 @@
 import { answerInit } from "../utils/answer-init";
 
+/** What the proxy's own refusal says, as its JSON holds it. */
+export interface ErrorFields {
+  readonly success: false;
+  readonly message: string;
+  readonly code?: string;
+}
+
+/**
+ * The fields of the proxy's own refusal: what `errorResponse` answers as
+ * JSON, for a server that writes its answer itself.
+ *
+ * @param message - What the caller did wrong, and how to put it right
+ * @param code - A stable name for the refusal, where a caller may act on it
+ * @returns The fields, `code` among them only when given
+ *
+ * @example
+ * ```ts
+ * res.end(JSON.stringify(errorFields("No such connection: open another", "CONNECTION_GONE")));
+ * ```
+ */
+export function errorFields(message: string, code?: string): ErrorFields {
+  return code === undefined ? { success: false, message } : { success: false, message, code };
+}
+
 /**
  * The proxy's own refusal, as the JSON a proxy client reads.
  *
@@ -20,9 +44,8 @@ export function errorResponse(
   code?: string,
   retryAfter?: number,
 ): Response {
-  const body = code === undefined ? { success: false, message } : { success: false, message, code };
   return Response.json(
-    body,
+    errorFields(message, code),
     answerInit(status, retryAfter === undefined ? {} : { "retry-after": String(retryAfter) }),
   );
 }

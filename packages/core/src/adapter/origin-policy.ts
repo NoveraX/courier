@@ -31,11 +31,12 @@
 
 import { isDevelopment } from "../utils/development";
 import { parseUrl } from "../utils/parse-url";
+import type { EntryRequest } from "./entry-request";
 
 /**
  * Decide whether a request may proceed, from where the browser says it comes.
  *
- * @param request - The incoming request
+ * @param request - The incoming request: a web one, or one as the gate reads it
  * @param allowedOrigins - Extra origins to accept; see {@link isOriginAccepted}
  * @returns Whether the request may proceed
  *
@@ -45,7 +46,10 @@ import { parseUrl } from "../utils/parse-url";
  * isOriginAllowed(request, ["https://studio.example.com", "https://*.example.com"]);
  * ```
  */
-export function isOriginAllowed(request: Request, allowedOrigins?: readonly string[]): boolean {
+export function isOriginAllowed(
+  request: EntryRequest | Request,
+  allowedOrigins?: readonly string[],
+): boolean {
   return isOriginAccepted(
     request.headers.get("Origin"),
     selfOrigin(request),
@@ -140,7 +144,8 @@ function isLoopback(origin: string): boolean {
  * into a match: the browser sets `Host` to the site it is calling and `Origin`
  * to the page it is calling from, so the two differ precisely when it matters.
  */
-function selfOrigin(request: Request): string | null {
+function selfOrigin(request: EntryRequest | Request): string | null {
+  if (typeof request.url !== "string") return request.url.origin;
   return parseOrigin(request.url)?.origin ?? null;
 }
 

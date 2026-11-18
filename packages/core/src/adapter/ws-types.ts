@@ -349,7 +349,10 @@ export interface WSHandler {
    * handler's sockets are upgraded on, from a client whose network let no
    * socket through. Its connection is the handler's as a socket's is, held
    * to the same hosts, origins and limits. Without the transport —
-   * `http: false` — every request is answered 404.
+   * `http: false` — every request is answered 404. On Node, give the
+   * handler to `attachWebSocketUpgrade` as `httpTransport`, or to
+   * `answerTransportRequest`: the same requests are answered there on
+   * Node's own request and response, with no web objects made for them.
    *
    * `peerAddress` is as `handleSocket`'s.
    */

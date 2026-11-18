@@ -46,10 +46,6 @@ export function readChunk(
 ): Promise<ReadableStreamReadResult<Uint8Array<ArrayBuffer>>> {
   const { signal } = wait;
   if (signal.aborted) return Promise.reject(clientLeft(signal.reason));
-  const remaining = wait.deadline - performance.now();
-  const idle = wait.idleMs < remaining;
-
-  const delay = Math.max(0, idle ? wait.idleMs : remaining);
 
   return new Promise((resolve, reject) => {
     const settle = (): void => {
@@ -60,16 +56,10 @@ export function readChunk(
       settle();
       reject(clientLeft(signal.reason));
     };
-    /* A delay past what a timer holds would fire at once; such a wait has no end. */
-    const timer =
-      delay <= MAX_TIMER_MS
-        ? setTimeout(() => {
-            settle();
-            reject(idle ? idleTimeout(wait.idleMs) : overdueBody(wait.timeoutMs));
-          }, delay)
-        : undefined;
-    /* A wait for a client must not keep a server that is shutting down alive. */
-    if (typeof timer === "object" && "unref" in timer) timer.unref();
+    const timer = chunkTimer(wait, (refusal) => {
+      settle();
+      reject(refusal);
+    });
     signal.addEventListener("abort", onAbort, ONCE);
 
     reader.read().then(
@@ -83,6 +73,38 @@ export function readChunk(
       },
     );
   });
+}
+
+/**
+ * Time the wait for a body's next chunk: the idle limit, or what is left
+ * before the body's deadline, whichever ends first. Whoever reads the body
+ * clears the timer once the chunk has come.
+ *
+ * @param wait - The limits on the wait
+ * @param overdue - Told the refusal once the wait is over, `BODY_TIMEOUT`
+ * @returns The timer, or `undefined` for a wait past what a timer holds, which has no end
+ * @example
+ * ```ts
+ * const timer = chunkTimer({ idleMs: 30_000, deadline, timeoutMs }, (refusal) => refuse(refusal));
+ * clearTimeout(timer);
+ * ```
+ */
+export function chunkTimer(
+  wait: Omit<ChunkWait, "signal">,
+  overdue: (refusal: BodyError) => void,
+): ReturnType<typeof setTimeout> | undefined {
+  const remaining = wait.deadline - performance.now();
+  const idle = wait.idleMs < remaining;
+  const delay = Math.max(0, idle ? wait.idleMs : remaining);
+  /* A delay past what a timer holds would fire at once; such a wait has no end. */
+  if (delay > MAX_TIMER_MS) return undefined;
+  const timer = setTimeout(
+    () => overdue(idle ? idleTimeout(wait.idleMs) : overdueBody(wait.timeoutMs)),
+    delay,
+  );
+  /* A wait for a client must not keep a server that is shutting down alive. */
+  if (typeof timer === "object" && "unref" in timer) timer.unref();
+  return timer;
 }
 
 /**
@@ -110,7 +132,17 @@ export function atDeadline(
   return timer;
 }
 
-function clientLeft(reason: unknown): BodyError {
+/**
+ * The refusal of a body whose client went away before it was whole.
+ *
+ * @param reason - What the read learned of it
+ * @returns The refusal, `BODY_ABORTED`
+ * @example
+ * ```ts
+ * req.once("error", (error) => refuse(clientLeft(error)));
+ * ```
+ */
+export function clientLeft(reason: unknown): BodyError {
   return new BodyError("BODY_ABORTED", "The client stopped sending its request body", {
     cause: reason,
   });

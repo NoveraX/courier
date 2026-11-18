@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { rememberPeerAddress } from "./adapter/peer-address";
 import { ConfigurationError } from "./errors/configuration-error";
 import type { WebBody } from "./http-client/web-types";
-import { addressedTo } from "./node-origin";
+import { addressedURL } from "./node-origin";
 import { nodeRequestBody } from "./node-request-body";
 import { REQUEST_MEMBERS } from "./utils/request-members";
 
@@ -12,7 +12,7 @@ import { REQUEST_MEMBERS } from "./utils/request-members";
  *
  * The URL is the one the client used, taken from a local proxy's
  * `X-Forwarded-Proto` / `X-Forwarded-Host` when there is one — see
- * {@link addressedTo}.
+ * {@link addressedURL}.
  *
  * Pass the response too wherever there is one: the request's `signal` then
  * fires when the client goes away before the response is done. Without it,
@@ -30,6 +30,7 @@ import { REQUEST_MEMBERS } from "./utils/request-members";
  * @param nodeRes - Its response, whose early close aborts the request
  * @param keptBody - The body the host already read, when it kept one
  * @returns The equivalent Web Standard Request
+ * @throws TypeError for a target, or a host, no URL reads
  *
  * @example
  * ```ts
@@ -43,8 +44,8 @@ export function toWebRequest(
   nodeRes?: ServerResponse,
   keptBody?: () => WebBody | Uint8Array | null | undefined,
 ): Request {
-  const { protocol, host = "localhost" } = addressedTo(nodeReq);
-  const url = new URL(nodeReq.url ?? "/", `${protocol}://${host}`);
+  const url = addressedURL(nodeReq);
+  if (url === undefined) throw new TypeError("The request's target and host make no URL");
 
   const headers = new Headers();
   for (const [key, value] of Object.entries(nodeReq.headers)) {
@@ -72,23 +73,9 @@ export function toWebRequest(
        before the proxy route runs. `new Request` then throws undici's "body
        object should not be disturbed or locked", which says nothing about the
        middleware that did it. */
-    const spent = nodeReq.readableEnded || nodeReq.readableDidRead;
+    const spent = isBodySpent(nodeReq);
     const kept = spent ? keptBody?.() : undefined;
-    if (spent && kept === undefined) {
-      throw new ConfigurationError(
-        "REQUEST_BODY_ALREADY_READ",
-        [
-          "[courier] The request body was already read before the proxy route.",
-          "",
-          "A body parser is mounted across the whole application — `express.json()`,",
-          "`express.urlencoded()`, `multer`, or a framework equivalent. The proxy",
-          "reads the raw body itself, so it must not be parsed first.",
-          "",
-          "Mount the parser on the routes that need it rather than globally:",
-          "  app.use('/api/users', express.json())",
-        ].join("\n"),
-      );
-    }
+    if (spent && kept === undefined) throw bodyAlreadyRead();
 
     if (kept === undefined) {
       init.body = nodeRequestBody(nodeReq);
@@ -106,6 +93,47 @@ export function toWebRequest(
   rememberPeerAddress(request, nodeReq.socket.remoteAddress);
   if (nodeRes) HELD_UNTIL_ANSWERED.set(nodeRes, request);
   return request;
+}
+
+/**
+ * Whether something before Courier has read a Node request's body, or begun to.
+ *
+ * @param nodeReq - The request
+ * @returns `true` once its stream has been read from
+ * @example
+ * ```ts
+ * if (isBodySpent(req)) throw bodyAlreadyRead();
+ * ```
+ */
+export function isBodySpent(nodeReq: IncomingMessage): boolean {
+  return nodeReq.readableEnded || nodeReq.readableDidRead;
+}
+
+/**
+ * What Courier fails with when a request's body was read before it: a body
+ * parser mounted across the whole application, and how to mount it instead.
+ *
+ * @param before - What was to read it: the proxy's route, or the WebSocket handler's HTTP transport
+ * @returns The error, `REQUEST_BODY_ALREADY_READ`
+ * @example
+ * ```ts
+ * if (isBodySpent(req)) throw bodyAlreadyRead("the HTTP transport");
+ * ```
+ */
+export function bodyAlreadyRead(before = "the proxy route"): ConfigurationError {
+  return new ConfigurationError(
+    "REQUEST_BODY_ALREADY_READ",
+    [
+      `[courier] The request body was already read before ${before}.`,
+      "",
+      "A body parser is mounted across the whole application — `express.json()`,",
+      "`express.text()`, `express.urlencoded()`, `multer`, or a framework",
+      "equivalent. Courier reads the raw body itself, so it must not be parsed first.",
+      "",
+      "Mount the parser on the routes that need it rather than globally:",
+      "  app.use('/api/users', express.json())",
+    ].join("\n"),
+  );
 }
 
 /* Bytes a host kept, as a stream over the same memory: given the bytes themselves, `new Request`

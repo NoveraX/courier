@@ -40,7 +40,20 @@ export async function readBodyText(request: Request, limits: BodyLimits): Promis
     if (!(error instanceof TypeError)) throw error;
     /* The decoder refused the bytes; the rest of the body is taken off the connection. */
     await reader.cancel();
-    return { ok: false, error: new BodyError("BODY_MALFORMED", "The request body is not UTF-8") };
+    return { ok: false, error: notUTF8Body() };
   }
   return { ok: true, text: pieces.join("") };
+}
+
+/**
+ * The refusal of a body whose bytes are not UTF-8.
+ *
+ * @returns The refusal, `BODY_MALFORMED`
+ * @example
+ * ```ts
+ * return { ok: false, error: notUTF8Body() };
+ * ```
+ */
+export function notUTF8Body(): BodyError {
+  return new BodyError("BODY_MALFORMED", "The request body is not UTF-8");
 }

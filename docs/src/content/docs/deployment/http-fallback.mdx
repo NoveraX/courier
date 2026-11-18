@@ -27,7 +27,7 @@ On the client, `fallback: false` keeps a connection on WebSocket, and `fallback:
 Where the requests are answered:
 
 - The [standalone server](/docs/deployment/standalone-server) answers them on its port.
-- A Node server of your own takes them off with `attachWebSocketUpgrade` from `@noverax/courier/node`, ahead of its other handlers: `onHTTP: (request, peer) => ws.handleHTTP(request, peer)`.
+- A Node server of your own takes them off with `attachWebSocketUpgrade` from `@noverax/courier/node`, ahead of its other handlers, given the handler: `httpTransport: ws`. They are read and answered on Node's own request and response; one that opens a connection is also made a web `Request` of its head, the one `onConnect` is given, as an upgrade is. On another runtime, `ws.handleHTTP(request)` answers a web `Request`.
 - Express's and NestJS's `courierWSAttach` takes them, ahead of the application's body parsers and routes; with Fastify and Hono, route them: `fastify.post("/ws", ws.http)`, `app.post("/ws", ws.http)` — as the [Replication Guide](/docs/deployment/replication) shows for each.
 
 `stats().http` counts the connections held over HTTP — on a stream, on a poll — the requests sent on to another replica, frames sent again, streams rotated, and the connections opened by why their clients were on HTTP: an upgrade refused, held, or let through with nothing coming back, a socket dropped, or the tab's memory of an earlier one.
@@ -37,7 +37,7 @@ Where the requests are answered:
 The load balancer, ingress or CDN between the pages and the replicas needs:
 
 - **`POST` to the socket's path**, on its host: `wss://api.example.com/ws` takes `POST https://api.example.com/ws`. Nothing in the URL names or admits a connection: its token travels in the bodies of its requests, never in a URL or a header a log keeps.
-- **Answers as they come.** A stream sends each frame as it is written. An entry that holds an answer until it ends holds the stream, and the client goes on polls, each answered whole: that works, at 12 to 14 times a WebSocket's processor time a message on the server. Turn buffering off for the path — `proxy_buffering off` on nginx; the server's answers also say `X-Accel-Buffering: no`, which nginx honours.
+- **Answers as they come.** A stream sends each frame as it is written. An entry that holds an answer until it ends holds the stream, and the client goes on polls, each answered whole: that works, at 6.0 to 6.3 times a WebSocket's processor time a message on the server. Turn buffering off for the path — `proxy_buffering off` on nginx; the server's answers also say `X-Accel-Buffering: no`, which nginx honours.
 - **Timeouts above the pings.** The server pings every connection every 25 s, on its stream as on a socket, so an idle timeout above that never cuts a live one; an answer may last `streamMs`. A stream cut sooner loses nothing: the client asks for the next where it ended.
 - **Bodies of `max(1 MiB, 2 × maxMessageSize)`**, the most a request carries: nginx's default `client_max_body_size` of `1m` is that at the handler's defaults.
 - **No compression of event streams, or a flush after each chunk.** The server does not compress them and says `Cache-Control: no-store, no-transform`. An entry that gzips them anyway without a flush holds every frame, and the connection goes on polls.
@@ -74,12 +74,12 @@ A connection whose WebSocket works costs nothing more: no request over HTTP, and
 
 | Measured | WebSocket | HTTP stream | Polls |
 | --- | --- | --- | --- |
-| The server's heap a connection | 18.3 KB | 30.5 KB | 33.5 KB |
-| The server's processor time a message delivered | 7.6 µs | 14.0 µs, 1.6× to 2.0× run to run | 90 µs, 12× to 14× |
-| A broadcast to all 2000, until each has it, p50 / p99 | 11 / 37 ms | 13 / 50 ms | 59 / 168 ms |
+| The server's heap a connection | 18.3 KB | 24.5 KB | 23.5 KB |
+| The server's processor time a message delivered | 6.0 µs | 12.5 µs, 2.0× to 2.2× run to run | 37 µs, 6.0× to 6.3× |
+| A broadcast to all 2000, until each has it, p50 / p99 | 9 / 27 ms | 12 / 31 ms | 35 / 80 ms |
 
 Behind an entry that refuses the upgrade, a client's subscription had its first data 37 to 42 ms after it asked, run to run, on a stream; behind one that lets the upgrade through, 24 to 42 ms, on its WebSocket. Behind one that holds the upgrade, or lets it through and holds back what the server sends, it had it after `after`, 3 s, on a stream; behind one that also holds every answer until it ends, after the same 3 s, on polls.
 
-Between replicas with no affinity, sharing Redis with the topic log, behind an entry that deals each request to the next replica in turn and lets no WebSocket through: a request sent on to the connection's replica took up to 1.8 ms more at p99, run to run, and one replica sent on 8040 to 9250 a second with 64 in flight. With 6000 connections on streams, a third on each of three replicas, one replica drained and stopped: 99 % were subscribed again in 5.7 s and all in 6.1 s, none missing an event or having one twice. With the entry letting WebSockets through again, 1000 connections that had climbed down to HTTP were all on WebSocket within 30 s, none missing an event or having one twice.
+Between replicas with no affinity, sharing Redis with the topic log, behind an entry that deals each request to the next replica in turn and lets no WebSocket through: a request sent on to the connection's replica took up to 2.1 ms more at p99, run to run, and one replica sent on 10,360 to 11,790 a second with 64 in flight. With 6000 connections on streams, a third on each of three replicas, one replica drained and stopped: 99 % were subscribed again in 5.7 s and all in 6.1 s, none missing an event or having one twice. With the entry letting WebSockets through again, 1000 connections that had climbed down to HTTP were all on WebSocket within 30 s, none missing an event or having one twice.
 
 Compression would not pay its way on the server. Of a stream's frames, gzip with a flush after each saved about 80 % of the bytes — a 115-byte event came to 18, a 313-byte one to 55 — for 20–33 µs of processor time a frame and 314 KiB of memory a connection, ten times what the connection holds; without a flush, frames waited for hundreds of later ones, and the web platform's `CompressionStream`, the only one every runtime has, cannot flush. An entry that compresses with a flush after each chunk added about 0.1 ms at p50 here.

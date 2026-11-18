@@ -20,8 +20,9 @@ export interface SocketsTo {
 
 /**
  * A socket factory whose WebSockets reach `handler` in-process through
- * `way`: each opens, fails, or carries a frame on a later turn, as a
- * network's does, and the server's end closes as the client's does.
+ * `way`: each opens, fails, or carries a frame on a later turn, the frames
+ * each way in the order they were sent, as a network's do, and the server's
+ * end closes as the client's does.
  *
  * @param handler - The handler each socket reaches
  * @param way - What the way between them does with each socket, until it is changed
@@ -48,7 +49,10 @@ export function socketsTo(handler: WSHandler, way: SocketWay): SocketsTo {
 function pairedSocket(handler: WSHandler, url: string, way: SocketWay): WSClientSocket {
   const listeners = new Map<string, Array<(event: unknown) => void>>();
   let readyState = 0;
-  const later = (run: () => void): void => void setTimeout(run, 0);
+  /* A turn 1 ms on, as Node makes a 0 ms one. Fake timers would fire a 0 ms
+     timer set between two advances of the clock at once, before one set in
+     the last ms of the advance before: a frame would pass the one sent before it. */
+  const later = (run: () => void): void => void setTimeout(run, 1);
   const emit = (type: string, event: unknown): void => {
     for (const listener of listeners.get(type) ?? []) listener(event);
   };

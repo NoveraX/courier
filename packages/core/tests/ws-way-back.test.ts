@@ -3,8 +3,9 @@
  * through again: its probe answered, the connection is made anew on a
  * WebSocket and its topic resumed where it stood from the topic's history,
  * nothing lost and nothing twice, the server holding the one connection
- * after. One whose WebSocket still does not get through stays on HTTP, each
- * probe let go of before the server admitted it.
+ * after — an event published at any ms of the way back, the one its
+ * WebSocket is admitted in included. One whose WebSocket still does not get
+ * through stays on HTTP, each probe let go of before the server admitted it.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -122,6 +123,32 @@ describe("a connection carried over HTTP", () => {
     expect(sent).toBeLessThanOrEqual(305);
     expect(heard).toEqual(Array.from({ length: sent }, (_, n) => `m${n + 1}`));
     expect(opens.at(-1)).toEqual({ resumed: true });
+    expect(sockets.opened()).toBe(3);
+    expect(admitted).toHaveLength(2);
+    expect(ended).toEqual([4000]);
+    expect(handler.connections.count).toBe(1);
+  });
+
+  it("hears each event of its topic once and in order on the way back, one published at every ms of it", async () => {
+    /* At 0, the probe's draw sends it 15 s after the connection opened over HTTP. */
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const { handler, admitted, ended } = serve();
+    const { connection, sockets, heard, opens } = connect(handler, "refuse");
+    await vi.waitFor(() => expect(opens).toHaveLength(1));
+    sockets.way = "pass";
+    await vi.advanceTimersByTimeAsync(13_900);
+    expect(sockets.opened()).toBe(1);
+
+    let sent = 0;
+    for (let ms = 0; ms < 1200 && transportOf(connection) !== "websocket"; ms++) {
+      await handler.connections.broadcastToTopic(TOPIC, `m${++sent}`);
+      await vi.advanceTimersByTimeAsync(1);
+    }
+    await handler.connections.broadcastToTopic(TOPIC, `m${++sent}`);
+    await vi.waitFor(() => expect(heard).toHaveLength(sent));
+
+    expect(transportOf(connection)).toBe("websocket");
+    expect(heard).toEqual(Array.from({ length: sent }, (_, n) => `m${n + 1}`));
     expect(sockets.opened()).toBe(3);
     expect(admitted).toHaveLength(2);
     expect(ended).toEqual([4000]);

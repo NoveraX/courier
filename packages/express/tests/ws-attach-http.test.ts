@@ -4,7 +4,7 @@
  * path, which is taken off the server ahead of Express — its body parsers and
  * its routes — and is the application's again with `http: false`.
  */
-import { createServer, type Server } from "node:http";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { registerSources } from "@noverax/courier";
 import { defineApi } from "@noverax/courier/define";
@@ -31,12 +31,14 @@ afterEach(async () => {
   server = undefined;
 });
 
-/* An Express app that reads every body as text, and answers a POST on the socket's path itself. */
+/* An Express app that reads every body before its routes, as a body parser does, and answers a POST on the socket's path itself. */
 async function serve(options: CourierWSAttachOptions): Promise<string> {
   const app = express();
-  app.use(express.text({ type: "*/*" }));
+  app.use((request: IncomingMessage, _response: ServerResponse, next: () => void) => {
+    request.resume().once("end", next);
+  });
   app.post("/api/ws", (_request, response) => {
-    response.status(418).send("the application's");
+    response.status(418).end("the application's");
   });
   server = createServer(app);
   stop = courierWSAttach(server, options);

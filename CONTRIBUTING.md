@@ -204,6 +204,21 @@ npx playwright install chromium webkit firefox
 npm run test:e2e
 ```
 
+So does a page's realtime connection: `e2e/realtime/` starts a replica, an
+entry in front of it and a page on an origin of its own, and drives the
+page's connections on each transport the entry leaves them — a WebSocket it
+lets through, an HTTP stream where it refuses the upgrade, polls where it
+holds every answer back as well. On each it checks the snapshot and the
+events, each once and in order; sends; credentials the server asks for
+again; every code the server closes with, as a socket's connection takes
+it; the transport a tab keeps across a reload; and the climb back to a
+WebSocket once one gets through. It runs on the built packages too:
+
+```bash
+npm run build
+npm run test:e2e:realtime
+```
+
 The VS Code extension runs inside VS Code itself, Courier File Icons beside
 it as Courier's extension pack installs it: a stand-in Studio answers as the
 real one does, and a suite opens a project's file and reads the hints the

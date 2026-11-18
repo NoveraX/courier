@@ -265,7 +265,12 @@ jobs:
 
   # Studio's flows in a real browser: each test file starts Studio from its
   # command line over its own copy of a fixture project, and drives the pages
-  # as a developer does. A failure keeps its trace and screenshots.
+  # as a developer does. Then a page's realtime connection, behind an entry
+  # that lets a WebSocket through, refuses it, or refuses it and holds every
+  # answer back: on each transport that carries it, its events, sends,
+  # renewed credentials and every close code, the transport its tab keeps,
+  # and the climb back to a WebSocket. A failure keeps its trace and
+  # screenshots.
   #
   # Chrome's, Safari's and Firefox's engines, as developers open Studio in
   # them, come in Playwright's image with every library, font and display
@@ -304,6 +309,9 @@ jobs:
 
       - name: Studio in a browser
         run: npm run test:e2e
+
+      - name: A realtime connection in a browser
+        run: npm run test:e2e:realtime
 
       - name: Keep what a failure left
         if: failure()

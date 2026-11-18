@@ -42,7 +42,7 @@ The load balancer, ingress or CDN between the pages and the replicas needs:
 - **Bodies of `max(1 MiB, 2 × maxMessageSize)`**, the most a request carries: nginx's default `client_max_body_size` of `1m` is that at the handler's defaults.
 - **No compression of event streams, or a flush after each chunk.** The server does not compress them and says `Cache-Control: no-store, no-transform`. An entry that gzips them anyway without a flush holds every frame, and the connection goes on polls.
 - **HTTP/2 or HTTP/3 to the browsers.** Over HTTP/1.1 a browser opens six connections to a host for all its tabs together. Each connection over HTTP holds one — its stream, or its poll — and its sends take another for a moment, so six tabs of the app hold them all, and their sends wait; over HTTP/2 they share one.
-- **Origins and cookies as for the socket.** A page on another origin needs it in `allowedOrigins`, as its WebSocket does, and the transport answers it the CORS headers it needs. The page's requests carry its cookies, as its WebSocket's handshake does.
+- **Origins and cookies as for the socket.** A page on another origin needs it in `allowedOrigins`, as its WebSocket does, and the transport answers it the CORS headers it needs. The page's requests carry its cookies, as its WebSocket's handshake does. A page whose Content Security Policy lists the socket's address in `connect-src` lists its host over `https:` beside it: `https://api.example.com` beside `wss://api.example.com`.
 
 On nginx, the socket's path then reads as follows; `$connection_upgrade` is the map the [Docker](/docs/deployment/docker) page's configuration sets:
 

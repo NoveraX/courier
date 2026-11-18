@@ -26,7 +26,9 @@ const NOT_ANSWERED = "The server did not answer the connection's opening";
  * reports it. Whatever an answer says before that event is not the
  * server's. A frame larger than the client reads closes the socket with
  * 1009, the server told, as a socket's message too big does: asked for
- * again, it would only come again.
+ * again, it would only come again. A socket the client closes lets go of
+ * its stream or poll once the server has the close, `probeMs` at most: let
+ * go of first, it would end the connection there as one dropped, with 1006.
  *
  * @param url - The socket's address, `ws:` or `wss:`
  * @param options - How its requests are made, and how its frames come first
@@ -174,8 +176,8 @@ export function createHTTPSocket(url: string, options: HTTPSocketOptions): HTTPS
     close(code = 1000, reason = "") {
       if (readyState >= 2) return;
       readyState = 3;
-      outbox.close(code);
-      life.abort();
+      /* A stream or a poll let go of before the server has the close would end the connection there with 1006. */
+      void outbox.close(code, options.probeMs).then(() => life.abort());
       queueMicrotask(() => socket.onclose?.({ code, reason }));
     },
   };

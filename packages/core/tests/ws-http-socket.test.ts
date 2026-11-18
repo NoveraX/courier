@@ -104,6 +104,23 @@ describe("a connection over the HTTP transport", () => {
     expect(log.heads.map((head) => head.op)).toEqual(["stream", "send"]);
   });
 
+  it.each(["stream", "poll"] as const)(
+    "ends at the server with the code it closed with, on a %s let go of once the close came",
+    async (mode) => {
+      const ends: number[] = [];
+      const a = serve({ onDisconnect: ({ code }) => void ends.push(code) });
+      const { fetch, log } = entryTo([a]);
+      const { connection, resumed } = connect(fetch, mode);
+      await expect.poll(() => resumed.length).toBe(1);
+
+      connection.close();
+
+      await expect.poll(() => ends).toEqual([1000]);
+      expect(log.heads.at(-1)).toMatchObject({ op: "close", code: 1000 });
+      expect(a.connections.count).toBe(0);
+    },
+  );
+
   it("acknowledges on a stream, unasked, each time it has read the bytes the server asked for", async () => {
     const a = serve({ maxBufferedAmount: 4096 });
     const { fetch, log } = entryTo([a]);

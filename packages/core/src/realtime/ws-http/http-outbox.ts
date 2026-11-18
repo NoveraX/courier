@@ -20,8 +20,11 @@ export interface Outbox {
   start(token: string, seq: number, maxBytes: number): void;
   /** Tell the server, with no frame, what the client has taken */
   acknowledge(): void;
-  /** Send what was handed in, then the client's close with `code` */
-  close(code: number): void;
+  /**
+   * Send what was handed in, then the client's close with `code`: settles
+   * once the close was answered, nothing more goes, or `withinMs` passed
+   */
+  close(code: number, withinMs: number): Promise<void>;
   /** Send nothing more: the connection ended */
   stop(): void;
 }
@@ -59,6 +62,17 @@ export function createOutbox(parts: OutboxParts): Outbox {
   let ackDue = false;
   let closing: number | undefined;
   let stopped = false;
+  /* Settles what `close` returned, at the latest when `bound` runs out. */
+  let closed: (() => void) | undefined;
+  let bound: ReturnType<typeof setTimeout> | undefined;
+
+  /* Nothing more goes: a close waited for is over. */
+  function halt(): void {
+    stopped = true;
+    clearTimeout(bound);
+    closed?.();
+    closed = undefined;
+  }
 
   function schedule(): void {
     if (busy || stopped || token === undefined) return;
@@ -75,7 +89,8 @@ export function createOutbox(parts: OutboxParts): Outbox {
     busy = false;
     if (closing === undefined) return;
     stopped = true;
-    void parts.post(JSON.stringify({ op: "close", token, code: closing }), true);
+    const body = JSON.stringify({ op: "close", token, code: closing });
+    void parts.post(body, true).then(halt);
   }
 
   /* As many frames as one body carries, after a head that numbers the first and acknowledges. */
@@ -99,9 +114,9 @@ export function createOutbox(parts: OutboxParts): Outbox {
       if (stopped) return;
       if (posted.kind === "answered") break;
       /* Once the client has closed, what it handed in goes once: nobody waits for it any more. */
-      if (posted.kind === "again" && closing !== undefined) stopped = true;
+      if (posted.kind === "again" && closing !== undefined) halt();
       else if (posted.kind !== "again") {
-        stopped = true;
+        halt();
         const { code, reason } = endingOf(posted);
         parts.ended(code, reason);
       } else {
@@ -137,15 +152,21 @@ export function createOutbox(parts: OutboxParts): Outbox {
       ackDue = true;
       schedule();
     },
-    close(code) {
-      if (stopped || closing !== undefined) return;
+    close(code, withinMs) {
+      if (stopped || closing !== undefined) return Promise.resolve();
       closing = code;
-      if (token === undefined) stopped = true;
-      else schedule();
+      const over = new Promise<void>((settle) => {
+        closed = settle;
+      });
+      if (token === undefined) {
+        halt();
+      } else {
+        bound = setTimeout(halt, withinMs);
+        schedule();
+      }
+      return over;
     },
-    stop() {
-      stopped = true;
-    },
+    stop: halt,
   };
 }
 

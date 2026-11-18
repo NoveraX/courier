@@ -48,9 +48,21 @@ export interface HTTPRequestHead {
 export interface HTTPOpening {
   /** The connection's token, which every later request carries */
   readonly token: string;
-  /** How many bytes of frames the client takes before it acknowledges them unasked */
+  /** How many bytes of answers the client reads before it acknowledges, unasked, the frames it took */
   readonly ackBytes: number;
+  /** The largest body a request may have, in bytes: the client's frames go in as many as they need */
+  readonly maxBytes: number;
 }
+
+/** The codes of the transport's refusals a client tells apart from an entry's answer of the same status. */
+export const HTTP_REFUSALS = {
+  /** 410: no replica holds the connection; its client opens another */
+  gone: "CONNECTION_GONE",
+  /** 504: the replica that holds it did not answer in time; its client opens another */
+  unreachable: "HOLDER_UNREACHABLE",
+  /** 503: the replicas cannot reach each other now; its client asks again */
+  unavailable: "FORWARDING_UNAVAILABLE",
+} as const;
 
 /** The names of the events an answer carries besides the frames. */
 export const HTTP_EVENTS = {

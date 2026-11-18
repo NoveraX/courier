@@ -60,6 +60,8 @@ describe("WSHandler.handleHTTP", () => {
       streaming: 1,
       polling: 0,
       forwarded: 0,
+      resent: 0,
+      rotated: 0,
     });
     await events.cancel();
   });

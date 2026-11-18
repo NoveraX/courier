@@ -3,12 +3,12 @@ export interface KeptFrames {
   /** Their bytes together: the connection's `bufferedAmount` */
   readonly bytes: number;
   readonly size: number;
-  /** Keep a frame sent, with its sequence number */
-  keep(seq: number, bytes: Uint8Array): void;
+  /** Keep a frame sent, with its sequence number; `carried` when an answer carries it already */
+  keep(seq: number, bytes: Uint8Array, carried: boolean): void;
   /** Let go of every frame up to `ack`, which the client has taken */
   acknowledge(ack: number): void;
-  /** Each frame kept, in order */
-  each(write: (bytes: Uint8Array) => void): void;
+  /** Write each frame kept, in order: how many of them an earlier answer carried */
+  each(write: (bytes: Uint8Array) => void): number;
   clear(): void;
 }
 
@@ -20,13 +20,13 @@ export interface KeptFrames {
  * @example
  * ```ts
  * const kept = createKeptFrames();
- * kept.keep(1, bytes);
+ * kept.keep(1, bytes, true);
  * kept.acknowledge(1);
  * kept.size; // 0
  * ```
  */
 export function createKeptFrames(): KeptFrames {
-  const frames: { readonly seq: number; readonly bytes: Uint8Array }[] = [];
+  const frames: { readonly seq: number; readonly bytes: Uint8Array; carried: boolean }[] = [];
   let bytes = 0;
   return {
     get bytes() {
@@ -35,8 +35,8 @@ export function createKeptFrames(): KeptFrames {
     get size() {
       return frames.length;
     },
-    keep(seq, frame) {
-      frames.push({ seq, bytes: frame });
+    keep(seq, frame, carried) {
+      frames.push({ seq, bytes: frame, carried });
       bytes += frame.byteLength;
     },
     acknowledge(ack) {
@@ -49,7 +49,13 @@ export function createKeptFrames(): KeptFrames {
       if (taken > 0) frames.splice(0, taken);
     },
     each(write) {
-      for (const frame of frames) write(frame.bytes);
+      let again = 0;
+      for (const frame of frames) {
+        if (frame.carried) again++;
+        frame.carried = true;
+        write(frame.bytes);
+      }
+      return again;
     },
     clear() {
       frames.length = 0;

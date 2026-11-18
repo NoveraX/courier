@@ -102,6 +102,8 @@ describe.skipIf(!available)(
   () => {
     it("carries a connection whose requests land on each replica in turn, its events in order and once", async () => {
       const [a, b, c] = [replica(), replica(), replica()];
+      /* As a readiness check holds traffic back: a replica whose Redis is not reached yet answers 503. */
+      await expect.poll(() => [a, b, c].every((each) => each.pubsub.state === "ready")).toBe(true);
       const entry = roundRobin([a.handler, b.handler]);
       const opened = await entry({ op: "poll", v: 1 }, [
         { type: "auth", v: 2, id: "a0" },
@@ -109,10 +111,12 @@ describe.skipIf(!available)(
       ]);
       const token = JSON.parse(opened.events[0]?.data ?? "{}").token as string;
       const taken: Event[] = [...opened.events];
+      const statuses = [opened.status];
       let ack = 0;
       const poll = async () => {
         ack = Math.max(ack, ...taken.map((event) => Number(event.id ?? 0)));
-        const { events } = await entry({ op: "poll", token, ack });
+        const { status, events } = await entry({ op: "poll", token, ack });
+        statuses.push(status);
         taken.push(...events.filter((event) => Number(event.id ?? 0) > ack || !event.id));
       };
       while (!taken.some((event) => typeOf(event) === "subscribed")) await poll();
@@ -131,6 +135,7 @@ describe.skipIf(!available)(
       ]);
       const ids = taken.flatMap((event) => (event.id === undefined ? [] : [Number(event.id)]));
       expect(ids).toEqual([...new Set(ids)].sort((x, y) => x - y));
+      expect(new Set(statuses)).toEqual(new Set([200]));
       expect(b.handler.stats().http?.forwarded).toBeGreaterThan(0);
       expect([a, b].map((each) => each.handler.stats().http?.connections)).toEqual([1, 0]);
     });

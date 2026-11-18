@@ -30,11 +30,11 @@ export function frameEvent(seq: number, frame: string): Uint8Array {
 /**
  * The event that begins a connection's first answer.
  *
- * @param opening - Its token, and how much the client takes before it acknowledges unasked
+ * @param opening - Its token, how much the client takes before it acknowledges unasked, and the largest body
  * @returns The event's bytes
  * @example
  * ```ts
- * openEvent({ token, ackBytes: 65_536 });
+ * openEvent({ token, ackBytes: 65_536, maxBytes: 1_048_576 });
  * ```
  */
 export function openEvent(opening: HTTPOpening): Uint8Array {

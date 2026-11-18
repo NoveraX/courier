@@ -1,7 +1,8 @@
 import { createLogger } from "../../logger";
 import { layerHeaders } from "../../utils/layer-headers";
-import { ONCE, ownFields } from "../../utils/own";
+import { ownFields } from "../../utils/own";
 import { REQUEST_MEMBERS } from "../../utils/request-members";
+import { withinSignal } from "../../utils/within-signal";
 import { CLIENT_LIMITS } from "../client-limits";
 import { fingerprintOf } from "../credentials-fingerprint";
 import { ConnectionError, type RealtimeError } from "../errors";
@@ -39,7 +40,7 @@ export async function openStream<TData>(
   try {
     /* What it gave, read as its own fields: a field it does not have, the platform's prototype
        answers for none of the stream's. */
-    const opened = ownFields(await within(signal, ctx.config.beforeConnect?.()));
+    const opened = ownFields(await withinSignal(signal, ctx.config.beforeConnect?.()));
     const refused = sameAsRefused(ctx, opened);
     if (refused) return refused;
     const send = ctx.config.fetch ?? fetch;
@@ -54,7 +55,7 @@ export async function openStream<TData>(
       body: null,
       signal,
     } as RequestInit);
-    const response = await within(signal, request, (answer) => {
+    const response = await withinSignal(signal, request, (answer) => {
       answer.body?.cancel().catch(() => undefined);
     });
     if (!response.ok) throw await refusal(response, signal);
@@ -75,34 +76,6 @@ export async function openStream<TData>(
   } finally {
     clearTimeout(deadline);
   }
-}
-
-/*
- * What the attempt waits for, given up when the attempt is: `beforeConnect`
- * takes no signal, and a `fetch` of the source's own may not pass it on.
- * What comes after that is let go of.
- */
-function within<T>(
-  signal: AbortSignal,
-  step: T | PromiseLike<T>,
-  letGo?: (late: T) => void,
-): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const abandon = () => reject(signal.reason);
-    if (signal.aborted) abandon();
-    else signal.addEventListener("abort", abandon, ONCE);
-    Promise.resolve(step).then(
-      (value) => {
-        signal.removeEventListener("abort", abandon);
-        if (signal.aborted) letGo?.(value);
-        resolve(value);
-      },
-      (error: unknown) => {
-        signal.removeEventListener("abort", abandon);
-        reject(error);
-      },
-    );
-  });
 }
 
 /*

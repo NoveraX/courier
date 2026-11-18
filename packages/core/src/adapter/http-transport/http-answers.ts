@@ -1,7 +1,7 @@
-import type { HTTPRequestHead } from "../../realtime/ws/http-protocol";
+import { HTTP_REFUSALS, type HTTPRequestHead } from "../../realtime/ws/http-protocol";
 import { answerInit } from "../../utils/answer-init";
 import { errorResponse } from "../parse";
-import type { HTTPConnection } from "./http-connection";
+import type { HTTPConnection } from "./http-connection-types";
 import type { Answered, Unanswered } from "./http-forwarding";
 
 /* An event stream no proxy holds back or rewrites, and no cache keeps. */
@@ -35,7 +35,7 @@ export function events(body: BodyInit): Response {
  * ```
  */
 export function gone(): Response {
-  return errorResponse(410, "No such connection: open another", "CONNECTION_GONE");
+  return errorResponse(410, "No such connection: open another", HTTP_REFUSALS.gone);
 }
 
 /**
@@ -106,9 +106,14 @@ export function responseOf(answer: Answered | Unanswered): Response {
       ? errorResponse(
           504,
           "The replica that holds the connection did not answer",
-          "HOLDER_UNREACHABLE",
+          HTTP_REFUSALS.unreachable,
         )
-      : errorResponse(503, "The replicas cannot reach each other now", "FORWARDING_UNAVAILABLE", 1);
+      : errorResponse(
+          503,
+          "The replicas cannot reach each other now",
+          HTTP_REFUSALS.unavailable,
+          1,
+        );
   }
   if (answer.status === 200) return events(answer.body);
   if (answer.status === 204) return new Response(null, answerInit(204));

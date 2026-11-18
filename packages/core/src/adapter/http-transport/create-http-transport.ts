@@ -4,7 +4,8 @@ import { HTTP_TRANSPORT_VERSION } from "../../realtime/ws/http-protocol";
 import { errorResponse } from "../parse";
 import { readBodyText } from "../read-body-text";
 import { answeredOf, answerHeld, events, gone } from "./http-answers";
-import { createHTTPConnection, type HTTPConnection } from "./http-connection";
+import { createHTTPConnection } from "./http-connection";
+import type { HTTPConnection, HTTPCounts } from "./http-connection-types";
 import type { DeliveryKind } from "./http-delivery";
 import { type Answered, createForwarding } from "./http-forwarding";
 import { relay } from "./http-relay";
@@ -22,6 +23,10 @@ export interface HTTPTransportStats {
   readonly polling: number;
   /** Requests sent on to the replica that holds their connection, since the handler was made */
   readonly forwarded: number;
+  /** Frames sent again, since: an answer that carried them was lost, or ended before its client took them */
+  readonly resent: number;
+  /** Streams ended after `streamMs`, since, so their clients asked for the next */
+  readonly rotated: number;
 }
 
 /** A handler's HTTP transport: its requests answered, its connections held. */
@@ -69,13 +74,14 @@ export function createHTTPTransport(
   const tokens = createTokens(cluster?.secret);
   const held = new Map<string, HTTPConnection>();
   const forwarding = cluster && createForwarding({ ...cluster, replica: tokens.replica, serve });
+  const counts: HTTPCounts = { resent: 0, rotated: 0 };
   let forwarded = 0;
 
   async function open(kind: DeliveryKind, frames: readonly string[], request: Request) {
     /* Heard before its client has the token, so no request for it can be sent on unheard. */
     await forwarding?.listen();
     const token = await tokens.mint();
-    const connection = createHTTPConnection(token, terms, () => held.delete(token));
+    const connection = createHTTPConnection(token, terms, counts, () => held.delete(token));
     held.set(token, connection);
     const body = connection.deliver(kind, 0);
     handleSocket(connection, request);
@@ -139,7 +145,7 @@ export function createHTTPTransport(
         if (connection.delivering === "stream") streaming++;
         else if (connection.delivering === "poll") polling++;
       }
-      return { connections: held.size, streaming, polling, forwarded };
+      return { connections: held.size, streaming, polling, forwarded, ...counts };
     },
     destroy() {
       forwarding?.destroy();

@@ -31,7 +31,7 @@ export interface HTTPTerms {
   readonly streamMs: number;
   /** How long a connection the server closed waits for an answer to tell its client on */
   readonly lingerMs: number;
-  /** The bytes of frames a client takes before it acknowledges them unasked */
+  /** The bytes of answers a client reads before it acknowledges, unasked, the frames it took */
   readonly ackBytes: number;
   /** The largest body a request may have */
   readonly maxBodyBytes: number;

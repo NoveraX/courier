@@ -1,5 +1,5 @@
-import type { WebSocketLike } from "../../realtime/adapters";
 import { PING_FRAME, PONG_FRAME } from "../../realtime/ws/http-protocol";
+import type { HTTPConnection, HTTPCounts } from "./http-connection-types";
 import { createDelivery, type Delivery, type DeliveryKind } from "./http-delivery";
 import { closeEvent, frameEvent, openEvent, PING_EVENT, STREAM_START } from "./http-events";
 import { createIntake } from "./http-intake";
@@ -7,32 +7,6 @@ import { createKeptFrames } from "./http-kept";
 import { createConnectionListeners } from "./http-listeners";
 import { createPings } from "./http-pings";
 import type { HTTPTerms } from "./http-terms";
-
-/** A connection over HTTP: a socket to its handler, and what the transport's requests do to it. */
-export interface HTTPConnection extends WebSocketLike {
-  readonly token: string;
-  /** The answer it delivers its frames on now, if one is held */
-  readonly delivering: DeliveryKind | undefined;
-  /** Whether it holds a poll that waits for a frame */
-  readonly holding: boolean;
-  /**
-   * Answer a `stream` or a `poll`, in place of the answer held before: its
-   * body carries every frame after `ack`, the first answer the connection's
-   * token before them. A poll with nothing to carry is held `holdMs` at most,
-   * the transport's own wait unless given.
-   */
-  deliver(kind: DeliveryKind, ack: number, holdMs?: number): ReadableStream<Uint8Array>;
-  /** Take the client's frames, the first numbered `seq`; false when some before it are missing */
-  receive(seq: number, frames: readonly string[]): boolean;
-  /** The client has taken every frame up to `ack` */
-  acknowledge(ack: number): void;
-  /** A request carried the connection's token: its client has it, and is there */
-  presented(): void;
-  /** The client closed the connection, with `code` */
-  peerClose(code: number): void;
-  /** End it now, its client told nothing more: its handler has stopped */
-  end(): void;
-}
 
 /**
  * A connection over HTTP, handed to the handler as its socket. Each frame
@@ -47,11 +21,12 @@ export interface HTTPConnection extends WebSocketLike {
  *
  * @param token - The connection's token
  * @param terms - How long it holds a poll, runs a stream and waits to say it closed
+ * @param counts - What the transport's connections count together
  * @param onClosed - Told once it has closed, before its handler is
  * @returns The connection, open
  * @example
  * ```ts
- * const connection = createHTTPConnection(token, terms, () => held.delete(token));
+ * const connection = createHTTPConnection(token, terms, counts, () => held.delete(token));
  * const body = connection.deliver("stream", 0);
  * handleSocket(connection, request);
  * ```
@@ -59,6 +34,7 @@ export interface HTTPConnection extends WebSocketLike {
 export function createHTTPConnection(
   token: string,
   terms: HTTPTerms,
+  counts: HTTPCounts,
   onClosed: () => void,
 ): HTTPConnection {
   const listeners = createConnectionListeners();
@@ -126,18 +102,23 @@ export function createHTTPConnection(
     ending = false;
     const next = createDelivery(kind, (left) => detach(next, left));
     delivery = next;
-    if (!opened) next.write(openEvent({ token, ackBytes: terms.ackBytes }));
-    else if (kind === "stream") next.write(STREAM_START);
+    if (!opened) {
+      next.write(openEvent({ token, ackBytes: terms.ackBytes, maxBytes: terms.maxBodyBytes }));
+    } else if (kind === "stream") next.write(STREAM_START);
     opened = true;
     const pinged = pings.takeUnsent();
     if (pinged) next.write(PING_EVENT);
     const unsent = pinged || kept.size > 0;
-    kept.each((bytes) => next.write(bytes));
+    counts.resent += kept.each((bytes) => next.write(bytes));
     if (closing !== undefined) {
       next.write(closeEvent(closing));
       finish(closing.code);
-    } else if (kind === "stream") arm(terms.streamMs, () => next.end());
-    else if (unsent) carried();
+    } else if (kind === "stream") {
+      arm(terms.streamMs, () => {
+        counts.rotated++;
+        next.end();
+      });
+    } else if (unsent) carried();
     else arm(holdMs, () => next.end());
     return next.body;
   }
@@ -166,7 +147,7 @@ export function createHTTPConnection(
         return;
       }
       const bytes = frameEvent(nextSeq, data);
-      kept.keep(nextSeq++, bytes);
+      kept.keep(nextSeq++, bytes, delivery !== undefined);
       delivery?.write(bytes);
       carried();
     },

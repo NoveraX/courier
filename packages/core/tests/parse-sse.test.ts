@@ -125,6 +125,18 @@ describe("parseSSEStream", () => {
     expect(events).toEqual([{ data: "a" }, { data: "b" }]);
   });
 
+  it("dispatches an event whose chunk ends with a lone CR at once, before another chunk comes", async () => {
+    const open = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("data: now\r\r"));
+      },
+    });
+    const events = parseSSEStream(open)[Symbol.asyncIterator]();
+
+    expect(await events.next()).toEqual({ done: false, value: { data: "now" } });
+    await events.return(undefined);
+  });
+
   it("dispatches no event for a block that only sets an id or a retry", async () => {
     const events = await collect(createStream("retry: 3000\n\nid: 77\n\ndata: 1\n\n"));
 

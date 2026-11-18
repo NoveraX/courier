@@ -18,6 +18,24 @@ export interface PostTerms {
   readonly init?: RequestInit | undefined;
 }
 
+/**
+ * A socket's address as HTTP takes it: the same host, path and query, the
+ * scheme `http:` for `ws:` and `https:` for `wss:`.
+ *
+ * @param url - The socket's address
+ * @returns Where its requests go
+ * @example
+ * ```ts
+ * httpAddressOf("wss://api.example.com/ws?room=7"); // "https://api.example.com/ws?room=7"
+ * ```
+ */
+export function httpAddressOf(url: string): string {
+  const address = new URL(url);
+  if (address.protocol === "ws:") address.protocol = "http:";
+  else if (address.protocol === "wss:") address.protocol = "https:";
+  return address.toString();
+}
+
 /** A request's answer, as the socket acts on it. */
 export type Posted =
   /** 200, with its events, or 204 */
@@ -30,7 +48,7 @@ export type Posted =
   | { readonly kind: "again"; readonly afterMs: number | undefined; readonly error?: unknown }
   /** The connection is no more: no replica holds it, or the one that does cannot be reached */
   | { readonly kind: "gone" }
-  /** No HTTP transport answers at the socket's path */
+  /** No HTTP transport answers at the socket's path: 404 or 405, or a 200 with no events */
   | { readonly kind: "absent" }
   /** Refused: the socket closes with the code a socket would */
   | { readonly kind: "refused"; readonly code: number; readonly reason: string };
@@ -131,10 +149,20 @@ export async function post(
   }
 }
 
-/* A status of an entry's is one of the server's only when its body names the transport's code. */
+/*
+ * A status of an entry's is one of the server's only when its body names the
+ * transport's code. A 200 is the transport's only with events, as each of its
+ * is: an entry's page, or another app's answer at the path, is no transport.
+ */
 async function postedOf(response: Response, signal: AbortSignal): Promise<Posted> {
   const { status } = response;
-  if (status === 200 || status === 204) return { kind: "answered", response };
+  if (status === 204 || (status === 200 && isEventStream(response))) {
+    return { kind: "answered", response };
+  }
+  if (status === 200) {
+    await response.body?.cancel().catch(() => undefined);
+    return { kind: "absent" };
+  }
   const said = await refusalOf(response, signal);
   if (status === 410 || said.code === HTTP_REFUSALS.unreachable) return { kind: "gone" };
   if (status === 404 || status === 405) return { kind: "absent" };
@@ -162,6 +190,11 @@ function closeCodeOf(status: number, said: { readonly code?: unknown; readonly m
   if (status === 400) return said.code === HTTP_REFUSALS.version ? 1006 : 1002;
   if (status === 403) return 4403;
   return status === 421 ? 4421 : 1006;
+}
+
+function isEventStream(response: Response): boolean {
+  const essence = response.headers.get("Content-Type")?.split(";")[0]?.trim().toLowerCase();
+  return essence === "text/event-stream";
 }
 
 /* The code and message of a server's JSON refusal; an entry's page says neither. */

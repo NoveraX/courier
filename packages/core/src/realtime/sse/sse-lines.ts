@@ -1,6 +1,8 @@
 import { CLIENT_LIMITS } from "../client-limits";
 
 const LINE_END = /\r\n|\r|\n/;
+const CR = 0x0d;
+const LF = 0x0a;
 
 /**
  * A line or an event of a stream longer than its reader takes: a server
@@ -25,12 +27,12 @@ export class EventTooLarge extends Error {
  *
  * Splitting on a blank-line pattern instead missed a blank line written with
  * mixed endings — `\n\r\n` or `\r\n\n` — and merged the events on either side
- * of it. A CR that ends a chunk is held until the next one says whether an LF
- * follows it, so a CRLF split across chunks is one line ending, not two. Text
- * after the last line ending is not a line: a stream that ends there ended in
- * the middle of one. Text that runs past `bound` with no line end ends the
- * read, rather than being held, and searched again for one with each piece
- * that comes.
+ * of it. A CR that ends a piece of the stream ends its line at once, and an
+ * LF that begins the next piece is that CRLF's, not a line ending of its own.
+ * Text after the last line ending is not a line: a stream that ends there
+ * ended in the middle of one. A line that comes in many pieces is held in
+ * them, each read once, and joined when it ends, so it costs its length, not
+ * its length again for every piece; one that runs past `bound` ends the read.
  *
  * @param stream - The response body
  * @param bound - How many characters a line may run to: an SSE stream's `SSE_MAX_EVENT_LENGTH` unless given
@@ -49,26 +51,39 @@ export async function* readSSELines(
 ): AsyncGenerator<string, void, unknown> {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
-  let pending = "";
+  /* The pieces of the line no line end has ended yet, and the characters they run to. */
+  const held: string[] = [];
+  let heldLength = 0;
+  /* Whether the last piece ended with a CR: an LF that begins the next ends no line. */
+  let afterCR = false;
 
   try {
     for (;;) {
       const { done, value } = await reader.read();
-      pending += done ? decoder.decode() : decoder.decode(value, { stream: true });
-      const { lines, rest } = splitLines(pending, done);
-      if (rest.length > bound) throw new EventTooLarge(bound);
-      pending = rest;
-      yield* lines;
       if (done) return;
+      let text = decoder.decode(value, { stream: true });
+      if (text === "") continue;
+      if (afterCR && text.charCodeAt(0) === LF) text = text.slice(1);
+      afterCR = text.charCodeAt(text.length - 1) === CR;
+      const lines = text.split(LINE_END);
+      const rest = lines.pop() ?? "";
+      for (let at = 0; at < lines.length; at++) {
+        let line = lines[at] as string;
+        if (at === 0 && held.length > 0) {
+          if (heldLength + line.length > bound) throw new EventTooLarge(bound);
+          held.push(line);
+          line = held.join("");
+          held.length = 0;
+          heldLength = 0;
+        } else if (line.length > bound) throw new EventTooLarge(bound);
+        yield line;
+      }
+      if (rest === "") continue;
+      held.push(rest);
+      heldLength += rest.length;
+      if (heldLength > bound) throw new EventTooLarge(bound);
     }
   } finally {
     reader.releaseLock();
   }
-}
-
-function splitLines(text: string, final: boolean): { lines: string[]; rest: string } {
-  const heldCR = !final && text.endsWith("\r");
-  const lines = (heldCR ? text.slice(0, -1) : text).split(LINE_END);
-  const rest = lines.pop() ?? "";
-  return { lines, rest: heldCR ? `${rest}\r` : rest };
 }

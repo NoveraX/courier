@@ -1,8 +1,10 @@
 import { HTTP_TRANSPORT_VERSION, type HTTPOpening, PONG_FRAME } from "../ws/http-protocol";
 import { deliverOnce } from "./http-delivery";
 import { createOutbox } from "./http-outbox";
-import { endingOf, type PostTerms, post, waitBeforeAgain } from "./http-post";
+import { endingOf, httpAddressOf, type PostTerms, post, waitBeforeAgain } from "./http-post";
 import type { HTTPSocket, HTTPSocketOptions } from "./http-socket-types";
+
+const NOT_ANSWERED = "The server did not answer the connection's opening";
 
 /**
  * A socket whose frames travel over the HTTP transport of a WebSocket
@@ -16,12 +18,15 @@ import type { HTTPSocket, HTTPSocketOptions } from "./http-socket-types";
  * back on the way, so polls carry the frames from then on. The heartbeat's
  * ping is answered by the requests themselves: its pong is not sent.
  *
- * The request that opens the connection is made once: one the network or
- * the server does not answer closes the socket with 1006, before it holds
- * any connection, and the connection's backoff decides when to try again,
- * as for a socket that does not open — the platform's error first, where
- * the network did not carry the request, as a WebSocket's handshake that
- * failed reports it.
+ * The request that opens the connection is made once: one whose answer
+ * brings no `open` event closes the socket with 1006, before it holds any
+ * connection, and the connection's backoff decides when to try again, as
+ * for a socket that does not open — the platform's error first, where the
+ * network did not carry the request, as a WebSocket's handshake that failed
+ * reports it. Whatever an answer says before that event is not the
+ * server's. A frame larger than the client reads closes the socket with
+ * 1009, the server told, as a socket's message too big does: asked for
+ * again, it would only come again.
  *
  * @param url - The socket's address, `ws:` or `wss:`
  * @param options - How its requests are made, and how its frames come first
@@ -74,10 +79,20 @@ export function createHTTPSocket(url: string, options: HTTPSocketOptions): HTTPS
   }
 
   function take(data: string, seq: number | undefined): void {
-    if (readyState !== 1 || (seq !== undefined && seq <= taken)) return;
+    if (readyState !== 1) return;
+    if (token === undefined) {
+      end(1006, NOT_ANSWERED);
+      return;
+    }
+    if (seq !== undefined && seq <= taken) return;
     if (seq !== undefined) taken = seq;
     socket.onmessage?.({ data });
     if (untold >= ackBytes && mode === "stream") outbox.acknowledge();
+  }
+
+  function closed(code: number, reason: string): void {
+    if (token === undefined) end(1006, NOT_ANSWERED);
+    else end(code, reason);
   }
 
   function end(code: number, reason: string): void {
@@ -103,18 +118,20 @@ export function createHTTPSocket(url: string, options: HTTPSocketOptions): HTTPS
           probeMs: mode === "stream" ? options.probeMs : undefined,
           life: life.signal,
         },
-        { received, opened, frame: take, closed: end },
+        { received, opened, frame: take, closed },
       );
       if (readyState !== 1) return;
       if (delivered.kind === "ended") {
         absent = first && delivered.posted.kind === "absent";
         const { code, reason } = endingOf(delivered.posted);
         end(code, reason);
-      } else if (delivered.kind === "again" && first) {
+      } else if (token === undefined && delivered.kind !== "held") {
         /* As a WebSocket whose handshake failed: what the platform said, then the close. */
-        if (delivered.error !== undefined)
+        if (delivered.kind === "again" && delivered.error !== undefined)
           socket.onerror?.({ type: "error", error: delivered.error });
-        end(1006, "The server did not answer the connection's opening");
+        end(1006, NOT_ANSWERED);
+      } else if (delivered.kind === "too-large") {
+        socket.close(1009, delivered.reason);
       } else if (delivered.kind === "again") {
         const ms = waitBeforeAgain(delivered.afterMs, failures++);
         await new Promise((resume) => setTimeout(resume, ms));
@@ -173,12 +190,4 @@ export function createHTTPSocket(url: string, options: HTTPSocketOptions): HTTPS
     });
   });
   return socket;
-}
-
-/* The socket's address as HTTP takes it: the same host, path and query. */
-function httpAddressOf(url: string): string {
-  const address = new URL(url);
-  if (address.protocol === "ws:") address.protocol = "http:";
-  else if (address.protocol === "wss:") address.protocol = "https:";
-  return address.toString();
 }

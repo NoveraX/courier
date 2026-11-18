@@ -1,4 +1,5 @@
 import { ONCE } from "../../utils/own";
+import { EventTooLarge } from "../sse/sse-lines";
 import { type AnswerParts, readAnswer } from "./http-answer";
 import { type Posted, type PostTerms, post } from "./http-post";
 
@@ -27,6 +28,8 @@ export type Delivered =
   | { readonly kind: "again"; readonly afterMs: number | undefined; readonly error?: unknown }
   /** A stream whose first bytes did not come in time: something on the way holds answers back */
   | { readonly kind: "held" }
+  /** A frame ran past what the client reads: asked for again, it would come again */
+  | { readonly kind: "too-large"; readonly reason: string }
   /** The connection is gone, the transport is not there, or the request was refused */
   | {
       readonly kind: "ended";
@@ -91,7 +94,8 @@ export async function deliverOnce(
       attempt.signal,
     );
     return started || performance.now() - begun >= SOON_MS ? NEXT : AGAIN;
-  } catch {
+  } catch (error) {
+    if (error instanceof EventTooLarge) return { kind: "too-large", reason: error.message };
     return held() ? HELD : AGAIN;
   } finally {
     clearTimeout(probe);

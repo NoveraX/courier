@@ -1,15 +1,12 @@
 import { ONCE } from "../../utils/own";
 import { EventTooLarge } from "../sse/sse-lines";
 import { type AnswerParts, readAnswer } from "./http-answer";
-import { type Posted, type PostTerms, post } from "./http-post";
+import type { Posted } from "./http-post";
 
 /** One answer of the server's frames to ask for. */
 export interface DeliveryRequest {
-  readonly terms: PostTerms;
-  /** Its head, and on the request that opens the connection the client's first frames */
-  readonly body: string;
-  /** Headers of its own: the handshake's, on the request that opens the connection */
-  readonly headers?: Readonly<Record<string, string>> | undefined;
+  /** Make its request, given up with `signal`: the one that opens the connection, or one on it */
+  readonly post: (signal: AbortSignal) => Promise<Posted>;
   /** For a stream, how long its first bytes may take; none for a poll */
   readonly probeMs?: number | undefined;
   /** The socket's, whose abort ends the answer */
@@ -53,7 +50,8 @@ const SOON_MS = 1000;
  * @example
  * ```ts
  * const parts = { received, opened, frame, closed };
- * const delivered = await deliverOnce({ terms, body, probeMs: 3000, life }, parts);
+ * const request = (signal: AbortSignal) => post(terms, body, signal);
+ * const delivered = await deliverOnce({ post: request, probeMs: 3000, life }, parts);
  * if (delivered.kind === "held") mode = "poll";
  * ```
  */
@@ -74,8 +72,7 @@ export async function deliverOnce(
         }, request.probeMs);
   const held = (): boolean => attempt.signal.aborted && !started && !request.life.aborted;
   try {
-    const extra = request.headers === undefined ? {} : { headers: request.headers };
-    const posted = await post(request.terms, request.body, attempt.signal, extra);
+    const posted = await request.post(attempt.signal);
     if (held()) return HELD;
     if (posted.kind === "again") return posted;
     if (posted.kind !== "answered") return { kind: "ended", posted };

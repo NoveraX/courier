@@ -238,4 +238,23 @@ describe("a connection over the HTTP transport", () => {
     expect(resumed).toEqual([false, true]);
     expect(b.stats().http?.connections).toBe(1);
   });
+
+  it.each(["stream", "poll"] as const)(
+    "keeps its connection on a %s when a request of it reaches a replica with no HTTP transport, as one of an earlier release while a rollout runs",
+    async (mode) => {
+      const a = serve();
+      const { fetch, log } = entryTo([a, serve({ http: false })]);
+      const { connection, heard, resumed } = connect(fetch, mode);
+      await expect.poll(() => resumed.length).toBe(1);
+
+      connection.send(TOPIC, "hi");
+      await expect.poll(() => heard).toEqual(["echo:hi"]);
+      await publish(a, "one");
+
+      await expect.poll(() => heard).toEqual(["echo:hi", "one"]);
+      expect(resumed).toEqual([false]);
+      expect(log.heads.filter((head) => head.v !== undefined)).toHaveLength(1);
+      expect(a.stats().http?.connections).toBe(1);
+    },
+  );
 });

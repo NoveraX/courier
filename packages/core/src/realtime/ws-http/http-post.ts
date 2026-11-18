@@ -105,6 +105,25 @@ export function endingOf(posted: Exclude<Posted, { readonly kind: "answered" | "
 }
 
 /**
+ * An answer as a connection that opened takes it: one from no HTTP
+ * transport is one to make again. While a rollout runs, the replica that
+ * answered may be one of the earlier release, and the next request, dealt
+ * to another, reaches one that answers. Were the transport gone from every
+ * replica, nothing would come, and the connection's liveness watch would
+ * take it for dead, as it would a socket.
+ *
+ * @param posted - How a request on the connection came out
+ * @returns How the connection takes it
+ * @example
+ * ```ts
+ * againIfAbsent({ kind: "absent" }); // { kind: "again", afterMs: undefined }
+ * ```
+ */
+export function againIfAbsent(posted: Posted): Posted {
+  return posted.kind === "absent" ? { kind: "again", afterMs: undefined } : posted;
+}
+
+/**
  * Make one request of the transport and say how it came out. A request the
  * network did not carry, or an entry or the server could not answer now, is
  * one to make again; one the attempt gave up is too, and its caller, who

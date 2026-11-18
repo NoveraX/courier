@@ -1,7 +1,7 @@
 import { HTTP_TRANSPORT_VERSION, type HTTPOpening, PONG_FRAME } from "../ws/http-protocol";
 import { deliverOnce } from "./http-delivery";
 import { createOutbox } from "./http-outbox";
-import { endingOf, httpAddressOf, type PostTerms, post, waitBeforeAgain } from "./http-post";
+import { againIfAbsent, endingOf, httpAddressOf, post, waitBeforeAgain } from "./http-post";
 import type { HTTPSocket, HTTPSocketOptions } from "./http-socket-types";
 
 const NOT_ANSWERED = "The server did not answer the connection's opening";
@@ -24,11 +24,15 @@ const NOT_ANSWERED = "The server did not answer the connection's opening";
  * for a socket that does not open — the platform's error first, where the
  * network did not carry the request, as a WebSocket's handshake that failed
  * reports it. Whatever an answer says before that event is not the
- * server's. A frame larger than the client reads closes the socket with
- * 1009, the server told, as a socket's message too big does: asked for
- * again, it would only come again. A socket the client closes lets go of
- * its stream or poll once the server has the close, `probeMs` at most: let
- * go of first, it would end the connection there as one dropped, with 1006.
+ * server's. A request on the connection that no HTTP transport answered is
+ * made again, as one the network did not carry: while a rollout runs, a
+ * replica of the earlier release may have had it, and the next, dealt to
+ * another, reaches one that answers. A frame larger than the client reads
+ * closes the socket with 1009, the server told, as a socket's message too
+ * big does: asked for again, it would only come again. A socket the client
+ * closes lets go of its stream or poll once the server has the close,
+ * `probeMs` at most: let go of first, it would end the connection there as
+ * one dropped, with 1006.
  *
  * @param url - The socket's address, `ws:` or `wss:`
  * @param options - How its requests are made, and how its frames come first
@@ -40,7 +44,7 @@ const NOT_ANSWERED = "The server did not answer the connection's opening";
  * ```
  */
 export function createHTTPSocket(url: string, options: HTTPSocketOptions): HTTPSocket {
-  const terms: PostTerms = { url: httpAddressOf(url), fetch: options.fetch, init: options.init };
+  const terms = { url: httpAddressOf(url), fetch: options.fetch, init: options.init };
   const life = new AbortController();
   const sending = new AbortController();
   let readyState = 0;
@@ -52,11 +56,15 @@ export function createHTTPSocket(url: string, options: HTTPSocketOptions): HTTPS
   let taken = 0;
   let untold = 0;
   let ackBytes = Number.POSITIVE_INFINITY;
+  const handshake = options.headers === undefined ? {} : { headers: options.headers };
+  /* A request on the connection, which takes an answer from no HTTP transport for one to make again. */
+  const onConnection = async (body: string, signal: AbortSignal, keepalive?: true) =>
+    againIfAbsent(await post(terms, body, signal, keepalive ? { keepalive } : {}));
   const outbox = createOutbox({
     post: (body, keepalive) =>
       keepalive
-        ? post(terms, body, new AbortController().signal, { keepalive })
-        : post(terms, body, sending.signal),
+        ? onConnection(body, new AbortController().signal, true)
+        : onConnection(body, sending.signal),
     ack: acknowledged,
     ended: end,
   });
@@ -111,11 +119,12 @@ export function createHTTPSocket(url: string, options: HTTPSocketOptions): HTTPS
       const head = first
         ? { op: mode, v: HTTP_TRANSPORT_VERSION, cause: options.cause }
         : { op: mode, token, ack: acknowledged() };
+      const body = [JSON.stringify(head), ...(first ? (opening ?? []) : [])].join("\n");
       const delivered = await deliverOnce(
         {
-          terms,
-          body: [JSON.stringify(head), ...(first ? (opening ?? []) : [])].join("\n"),
-          headers: first ? options.headers : undefined,
+          post: first
+            ? (signal) => post(terms, body, signal, handshake)
+            : (signal) => onConnection(body, signal),
           probeMs: mode === "stream" ? options.probeMs : undefined,
           life: life.signal,
         },

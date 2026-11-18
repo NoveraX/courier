@@ -168,12 +168,21 @@ export async function post(
   }
 }
 
-/*
- * A status of an entry's is one of the server's only when its body names the
- * transport's code. A 200 is the transport's only with events, as each of its
- * is: an entry's page, or another app's answer at the path, is no transport.
+/**
+ * How an answer came out, as the socket acts on it. A status of an entry's
+ * is one of the server's only when its body names the transport's code. A
+ * 200 is the transport's only with events, as each of its is: an entry's
+ * page, or another app's answer at the path, is no transport.
+ *
+ * @param response - The answer, or the one a `refused` event stands for
+ * @param signal - The attempt's, which ends the read of a refusal's body
+ * @returns How it came out
+ * @example
+ * ```ts
+ * const posted = await postedOf(await fetch(url, init), attempt.signal);
+ * ```
  */
-async function postedOf(response: Response, signal: AbortSignal): Promise<Posted> {
+export async function postedOf(response: Response, signal: AbortSignal): Promise<Posted> {
   const { status } = response;
   if (status === 204 || (status === 200 && isEventStream(response))) {
     return { kind: "answered", response };

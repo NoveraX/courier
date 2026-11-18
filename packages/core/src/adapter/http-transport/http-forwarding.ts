@@ -30,15 +30,9 @@ export type Unanswered = { readonly failed: "unreachable" | "unavailable" };
 export interface Forwarding {
   /**
    * Send a request on to the replica that holds its connection, and wait
-   * for its answer: `taken` is called once the holder holds the poll, which
-   * it then may for `wait`
+   * for its answer: once the holder says it holds the poll, for `wait` more
    */
-  forward(
-    holder: string,
-    request: string,
-    wait: number,
-    taken?: () => void,
-  ): Promise<Answered | Unanswered>;
+  forward(holder: string, request: string, wait: number): Promise<Answered | Unanswered>;
   /** Hear what other replicas send this one, from now on: settles once the adapter has taken its channel */
   listen(): Promise<void>;
   /** Stop hearing them; every request still waiting is told the adapter cannot carry it */
@@ -148,7 +142,7 @@ export function createForwarding(options: ForwardingOptions): Forwarding {
 
   return {
     listen,
-    async forward(holder, request, wait, taken) {
+    async forward(holder, request, wait) {
       if (pubsub.state !== "ready") return { failed: "unavailable" };
       await listen();
       const id = randomId();
@@ -163,7 +157,6 @@ export function createForwarding(options: ForwardingOptions): Forwarding {
           taken() {
             clearTimeout(timer);
             timer = setTimeout(() => settle({ failed: "unreachable" }), wait + FORWARD_TIMEOUT_MS);
-            taken?.();
           },
           settle,
         });

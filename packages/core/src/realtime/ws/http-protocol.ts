@@ -16,7 +16,9 @@ import { encodeMessage } from "./ws-protocol";
  *
  * Any replica takes any request: one that reached a replica other than
  * the connection's holder is sent on to it, and a stream there is answered
- * with a poll of the holder's, which begins with a `relayed` event.
+ * with a poll of the holder's, which begins with a `relayed` event at once
+ * and ends, when the holder refused it or did not answer, with a `refused`
+ * event: the answer it would have had.
  */
 
 /** The version of the transport's framing, named by every request that opens a connection. */
@@ -102,7 +104,23 @@ export const HTTP_EVENTS = {
    * answered, and the client asks for its stream again
    */
   relayed: "relayed",
+  /**
+   * Last on an answer begun before its request was answered — a stream
+   * relayed to the holder — when the holder refused it or did not answer:
+   * the `HTTPRefused` it would have been answered with
+   */
+  refused: "refused",
 } as const;
+
+/** A refusal carried in an answer already begun: the answer it stands for. */
+export interface HTTPRefused {
+  /** Its status, 400 to 599 */
+  readonly status: number;
+  /** Its body: the server's JSON refusal */
+  readonly body: string;
+  /** Its `Retry-After`, when it asks for a wait */
+  readonly retryAfter?: string | undefined;
+}
 
 /** The heartbeat's ping, which the transport answers for the client while it hears from it. */
 export const PING_FRAME: string = encodeMessage({ type: "ping" });

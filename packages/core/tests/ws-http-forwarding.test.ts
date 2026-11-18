@@ -111,4 +111,30 @@ describe("the HTTP transport on replicas with no affinity", () => {
     expect(answer.status).toBe(504);
     expect(await answer.json()).toMatchObject({ code: "HOLDER_UNREACHABLE" });
   });
+
+  it("begins a stream that landed elsewhere at once, and ends it with the refusal it would have had once its holder has not answered in time", async () => {
+    const bus = createMemoryBus();
+    const b = replica(bus.replica("b"));
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+    let begun = false;
+    const token = `${"0".repeat(16)}.${"1".repeat(32)}`;
+    const answering = post(b, { op: "stream", token, ack: 0 }).then((answer) => {
+      begun = true;
+      return answer;
+    });
+    await vi.advanceTimersByTimeAsync(10);
+    const begunAtOnce = begun;
+    await vi.advanceTimersByTimeAsync(5_000);
+    const answer = await answering;
+    const events = await eventsOf(answer).rest();
+
+    expect(begunAtOnce).toBe(true);
+    expect(answer.status).toBe(200);
+    expect(events.map((event) => event.event)).toEqual(["relayed", "refused"]);
+    expect(JSON.parse(events[1]?.data ?? "{}")).toMatchObject({
+      status: 504,
+      body: expect.stringContaining('"code":"HOLDER_UNREACHABLE"'),
+    });
+  });
 });

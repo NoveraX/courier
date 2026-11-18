@@ -239,6 +239,39 @@ describe("a connection over the HTTP transport", () => {
     expect(b.stats().http?.connections).toBe(1);
   });
 
+  it("keeps to a stream once its holder died, a stream that landed on another replica not taken for one held back", {
+    timeout: 15_000,
+  }, async () => {
+    const bus = createMemoryBus({ log: {} });
+    const dead = bus.replica("a");
+    const [a, b] = [serve({ pubsub: dead }), serve({ pubsub: bus.replica("b") })];
+    const replicas = [a];
+    /* What the dead replica was answering is cut, as a network cuts it. */
+    const death = new AbortController();
+    const dying: EntryWay = async (_head, pass) => {
+      const answer = await pass();
+      if (death.signal.aborted || answer.body === null) return answer;
+      const pipe = new TransformStream<Uint8Array, Uint8Array>();
+      answer.body.pipeTo(pipe.writable, { signal: death.signal }).catch(() => undefined);
+      return new Response(pipe.readable, { status: answer.status, headers: answer.headers });
+    };
+    const { fetch } = entryTo(replicas, dying);
+    const { heard, resumed, sockets } = connect(fetch, "stream", 100);
+    await expect.poll(() => resumed.length).toBe(1);
+    await publish(b, "one");
+    await expect.poll(() => heard).toEqual(["one"]);
+
+    await dead.disconnect();
+    replicas.splice(0, 1, b);
+    death.abort();
+    await publish(b, "two");
+
+    await expect.poll(() => resumed.length, { timeout: 12_000 }).toBe(2);
+    await expect.poll(() => heard).toEqual(["one", "two"]);
+    expect(resumed).toEqual([false, true]);
+    expect(sockets.map((socket) => socket.mode)).toEqual(["stream", "stream"]);
+  });
+
   it.each(["stream", "poll"] as const)(
     "keeps its connection on a %s when a request of it reaches a replica with no HTTP transport, as one of an earlier release while a rollout runs",
     async (mode) => {

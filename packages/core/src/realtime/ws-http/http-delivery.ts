@@ -1,7 +1,7 @@
 import { ONCE } from "../../utils/own";
 import { EventTooLarge } from "../sse/sse-lines";
 import { type AnswerParts, readAnswer } from "./http-answer";
-import type { Posted } from "./http-post";
+import { type Posted, postedOf } from "./http-post";
 
 /** One answer of the server's frames to ask for. */
 export interface DeliveryRequest {
@@ -42,7 +42,9 @@ const SOON_MS = 1000;
 /**
  * Ask for one answer of the server's frames — a stream, or a poll — and
  * read it to its end, each part handed on as it comes. A stream whose first
- * bytes do not come in `probeMs` is given up, and said to be held back.
+ * bytes do not come in `probeMs` is given up, and said to be held back. An
+ * answer that ends with a refusal comes out as that refusal would have,
+ * had the request been answered with it.
  *
  * @param request - What to ask for, and where
  * @param parts - What counts the answer's bytes, and takes its `open` event, its frames and its `close`
@@ -57,7 +59,7 @@ const SOON_MS = 1000;
  */
 export async function deliverOnce(
   request: DeliveryRequest,
-  parts: AnswerParts,
+  parts: Omit<AnswerParts, "refused">,
 ): Promise<Delivered> {
   const attempt = new AbortController();
   const stop = (): void => attempt.abort();
@@ -78,6 +80,7 @@ export async function deliverOnce(
     if (posted.kind !== "answered") return { kind: "ended", posted };
     const { body } = posted.response;
     if (body === null) return AGAIN;
+    let refusal: Response | undefined;
     await readAnswer(
       body,
       {
@@ -87,9 +90,13 @@ export async function deliverOnce(
           clearTimeout(probe);
           parts.received(bytes);
         },
+        refused(answer) {
+          refusal = answer;
+        },
       },
       attempt.signal,
     );
+    if (refusal !== undefined) return deliveredOf(await postedOf(refusal, attempt.signal));
     return started || performance.now() - begun >= SOON_MS ? NEXT : AGAIN;
   } catch (error) {
     if (error instanceof EventTooLarge) return { kind: "too-large", reason: error.message };
@@ -98,4 +105,10 @@ export async function deliverOnce(
     clearTimeout(probe);
     request.life.removeEventListener("abort", stop);
   }
+}
+
+/* A refusal an answer ended with, as the same refusal of the request comes out. */
+function deliveredOf(posted: Posted): Delivered {
+  if (posted.kind === "again") return posted;
+  return posted.kind === "answered" ? AGAIN : { kind: "ended", posted };
 }

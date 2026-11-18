@@ -21,14 +21,18 @@ export interface AnswerParts {
   frame(data: string, seq: number | undefined): void;
   /** The `close` event: the server closed the connection, after its last frame */
   closed(code: number, reason: string): void;
+  /** The `refused` event: the answer, begun, stands for this refusal of its request */
+  refused(answer: Response): void;
 }
 
 /**
  * Read an answer of events, each part as it comes, until the answer ends:
- * after its last frame, or with the connection's close. A `relayed` event,
- * which begins the answer another replica gave a stream with its holder's
- * poll, needs nothing: the socket asks for its stream again once the answer
- * ends, as after any.
+ * after its last frame, with the connection's close, or with a refusal. A
+ * `relayed` event, which begins the answer another replica gave a stream
+ * with its holder's poll, needs nothing: the socket asks for its stream
+ * again once the answer ends, as after any. A `refused` event, which ends
+ * such an answer when the holder refused the stream or did not answer, is
+ * handed on as the answer it stands for, its status, body and wait.
  *
  * The body is read through a pipe the attempt's abort cuts, so an answer
  * given up ends at once, whatever `fetch` made it; the pipe counts its
@@ -41,7 +45,7 @@ export interface AnswerParts {
  * @param body - The answer's body
  * @param parts - What takes each of its parts
  * @param signal - The attempt's
- * @throws {TypeError} For an `open` or a `close` event that says no such thing: no server of this transport sent it
+ * @throws {TypeError} For an `open`, a `close` or a `refused` event that says no such thing: no server of this transport sent it
  * @throws EventTooLarge for a line or an event that runs past `HTTP_MAX_EVENT_LENGTH`
  * @example
  * ```ts
@@ -77,6 +81,9 @@ export async function readAnswer(
           parts.closed(code, reason);
           return;
         }
+        case HTTP_EVENTS.refused:
+          parts.refused(refusalOf(event.data));
+          return;
         default:
           /* `relayed`, or an event of a later version of the transport this client needs nothing of. */
           break;
@@ -102,6 +109,18 @@ function closingOf(data: string): { readonly code: number; readonly reason: stri
     return { code: said.code, reason: said.reason };
   }
   throw new TypeError(`Not the close event of an HTTP transport: ${data}`);
+}
+
+/* The answer a `refused` event stands for, as it would have come. */
+function refusalOf(data: string): Response {
+  const said = fieldsOf(data);
+  const { status, body, retryAfter } = said;
+  if (isCount(status) && status >= 400 && status <= 599 && isString(body)) {
+    const headers = new Headers({ "Content-Type": "application/json" });
+    if (isString(retryAfter)) headers.set("Retry-After", retryAfter);
+    return new Response(body, { status, headers });
+  }
+  throw new TypeError(`Not the refused event of an HTTP transport: ${data}`);
 }
 
 function fieldsOf(data: string): Record<string, unknown> {

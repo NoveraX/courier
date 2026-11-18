@@ -1,4 +1,9 @@
-import { HTTP_EVENTS, type HTTPOpening, PING_FRAME } from "../../realtime/ws/http-protocol";
+import {
+  HTTP_EVENTS,
+  type HTTPOpening,
+  type HTTPRefused,
+  PING_FRAME,
+} from "../../realtime/ws/http-protocol";
 
 /* The events of an answer, each encoded once: a frame kept for resending is resent as its bytes. */
 const encoder = new TextEncoder();
@@ -53,6 +58,27 @@ export function openEvent(opening: HTTPOpening): Uint8Array {
  */
 export function closeEvent(close: { readonly code: number; readonly reason: string }): Uint8Array {
   return namedEvent(HTTP_EVENTS.close, { code: close.code, reason: close.reason });
+}
+
+/**
+ * The event that ends an answer already begun with the refusal its request
+ * would have been answered with otherwise: its status, body and wait.
+ *
+ * @param refusal - The answer it stands for
+ * @returns The event's bytes
+ * @example
+ * ```ts
+ * controller.enqueue(await refusedEvent(responseOf({ failed: "unreachable" })));
+ * ```
+ */
+export async function refusedEvent(refusal: Response): Promise<Uint8Array> {
+  const retryAfter = refusal.headers.get("retry-after");
+  const said: HTTPRefused = {
+    status: refusal.status,
+    body: await refusal.text(),
+    ...(retryAfter !== null && { retryAfter }),
+  };
+  return namedEvent(HTTP_EVENTS.refused, said);
 }
 
 function namedEvent(name: string, data: unknown): Uint8Array<ArrayBuffer> {

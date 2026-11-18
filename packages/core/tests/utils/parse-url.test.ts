@@ -133,6 +133,7 @@ describe("on a runtime without URL.parse and URL.canParse", () => {
 
     await expect(api.me()).resolves.toEqual({});
     await expect(api.me()).resolves.toEqual({});
+    await vi.dynamicImportSettled();
 
     const said = warn.mock.calls
       .flat()

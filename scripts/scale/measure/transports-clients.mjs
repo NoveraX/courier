@@ -19,9 +19,12 @@
  * its share of what the queue holds. Given `socket`, a Unix socket's path,
  * they reach `url`'s server through it, as clients on hosts of their own
  * would: on one host, a connection through an entry would hold two of its
- * ephemeral ports, and a storm of thousands runs out of them.
+ * ephemeral ports, and a storm of thousands runs out of them. Given
+ * `refused`, they are behind an entry that lets no WebSocket through, and
+ * it refuses here, before the server hears of it, each probe a connection
+ * over HTTP makes for one getting through again.
  *
- *   node transports-clients.mjs <url> <websocket|stream|poll|ladder> <count> <first> <wave> [socket]
+ *   node transports-clients.mjs <url> <websocket|stream|poll|ladder> <count> <first> <wave> [socket] [refused]
  */
 import { argv, exit, hrtime } from "node:process";
 
@@ -38,6 +41,7 @@ const [
   firstArg = "0",
   waveArg = "25",
   socketPath = "",
+  refusedArg = "",
 ] = argv.slice(2);
 const COUNT = Number(countArg);
 const FIRST = Number(firstArg);
@@ -48,6 +52,14 @@ const ROOM = qualifyTopic("api.room", { room: "all" });
 /* Every request and socket of the process by way of the socket path, when there is one. */
 const through =
   socketPath === "" ? undefined : { dispatcher: new Agent({ connect: { socketPath } }) };
+
+/* A WebSocket the entry in front refuses: one that cannot be made, as a probe takes one refused. */
+class RefusedWebSocket {
+  constructor() {
+    throw new Error("The entry lets no WebSocket through");
+  }
+}
+const webSocket = refusedArg === "refused" ? RefusedWebSocket : WebSocket;
 
 const nowUs = () => Number(hrtime.bigint() / 1000n);
 const tell = (message) => process.send?.(message);
@@ -144,7 +156,7 @@ function open(index) {
     url,
     credentials: () => ({ frame: { auth: { userId: `u${FIRST + index}` } } }),
     fetch,
-    webSocket: WebSocket,
+    webSocket,
     fetchInit: through,
     socketInit: through,
   });

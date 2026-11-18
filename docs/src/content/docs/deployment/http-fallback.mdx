@@ -74,9 +74,9 @@ A connection whose WebSocket works costs nothing more: no request over HTTP, and
 
 | Measured | WebSocket | HTTP stream | Polls |
 | --- | --- | --- | --- |
-| The server's heap a connection | 18.2 KB | 30.4 KB | 33.4 KB |
-| The server's processor time a message delivered | 9.3 µs | 14.6 µs, 1.6× | 96.4 µs, 10× |
-| A broadcast to all 2000, until each has it, p50 / p99 | 13 / 36 ms | 17 / 39 ms | 64 / 130 ms |
+| The server's heap a connection | 18.3 KB | 30.5 KB | 33.5 KB |
+| The server's processor time a message delivered | 7.6 µs | 14.0 µs, 1.6× to 2.0× run to run | 90 µs, 12× to 14× |
+| A broadcast to all 2000, until each has it, p50 / p99 | 11 / 37 ms | 13 / 50 ms | 59 / 168 ms |
 
 Behind an entry that refuses the upgrade, a client's subscription had its first data under 40 ms after it asked, on a stream. Behind one that holds the upgrade, or lets it through and holds back what the server sends, it had it after `after`, 3 s, on a stream; behind one that also holds every answer until it ends, after the same 3 s, on polls.
 

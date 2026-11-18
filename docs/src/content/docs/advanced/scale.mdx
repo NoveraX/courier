@@ -40,13 +40,13 @@ Courier's WebSocket handler driven with ten thousand sockets held in memory, the
 
 ### Each transport of a connection
 
-The same handler on a server of its own, 2000 connections of Courier's client in 8 processes on the same machine, on each of the [transports a connection climbs down to](/docs/advanced/realtime-connections#when-no-websocket-gets-through) in turn. A connection holds sockets and their buffers here, which the figures above leave out.
+The same handler on three servers of its own, one for each of the [transports a connection climbs down to](/docs/advanced/realtime-connections#when-no-websocket-gets-through), 2000 connections of Courier's client on each, in 8 processes a transport on the same machine. The three are broadcast to at the same pace, each every 250 ms and a third of that apart, and timed over the same three windows of 20 broadcasts: a figure is the median of its windows, and a multiple of WebSocket's the median of the windows' own. A server that waited idle costs more a message for a while after, an HTTP stream's up to twice as much, so none of them waits its turn. A connection holds sockets and their buffers here, which the figures above leave out.
 
 | Measured | WebSocket | HTTP stream | Polls |
 | --- | --- | --- | --- |
-| The server's heap a connection | 18.2 KB | 30.4 KB | 33.4 KB |
-| The server's processor time a message delivered | 9.3 µs | 14.6 µs, 1.6× | 96.4 µs, 10× |
-| A broadcast to all 2000, until each has it, p50 / p99 | 13 / 36 ms | 17 / 39 ms | 64 / 130 ms |
+| The server's heap a connection | 18.3 KB | 30.5 KB | 33.5 KB |
+| The server's processor time a message delivered | 7.6 µs | 14.0 µs, 1.6× to 2.0× run to run | 90 µs, 12× to 14× |
+| A broadcast to all 2000, until each has it, p50 / p99 | 11 / 37 ms | 13 / 50 ms | 59 / 168 ms |
 
 Every connection had every broadcast once, in order, on each transport.
 

@@ -2,12 +2,14 @@
  * Run inside a fresh Node: what each transport costs a replica, side by
  * side — WebSocket, an HTTP stream, polls — its connections opened by
  * Courier's own client in processes of their own, so what is read off the
- * replica's process is the replica's alone. For each: the heap a
- * connection holds, the processor time of each message delivered, and how
- * long a broadcast takes to reach each subscriber, from its start to the
- * client's hands. Each broadcast waits a gap after the last, so what is
- * timed is a broadcast's, not a queue's. Prints what it saw, as JSON, or
- * `{ failed }` with why it saw nothing, and exits with 1.
+ * replica's process is the replica's alone. The three are open at once,
+ * each on a replica of its own, broadcast to at the same pace, and timed
+ * over the same windows. For each: the heap a connection holds, the
+ * processor time of each message delivered, and how long a broadcast takes
+ * to reach each subscriber, from its start to the client's hands. Each
+ * broadcast waits a gap after the last, so what is timed is a broadcast's,
+ * not a queue's. Prints what it saw, as JSON, or `{ failed }` with why it
+ * saw nothing, and exits with 1.
  *
  *   node transports-probe.mjs [connections]
  */
@@ -20,53 +22,123 @@ import { startClients, startReplica } from "./transports-processes.mjs";
 
 const [connectionsArg = "2000"] = argv.slice(2);
 const CONNECTIONS = Number(connectionsArg);
-/* The clients' processes: as many as the machine runs beside the replica, so that what a client
-   takes to read its messages is not what holds the next one up. */
+/* Each transport's clients' processes: as many as the machine runs beside a replica, so that what
+   a client takes to read its messages is not what holds the next one up. */
 const PROCESSES = Math.max(2, Math.min(8, availableParallelism() - 2));
-/* Broadcasts before the timed ones, so the first calls' compiling is not what is timed. */
-const WARM = 5;
+/* Rounds before the timed ones, at the pace of the timed ones: the first calls' compiling behind
+   them, and each replica as busy as it is timed. */
+const WARM_ROUNDS = 20;
+/* Each window's rounds, every replica broadcast to once a round, and the windows timed. */
 const ROUNDS = 20;
+const WINDOWS = 3;
 const GAP_MS = 250;
 /* After the last broadcast is in every client's hands, for what it set off — the polls asked
    again — to be done before the processor time is read. */
 const SETTLE_MS = 300;
 
-async function measureTransport(transport) {
+const TRANSPORTS = ["websocket", "stream", "poll"];
+
+/*
+ * A transport's replica, its connections all subscribed, and the heap they hold; kept in
+ * `opened` from its start, so whatever fails on the way is closed with the rest. A
+ * replica of an HTTP transport refuses upgrades, as the entry it stands for would; that entry
+ * would also refuse, before any replica heard of them, the probes each connection over HTTP
+ * makes for a WebSocket getting through again, 15 to 30 s after it opens, so its clients refuse
+ * those themselves, and what the replica is measured for is the messages it delivers.
+ */
+async function open(transport, opened) {
   const replica = await startReplica({ upgrades: transport === "websocket" });
+  const run = { transport, replica, clients: undefined, heapPerConnectionKb: 0, n: 0 };
+  opened.push(run);
+  const { bytes: idle } = await replica.ask("heap");
+  run.clients = startClients(replica.url, transport, CONNECTIONS, PROCESSES, {
+    webSocketRefused: transport !== "websocket",
+  });
+  await run.clients.when(
+    ({ subscribed }) => subscribed === CONNECTIONS,
+    `${CONNECTIONS} connections subscribed on ${transport}`,
+  );
+  const { bytes: held } = await replica.ask("heap");
+  run.heapPerConnectionKb = (held - idle) / CONNECTIONS / 1024;
+}
+
+/*
+ * The transports side by side, each on a replica of its own, all three open at once and busy at
+ * the same pace: each round broadcasts on each, a third of the gap after the last, so each
+ * replica's broadcasts are the gap apart and no two begin together; and each window reads every
+ * replica's processor time over the same rounds. A message's processor time is the median of a
+ * transport's windows, and how it stands to WebSocket's the median of what it was in each window.
+ * Whatever the machine does meanwhile — the cores it gives them, their clocks, another process's
+ * load — it does to all three alike; and none waits idle for a turn, which a replica in service
+ * does not either, and after which the machine runs it slower for a while: an HTTP stream timed
+ * after ten seconds of waiting cost up to twice as much a message, in the kernel's time for the
+ * same writes as in its own.
+ */
+async function measure() {
+  const seen = {
+    connections: CONNECTIONS,
+    rounds: ROUNDS,
+    windows: WINDOWS,
+    clientProcesses: PROCESSES,
+  };
+  const opened = [];
   try {
-    const { bytes: idle } = await replica.ask("heap");
-    const clients = startClients(replica.url, transport, CONNECTIONS, PROCESSES);
-    try {
-      await clients.when(
-        ({ subscribed }) => subscribed === CONNECTIONS,
-        `${CONNECTIONS} connections subscribed on ${transport}`,
-      );
-      const { bytes: held } = await replica.ask("heap");
-      let n = 0;
-      while (n < WARM) await replica.ask("broadcast", { n: ++n });
-      await clients.awaitEvent(n);
-      const { us: begun } = await replica.ask("cpu");
-      for (let round = 0; round < ROUNDS; round++) {
-        await replica.ask("broadcast", { n: ++n, timed: true });
-        await sleep(GAP_MS);
-      }
-      const seen = await clients.awaitEvent(n);
-      await sleep(SETTLE_MS);
-      const { us: ended } = await replica.ask("cpu");
-      return {
-        heapPerConnectionKb: (held - idle) / CONNECTIONS / 1024,
-        cpuPerMessageUs: (ended - begun) / (CONNECTIONS * ROUNDS),
-        fanout: percentiles(seen.latencies.map((us) => us / 1000)),
-        delivered: seen.short === 0 && seen.missed === 0 && seen.twice === 0,
-        carried: carriedOf(seen.transports),
+    for (const transport of TRANSPORTS) await open(transport, opened);
+    await broadcastRounds(opened, WARM_ROUNDS, false);
+    await Promise.all(opened.map(({ clients, n }) => clients.awaitEvent(n)));
+    const windows = [];
+    for (let window = 0; window < WINDOWS; window++) windows.push(await timedWindow(opened));
+    for (const [index, run] of opened.entries()) {
+      const timed = windows.map((each) => each[index]);
+      const last = timed.at(-1).heard;
+      seen[run.transport] = {
+        heapPerConnectionKb: run.heapPerConnectionKb,
+        cpuPerMessageUs: median(timed.map(({ cpuPerMessageUs }) => cpuPerMessageUs)),
+        fanout: percentiles(timed.flatMap(({ heard }) => heard.latencies).map((us) => us / 1000)),
+        delivered: last.short === 0 && last.missed === 0 && last.twice === 0,
+        carried: carriedOf(last.transports),
       };
-    } finally {
-      await clients.close();
     }
+    const ofWebSocket = (transport) => {
+      const at = TRANSPORTS.indexOf(transport);
+      return median(windows.map((each) => each[at].cpuPerMessageUs / each[0].cpuPerMessageUs));
+    };
+    seen.streamOfWebSocket = ofWebSocket("stream");
+    seen.pollOfWebSocket = ofWebSocket("poll");
+    return seen;
   } finally {
-    replica.kill();
+    await Promise.all(opened.map(({ clients }) => clients?.close()));
+    for (const { replica } of opened) replica.kill();
   }
 }
+
+/* Rounds of broadcasts: each round one on each replica, a third of the gap after the last. */
+async function broadcastRounds(opened, rounds, timed) {
+  const sent = [];
+  for (let round = 0; round < rounds; round++) {
+    for (const run of opened) {
+      sent.push(run.replica.ask("broadcast", { n: ++run.n, timed }));
+      await sleep(GAP_MS / opened.length);
+    }
+  }
+  await Promise.all(sent);
+}
+
+/* A window of rounds, timed on every replica alike: the processor time of each message it
+   delivered, and what its clients had once the last broadcast was in every one's hands. */
+async function timedWindow(opened) {
+  const begun = await Promise.all(opened.map(({ replica }) => replica.ask("cpu")));
+  await broadcastRounds(opened, ROUNDS, true);
+  const heard = await Promise.all(opened.map(({ clients, n }) => clients.awaitEvent(n)));
+  await sleep(SETTLE_MS);
+  const ended = await Promise.all(opened.map(({ replica }) => replica.ask("cpu")));
+  return opened.map((_run, index) => ({
+    cpuPerMessageUs: (ended[index].us - begun[index].us) / (CONNECTIONS * ROUNDS),
+    heard: heard[index],
+  }));
+}
+
+const median = (values) => percentiles(values).p50;
 
 /* The connections each transport carried at the end, every client process's together. */
 function carriedOf(counts) {
@@ -77,14 +149,6 @@ function carriedOf(counts) {
     }
   }
   return carried;
-}
-
-async function measure() {
-  const seen = { connections: CONNECTIONS, rounds: ROUNDS, clientProcesses: PROCESSES };
-  for (const transport of ["websocket", "stream", "poll"]) {
-    seen[transport] = await measureTransport(transport);
-  }
-  return seen;
 }
 
 const seen = await measure().catch((error) => ({

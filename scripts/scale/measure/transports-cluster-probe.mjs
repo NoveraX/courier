@@ -148,7 +148,9 @@ async function measureStorm(redis, prefix) {
   for (let i = 0; i < 3; i++) replicas.push(await startReplica({ upgrades: false, redis, prefix }));
   const [drained, publisher] = replicas;
   const entry = await startEntry(replicas.map((replica) => replica.port));
-  const clients = startClients(entry.url, "stream", STORM, PROCESSES, entry.socketPath);
+  const clients = startClients(entry.url, "stream", STORM, PROCESSES, {
+    socketPath: entry.socketPath,
+  });
   try {
     await clients.when(({ subscribed }) => subscribed === STORM, `${STORM} connections subscribed`);
     const { stats } = await drained.ask("stats");
@@ -194,7 +196,9 @@ async function measureWayBack(redis, prefix) {
   for (let i = 0; i < 2; i++) replicas.push(await startReplica({ redis, prefix }));
   const [publisher] = replicas;
   const entry = await startEntry(replicas.map((replica) => replica.port));
-  const clients = startClients(entry.url, "ladder", WAY_BACK, PROCESSES, entry.socketPath);
+  const clients = startClients(entry.url, "ladder", WAY_BACK, PROCESSES, {
+    socketPath: entry.socketPath,
+  });
   try {
     await clients.when(
       ({ subscribed, websocket }) => subscribed === WAY_BACK && websocket === 0,

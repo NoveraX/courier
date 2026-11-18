@@ -12,7 +12,7 @@ import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { env } from "node:process";
 
-import { measured, times } from "./metrics.mjs";
+import { measured } from "./metrics.mjs";
 
 /** Connections each transport is measured with. */
 const CONNECTIONS = 2_000;
@@ -41,7 +41,7 @@ const BUDGETS = {
  */
 export async function measureTransports({ repo }) {
   const seen = probe(repo, "transports-probe.mjs", CONNECTIONS, (figures) => figures.poll);
-  const of = `${seen.connections} connections, ${seen.clientProcesses} client processes`;
+  const of = `${seen.connections} connections, ${seen.clientProcesses} client processes, the median of ${seen.windows} windows`;
   const figures = [];
   for (const transport of ["websocket", "stream", "poll"]) {
     const each = seen[transport];
@@ -63,13 +63,14 @@ export async function measureTransports({ repo }) {
       measured(`transports.${transport}.delivered`, each.delivered ? 1 : 0, "", 1, { more: true }),
     );
   }
-  const ws = seen.websocket.cpuPerMessageUs;
+  /* Each against WebSocket's over the same window: the median of the windows' own. */
+  const ofWindows = `the median of ${seen.windows} windows' own, the three timed over each`;
   figures.push(
-    measured("transports.stream.cpuOfWebSocket", seen.stream.cpuPerMessageUs / ws, "×", 2.5, {
-      note: `streaming's processor time per message, ${times(seen.stream.cpuPerMessageUs, ws)} WebSocket's`,
+    measured("transports.stream.cpuOfWebSocket", seen.streamOfWebSocket, "×", 2.5, {
+      note: ofWindows,
     }),
-    measured("transports.poll.cpuOfWebSocket", seen.poll.cpuPerMessageUs / ws, "×", 12, {
-      note: "an answer ended and a request read for every message",
+    measured("transports.poll.cpuOfWebSocket", seen.pollOfWebSocket, "×", 12, {
+      note: `${ofWindows}; an answer ended and a request read for every message`,
     }),
   );
   return figures;

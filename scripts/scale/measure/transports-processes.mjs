@@ -54,7 +54,7 @@ export async function startReplica(config) {
  * @param {"websocket" | "stream" | "poll" | "ladder"} transport - The transport they start on
  * @param {number} count - The connections
  * @param {number} processes - The processes they are spread over
- * @param {string} [socketPath] - A Unix socket that `url`'s server listens on, which they reach it through
+ * @param {{ socketPath?: string, webSocketRefused?: boolean }} [through] - A Unix socket that `url`'s server listens on, which they reach it through; and whether an entry in front refuses every WebSocket, here, before the server hears of it
  * @returns {{ when: (test: (counts: Counts) => boolean, what: string) => Promise<number>, awaitEvent: (n: number) => Promise<any>, stuck: () => Promise<any[]>, close: () => Promise<void> }} The clients
  * @example
  * ```js
@@ -62,7 +62,13 @@ export async function startReplica(config) {
  * await clients.when(({ subscribed }) => subscribed === 2_000, "every connection subscribed");
  * ```
  */
-export function startClients(url, transport, count, processes, socketPath = "") {
+export function startClients(
+  url,
+  transport,
+  count,
+  processes,
+  { socketPath = "", webSocketRefused = false } = {},
+) {
   const share = Math.ceil(count / processes);
   const children = [];
   /** @type {Counts[]} */
@@ -79,6 +85,7 @@ export function startClients(url, transport, count, processes, socketPath = "") 
         String(first),
         String(Math.max(1, Math.floor(AT_ONCE / processes))),
         socketPath,
+        webSocketRefused ? "refused" : "",
       ],
       { stdio: ["ignore", "ignore", "inherit", "ipc"] },
     );

@@ -14,8 +14,10 @@ import type { WSClientSocket, WSMessageEventLike, WSSocketFactory } from "./ws-t
  * held back on the way — then: the frames the client sent on it go with
  * the request that opens the connection over HTTP. A WebSocket the server
  * answered on stays, whatever happens to it next. The rung the HTTP
- * transport reached is kept, so the next socket to the path starts there,
- * and one where no HTTP transport answers is kept to the WebSocket. While
+ * transport reached is kept, so the next socket to the path starts there;
+ * where no HTTP transport answers, nothing is, and the next tries a
+ * WebSocket first again — the replica that answered may be one of an
+ * earlier release, which the entry's next request passes by. While
  * HTTP carries the connection, the path is probed for a WebSocket getting
  * through again; once one does, the rung is forgotten and the socket says
  * so: the connection is made anew, on a WebSocket.
@@ -29,10 +31,7 @@ import type { WSClientSocket, WSMessageEventLike, WSSocketFactory } from "./ws-t
  * ```
  */
 export function ladderFactory(options: LadderOptions): WSSocketFactory {
-  return (url, protocols, headers) =>
-    options.memory.get(url) === "absent"
-      ? options.webSocket(url, protocols, headers)
-      : ladderSocket(url, protocols, headers, options);
+  return (url, protocols, headers) => ladderSocket(url, protocols, headers, options);
 }
 
 function ladderSocket(
@@ -43,7 +42,7 @@ function ladderSocket(
 ): LadderSocket {
   const { memory } = options;
   const kept = memory.get(url);
-  let transport: WSTransport = kept === "stream" || kept === "poll" ? kept : "websocket";
+  let transport: WSTransport = kept ?? "websocket";
   let current: WSClientSocket | undefined;
   let readyState = 0;
   let answered = false;
@@ -138,10 +137,7 @@ function ladderSocket(
       if (answered) memory.set(url, next);
       ladder.ontransport?.(next);
     };
-    socket.onclose = (event) => {
-      if (socket.absent) memory.set(url, "absent");
-      ended(event.code, event.reason);
-    };
+    socket.onclose = (event) => ended(event.code, event.reason);
     socket.onerror = (event) => ladder.onerror?.(event);
   }
 

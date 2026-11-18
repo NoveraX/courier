@@ -282,12 +282,11 @@ describe("a socket over HTTP", () => {
         headers: { "Content-Type": "text/html; charset=utf-8" },
       });
     const { fetch, log } = entryTo([serve()], anotherApp(page));
-    const { socket, closes } = socketThrough(fetch);
+    const { closes } = socketThrough(fetch);
 
     await expect
       .poll(() => closes)
       .toEqual([{ code: 1006, reason: "No HTTP transport answers at the socket's path" }]);
-    expect(socket.absent).toBe(true);
     expect(log.heads).toHaveLength(1);
   });
 });

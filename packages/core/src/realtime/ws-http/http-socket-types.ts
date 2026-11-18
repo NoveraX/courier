@@ -28,8 +28,6 @@ export interface HTTPSocket extends WSClientSocket {
   readonly mode: HTTPMode;
   /** Told when they come another way from then on: a stream held back, so polls */
   onmode: ((mode: HTTPMode) => void) | null;
-  /** Whether it closed because no HTTP transport answers at its path */
-  readonly absent: boolean;
   /**
    * Whether the server answered the request that opens the connection:
    * until it does, the socket is open only to carry the client's first

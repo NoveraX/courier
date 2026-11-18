@@ -45,7 +45,6 @@ export function createHTTPSocket(url: string, options: HTTPSocketOptions): HTTPS
   const sending = new AbortController();
   let readyState = 0;
   let mode = options.mode;
-  let absent = false;
   /* The frames the connection opens with, sent again by an opening made again, until its token comes. */
   let opening: string[] | undefined = [];
   let requested = false;
@@ -124,7 +123,6 @@ export function createHTTPSocket(url: string, options: HTTPSocketOptions): HTTPS
       );
       if (readyState !== 1) return;
       if (delivered.kind === "ended") {
-        absent = first && delivered.posted.kind === "absent";
         const { code, reason } = endingOf(delivered.posted);
         end(code, reason);
       } else if (token === undefined && delivered.kind !== "held") {
@@ -161,9 +159,6 @@ export function createHTTPSocket(url: string, options: HTTPSocketOptions): HTTPS
     },
     get mode() {
       return mode;
-    },
-    get absent() {
-      return absent;
     },
     get reached() {
       return token !== undefined;

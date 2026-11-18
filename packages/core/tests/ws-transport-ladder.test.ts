@@ -229,28 +229,43 @@ describe("the rung a path reached", () => {
     expect(a.stats().http?.fallbacks).toMatchObject({ refused: 2, remembered: 1 });
   });
 
-  it("keeps to WebSocket where no HTTP transport answers", async () => {
+  it("is none where no HTTP transport answered: each attempt tries a WebSocket first, then one request", async () => {
     const a = serve({ http: false });
     const { fetch, log } = entryTo([a]);
     const { connection, sockets } = connect(a, "refuse", { fetch });
 
-    await expect.poll(() => sockets.opened()).toBeGreaterThanOrEqual(3);
-    expect(log.heads).toHaveLength(1);
+    await expect.poll(() => log.heads.length).toBeGreaterThanOrEqual(3);
+    expect(log.heads.every((head) => head.cause === "refused")).toBe(true);
+    expect(sockets.opened()).toBeGreaterThanOrEqual(log.heads.length);
     expect(connection.state.phase).not.toBe("open");
   });
 
-  it("is kept in the tab's session for its path, so the page loaded again starts there; a missing transport only for the page", async () => {
+  it("is reached past a replica with no HTTP transport, as one of an earlier release while a rollout runs", async () => {
+    const earlier = serve({ http: false });
+    const b = serve();
+    const { fetch, log } = entryTo([earlier, b]);
+    const { connection, admitted } = connect(b, "refuse", { fetch });
+
+    await expect.poll(() => admitted.length).toBe(1);
+    expect(transportOf(connection)).toBe("stream");
+    expect(log.heads.filter((head) => head.v !== undefined).map((head) => head.cause)).toEqual([
+      "refused",
+      "refused",
+    ]);
+    expect(b.stats().http?.connections).toBe(1);
+  });
+
+  it("is kept in the tab's session for its path, so the page loaded again starts there", async () => {
     const stored = new Map<string, string>();
     vi.stubGlobal("sessionStorage", {
       getItem: (key: string) => stored.get(key) ?? null,
       setItem: (key: string, value: string) => void stored.set(key, value),
       removeItem: (key: string) => void stored.delete(key),
     });
-    const [polled, absent, forgotten] = [place(), place(), place()];
+    const [polled, forgotten] = [place(), place()];
     const { rungMemory } = await import("../src/realtime/ws/rung-memory");
     const memory = rungMemory(true);
     memory.set(`${polled}?token=t0k3n`, "poll");
-    memory.set(absent, "absent");
     memory.set(forgotten, "stream");
     memory.forget(forgotten);
     rungMemory(false).set(place(), "stream");
@@ -258,9 +273,8 @@ describe("the rung a path reached", () => {
     vi.resetModules();
     const reloaded = (await import("../src/realtime/ws/rung-memory")).rungMemory(true);
 
-    expect([`${polled}?v=2`, absent, forgotten].map((url) => reloaded.get(url))).toEqual([
+    expect([`${polled}?v=2`, forgotten].map((url) => reloaded.get(url))).toEqual([
       "poll",
-      undefined,
       undefined,
     ]);
     expect([...stored.keys()]).toEqual([`courier:ws:${polled}`]);

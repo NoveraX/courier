@@ -9,6 +9,9 @@ export const PING_EVENT: Uint8Array = encoder.encode(`data: ${PING_FRAME}\n\n`);
 /** What a stream after the first begins with, so its client sees at once that it streams. */
 export const STREAM_START: Uint8Array = encoder.encode(":\n\n");
 
+/** What the answer to a stream begins with when another replica holds its connection. */
+export const RELAYED_EVENT: Uint8Array<ArrayBuffer> = namedEvent(HTTP_EVENTS.relayed, {});
+
 /**
  * One of the server's frames, numbered on its connection.
  *
@@ -52,6 +55,6 @@ export function closeEvent(close: { readonly code: number; readonly reason: stri
   return namedEvent(HTTP_EVENTS.close, { code: close.code, reason: close.reason });
 }
 
-function namedEvent(name: string, data: unknown): Uint8Array {
+function namedEvent(name: string, data: unknown): Uint8Array<ArrayBuffer> {
   return encoder.encode(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
 }

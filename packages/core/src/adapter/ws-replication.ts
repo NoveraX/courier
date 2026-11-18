@@ -1,4 +1,5 @@
 import type { RefusalLog } from "../logger/refusal-log";
+import type { PubSubAdapter } from "../realtime/adapters";
 import { createClusterControl } from "./cluster-control";
 import { clusterSecretOf } from "./ws-cluster-secret";
 import { runCommand } from "./ws-connection-command";
@@ -9,6 +10,10 @@ import type { WSHandlerConfig } from "./ws-types";
 
 /** What a handler shares with the other replicas through its pub/sub adapter. */
 export interface Replication {
+  /** The adapter the replicas share */
+  readonly pubsub: PubSubAdapter;
+  /** The cluster's secret, which signs what they send each other, if it has one */
+  readonly secret: string | undefined;
   /** Topic subscriptions and broadcasts between replicas */
   readonly bridge: PubSubBridge;
   /** The registry application code is handed: its broadcasts and commands reach every replica */
@@ -63,6 +68,8 @@ export function replicate(
     previous = state;
   });
   return {
+    pubsub,
+    secret,
     bridge,
     connections: replicateRegistry(registry, bridge, control),
     destroy() {

@@ -1,13 +1,16 @@
-import type { WebSocketLike } from "../../realtime/adapters";
-import { HTTP_TRANSPORT_VERSION, type HTTPRequestHead } from "../../realtime/ws/http-protocol";
-import { answerInit } from "../../utils/answer-init";
+import type { RefusalLog } from "../../logger/refusal-log";
+import type { PubSubAdapter, WebSocketLike } from "../../realtime/adapters";
+import { HTTP_TRANSPORT_VERSION } from "../../realtime/ws/http-protocol";
 import { errorResponse } from "../parse";
 import { readBodyText } from "../read-body-text";
+import { answeredOf, answerHeld, events, gone } from "./http-answers";
 import { createHTTPConnection, type HTTPConnection } from "./http-connection";
 import type { DeliveryKind } from "./http-delivery";
+import { type Answered, createForwarding } from "./http-forwarding";
+import { relay } from "./http-relay";
 import type { HTTPTerms } from "./http-terms";
-import { mintToken, replicaName } from "./http-token";
-import { readHTTPRequest } from "./read-http-request";
+import { createTokens } from "./http-token";
+import { type HTTPRequest, readHTTPRequest } from "./read-http-request";
 
 /** What a handler's connections over HTTP are doing, on this replica. */
 export interface HTTPTransportStats {
@@ -17,6 +20,8 @@ export interface HTTPTransportStats {
   readonly streaming: number;
   /** Those that hold a poll now */
   readonly polling: number;
+  /** Requests sent on to the replica that holds their connection, since the handler was made */
+  readonly forwarded: number;
 }
 
 /** A handler's HTTP transport: its requests answered, its connections held. */
@@ -28,12 +33,12 @@ export interface HTTPTransport {
   destroy(): void;
 }
 
-/* An event stream no proxy holds back or rewrites, and no cache keeps. */
-const EVENT_STREAM = {
-  "Content-Type": "text/event-stream",
-  "Cache-Control": "no-store, no-transform",
-  "X-Accel-Buffering": "no",
-};
+/** How the replicas a handler shares its pub/sub adapter with reach the connections each holds. */
+export interface HTTPCluster {
+  readonly pubsub: PubSubAdapter;
+  readonly secret: string | undefined;
+  readonly refusals: RefusalLog;
+}
 
 /**
  * The HTTP transport of a WebSocket handler, for clients whose network lets
@@ -41,27 +46,35 @@ const EVENT_STREAM = {
  * the handler a socket — `handleSocket`, so the connection is admitted,
  * limited, heard and closed as a socket is — and its frames; each later
  * request names the connection by its token and does what it asks to it.
- * A token this replica holds no connection for is answered 410, and its
- * client opens another.
+ * With a pub/sub adapter, a request that reaches a replica other than its
+ * connection's holder is sent on to the holder, so replicas need no
+ * affinity. A token no replica holds a connection for is answered 410, and
+ * its client opens another.
  *
  * @param terms - How its connections hold their answers, and the largest body
  * @param handleSocket - The handler's way in for a socket
+ * @param cluster - The adapter the replicas share, the cluster's secret and the log, if any
  * @returns The transport
  * @example
  * ```ts
- * const http = createHTTPTransport(httpTermsOf(config), handleSocket);
+ * const http = createHTTPTransport(httpTermsOf(config), handleSocket, { pubsub, secret, refusals });
  * const response = await http.handle(request);
  * ```
  */
 export function createHTTPTransport(
   terms: HTTPTerms,
   handleSocket: (ws: WebSocketLike, request: Request) => unknown,
+  cluster?: HTTPCluster,
 ): HTTPTransport {
-  const replica = replicaName();
+  const tokens = createTokens(cluster?.secret);
   const held = new Map<string, HTTPConnection>();
+  const forwarding = cluster && createForwarding({ ...cluster, replica: tokens.replica, serve });
+  let forwarded = 0;
 
-  function open(kind: DeliveryKind, frames: readonly string[], request: Request): Response {
-    const token = mintToken(replica);
+  async function open(kind: DeliveryKind, frames: readonly string[], request: Request) {
+    /* Heard before its client has the token, so no request for it can be sent on unheard. */
+    await forwarding?.listen();
+    const token = await tokens.mint();
     const connection = createHTTPConnection(token, terms, () => held.delete(token));
     held.set(token, connection);
     const body = connection.deliver(kind, 0);
@@ -70,25 +83,32 @@ export function createHTTPTransport(
     return events(body);
   }
 
-  function answer(
-    connection: HTTPConnection,
-    head: HTTPRequestHead,
-    frames: readonly string[],
-  ): Response {
-    const ack = head.ack ?? 0;
-    connection.presented();
-    switch (head.op) {
-      case "stream":
-      case "poll":
-        return events(connection.deliver(head.op, ack));
-      case "send":
-        connection.acknowledge(ack);
-        if (connection.receive(head.seq ?? 1, frames)) return noContent();
-        return errorResponse(409, "Frames before these were not received", "SEQUENCE_GAP");
-      case "close":
-        connection.peerClose(head.code ?? 1005);
-        return noContent();
+  /* A request another replica sent on: a stream is held as a poll, so frames leave here only on
+     a poll's answer, and `taken` says it is held. */
+  async function serve(text: string, wait: number, taken: () => void): Promise<Answered> {
+    const read = readHTTPRequest(text);
+    if (read === undefined) return answeredOf(malformed());
+    const { head, frames } = read;
+    const connection = head.token === undefined ? undefined : held.get(head.token);
+    if (connection === undefined) return answeredOf(gone());
+    if (head.op === "send" || head.op === "close") {
+      return answeredOf(answerHeld(connection, head, frames));
     }
+    connection.presented();
+    const body = connection.deliver("poll", head.ack ?? 0, Math.min(wait, terms.holdMs));
+    if (connection.holding) taken();
+    return { status: 200, body: await new Response(body).text() };
+  }
+
+  /* Answered here when the connection is, sent on to its holder when another replica is. */
+  async function answerToken({ head, frames }: HTTPRequest, token: string, text: string) {
+    const connection = held.get(token);
+    if (connection !== undefined) return answerHeld(connection, head, frames);
+    if (forwarding === undefined) return gone();
+    const holder = await tokens.holderOf(token);
+    if (holder === undefined || holder === tokens.replica) return gone();
+    forwarded++;
+    return relay(forwarding, holder, head.op, text, terms.holdMs);
   }
 
   return {
@@ -99,22 +119,10 @@ export function createHTTPTransport(
       const body = await readBodyText(request, { maxBytes: terms.maxBodyBytes });
       if (!body.ok) return errorResponse(body.error.status, body.error.message, body.error.code);
       const read = readHTTPRequest(body.text);
-      if (read === undefined) {
-        return errorResponse(400, "Not a request of the HTTP transport", "MALFORMED_REQUEST");
-      }
+      if (read === undefined) return malformed();
       const { head, frames } = read;
-      if (head.token !== undefined) {
-        const connection = held.get(head.token);
-        if (connection !== undefined) return answer(connection, head, frames);
-        return errorResponse(410, "No such connection: open another", "CONNECTION_GONE");
-      }
-      if (head.op === "send" || head.op === "close") {
-        return errorResponse(
-          400,
-          "A connection opens with a stream or a poll",
-          "MALFORMED_REQUEST",
-        );
-      }
+      if (head.token !== undefined) return answerToken(read, head.token, body.text);
+      if (head.op === "send" || head.op === "close") return malformed();
       if (head.v !== HTTP_TRANSPORT_VERSION) {
         return errorResponse(
           400,
@@ -131,18 +139,15 @@ export function createHTTPTransport(
         if (connection.delivering === "stream") streaming++;
         else if (connection.delivering === "poll") polling++;
       }
-      return { connections: held.size, streaming, polling };
+      return { connections: held.size, streaming, polling, forwarded };
     },
     destroy() {
+      forwarding?.destroy();
       for (const connection of [...held.values()]) connection.end();
     },
   };
 }
 
-function events(body: ReadableStream<Uint8Array>): Response {
-  return new Response(body, answerInit(200, EVENT_STREAM));
-}
-
-function noContent(): Response {
-  return new Response(null, answerInit(204));
+function malformed(): Response {
+  return errorResponse(400, "Not a request of the HTTP transport", "MALFORMED_REQUEST");
 }

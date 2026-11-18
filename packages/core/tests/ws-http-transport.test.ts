@@ -55,7 +55,12 @@ describe("WSHandler.handleHTTP", () => {
     expect(ok?.id).toBe("1");
     expect(messageOf(ok)).toMatchObject({ type: "auth_ok" });
     expect(handler.connections.list()[0]?.meta).toMatchObject({ userId: "u1" });
-    expect(handler.stats().http).toEqual({ connections: 1, streaming: 1, polling: 0 });
+    expect(handler.stats().http).toEqual({
+      connections: 1,
+      streaming: 1,
+      polling: 0,
+      forwarded: 0,
+    });
     await events.cancel();
   });
 

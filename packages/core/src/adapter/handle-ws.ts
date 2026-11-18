@@ -102,7 +102,14 @@ export function createWSHandler(given?: WSHandlerConfig): WSHandler {
     },
     stopping: () => stopping !== undefined,
   });
-  const http = httpTerms && createHTTPTransport(httpTerms, handleSocket);
+  /* Requests that reach a replica other than their connection's holder go on to it over the
+     replicas' adapter. */
+  const cluster = replication && {
+    pubsub: replication.pubsub,
+    secret: replication.secret,
+    refusals,
+  };
+  const http = httpTerms && createHTTPTransport(httpTerms, handleSocket, cluster);
 
   // Wire Studio playground WS send — allows playground to relay messages to active connections
   studioHooks.sendWSMessage = (connectionId, topic, data) => {

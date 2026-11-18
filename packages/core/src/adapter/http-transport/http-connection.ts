@@ -5,6 +5,7 @@ import { closeEvent, frameEvent, openEvent, PING_EVENT, STREAM_START } from "./h
 import { createIntake } from "./http-intake";
 import { createKeptFrames } from "./http-kept";
 import { createConnectionListeners } from "./http-listeners";
+import { createPings } from "./http-pings";
 import type { HTTPTerms } from "./http-terms";
 
 /** A connection over HTTP: a socket to its handler, and what the transport's requests do to it. */
@@ -12,12 +13,15 @@ export interface HTTPConnection extends WebSocketLike {
   readonly token: string;
   /** The answer it delivers its frames on now, if one is held */
   readonly delivering: DeliveryKind | undefined;
+  /** Whether it holds a poll that waits for a frame */
+  readonly holding: boolean;
   /**
    * Answer a `stream` or a `poll`, in place of the answer held before: its
    * body carries every frame after `ack`, the first answer the connection's
-   * token before them
+   * token before them. A poll with nothing to carry is held `holdMs` at most,
+   * the transport's own wait unless given.
    */
-  deliver(kind: DeliveryKind, ack: number): ReadableStream<Uint8Array>;
+  deliver(kind: DeliveryKind, ack: number, holdMs?: number): ReadableStream<Uint8Array>;
   /** Take the client's frames, the first numbered `seq`; false when some before it are missing */
   receive(seq: number, frames: readonly string[]): boolean;
   /** The client has taken every frame up to `ack` */
@@ -62,6 +66,9 @@ export function createHTTPConnection(
   const intake = createIntake((frame) => {
     if (readyState === 1) listeners.message(frame);
   });
+  const pings = createPings(() => {
+    if (readyState === 1) listeners.message(PONG_FRAME);
+  });
   let readyState = 1;
   let delivery: Delivery | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -69,19 +76,7 @@ export function createHTTPConnection(
   let opened = false;
   let presented = false;
   let nextSeq = 1;
-  let pongOwed = false;
-  let pingUnsent = false;
   let closing: { readonly code: number; readonly reason: string } | undefined;
-
-  /* The client is there: the ping it owes an answer to is answered for it, once the heartbeat
-     has begun to wait for that answer. */
-  function heard(): void {
-    if (!pongOwed) return;
-    pongOwed = false;
-    queueMicrotask(() => {
-      if (readyState === 1) listeners.message(PONG_FRAME);
-    });
-  }
 
   function arm(ms: number, then: () => void): void {
     clearTimeout(timer);
@@ -118,7 +113,11 @@ export function createHTTPConnection(
     listeners.closed(code);
   }
 
-  function deliver(kind: DeliveryKind, ack: number): ReadableStream<Uint8Array> {
+  function deliver(
+    kind: DeliveryKind,
+    ack: number,
+    holdMs = terms.holdMs,
+  ): ReadableStream<Uint8Array> {
     kept.acknowledge(ack);
     const previous = delivery;
     delivery = undefined;
@@ -130,16 +129,16 @@ export function createHTTPConnection(
     if (!opened) next.write(openEvent({ token, ackBytes: terms.ackBytes }));
     else if (kind === "stream") next.write(STREAM_START);
     opened = true;
-    const unsent = pingUnsent || kept.size > 0;
-    if (pingUnsent) next.write(PING_EVENT);
-    pingUnsent = false;
+    const pinged = pings.takeUnsent();
+    if (pinged) next.write(PING_EVENT);
+    const unsent = pinged || kept.size > 0;
     kept.each((bytes) => next.write(bytes));
     if (closing !== undefined) {
       next.write(closeEvent(closing));
       finish(closing.code);
     } else if (kind === "stream") arm(terms.streamMs, () => next.end());
     else if (unsent) carried();
-    else arm(terms.holdMs, () => next.end());
+    else arm(holdMs, () => next.end());
     return next.body;
   }
 
@@ -147,6 +146,9 @@ export function createHTTPConnection(
     token,
     get delivering() {
       return delivery?.kind;
+    },
+    get holding() {
+      return delivery?.kind === "poll" && !ending;
     },
     get readyState() {
       return readyState;
@@ -158,10 +160,8 @@ export function createHTTPConnection(
     send(data) {
       if (readyState !== 1) return;
       if (data === PING_FRAME) {
-        pongOwed = true;
-        pingUnsent = delivery === undefined;
+        pings.sent(delivery !== undefined);
         delivery?.write(PING_EVENT);
-        if (delivery !== undefined) heard();
         carried();
         return;
       }
@@ -185,7 +185,7 @@ export function createHTTPConnection(
     acknowledge: kept.acknowledge,
     presented() {
       presented = true;
-      heard();
+      pings.heard();
     },
     peerClose: finish,
     end() {

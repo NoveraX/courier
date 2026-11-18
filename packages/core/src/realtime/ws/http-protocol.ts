@@ -13,6 +13,10 @@ import { encodeMessage } from "./ws-protocol";
  * sequence number on the connection — the heartbeat's ping, which needs no
  * resending, has none — and a `close` event when the server closes the
  * connection. A frame is one line of JSON, as `encodeMessage` writes it.
+ *
+ * Any replica takes any request: one that reached a replica other than
+ * the connection's holder is sent on to it, and a stream there is answered
+ * with a poll of the holder's, which begins with a `relayed` event.
  */
 
 /** The version of the transport's framing, named by every request that opens a connection. */
@@ -38,8 +42,6 @@ export interface HTTPRequestHead {
   readonly seq?: number | undefined;
   /** On `close`, the code the client closes with */
   readonly code?: number | undefined;
-  /** On `close`, its reason */
-  readonly reason?: string | undefined;
 }
 
 /** What the `open` event that begins the answer to a connection's first request says. */
@@ -56,6 +58,12 @@ export const HTTP_EVENTS = {
   open: "open",
   /** The server closed the connection: `{ code, reason }`, after its last frame */
   close: "close",
+  /**
+   * First on the answer to a stream that reached a replica other than the
+   * one that holds the connection: what follows is a poll's, which that one
+   * answered, and the client asks for its stream again
+   */
+  relayed: "relayed",
 } as const;
 
 /** The heartbeat's ping, which the transport answers for the client while it hears from it. */

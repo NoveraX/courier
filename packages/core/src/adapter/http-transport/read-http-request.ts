@@ -51,16 +51,15 @@ function headOf(line: string): HTTPRequestHead | undefined {
     return undefined;
   }
   if (!isRecord(value)) return undefined;
-  const { op, v, token, ack, seq, code, reason } = ownFields(value);
+  const { op, v, token, ack, seq, code } = ownFields(value);
   if (typeof op !== "string" || !OPERATIONS.has(op)) return undefined;
   const holds =
     absentOr(v, isCount) &&
     absentOr(token, isString) &&
     absentOr(ack, isAck) &&
     absentOr(seq, isCount) &&
-    absentOr(code, isCode) &&
-    absentOr(reason, isString);
-  return holds ? ({ op, v, token, ack, seq, code, reason } as HTTPRequestHead) : undefined;
+    absentOr(code, isCode);
+  return holds ? ({ op, v, token, ack, seq, code } as HTTPRequestHead) : undefined;
 }
 
 function absentOr(value: unknown, check: (value: unknown) => boolean): boolean {

@@ -134,7 +134,7 @@ describe("a server's answer to the first auth", () => {
 
     socket().admit({ connectionId: "c_7f3k" });
 
-    expect(conn.state).toEqual({ phase: "open", connectionId: "c_7f3k" });
+    expect(conn.state).toEqual({ phase: "open", connectionId: "c_7f3k", transport: "websocket" });
   });
 
   it.each([
@@ -289,7 +289,7 @@ describe("an admitted connection", () => {
       payload: { auth: { token: "t2" } },
     });
     socket().admit();
-    expect(conn.state).toEqual({ phase: "open", connectionId: "c1" });
+    expect(conn.state).toEqual({ phase: "open", connectionId: "c1", transport: "websocket" });
   });
 
   it("ends with the server's reason when the credentials sent again are refused", async () => {

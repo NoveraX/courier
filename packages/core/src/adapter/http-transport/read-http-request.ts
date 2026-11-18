@@ -1,5 +1,10 @@
 import { isCode, isCount, isString } from "../../realtime/ws/frame-fields";
-import type { HTTPOperation, HTTPRequestHead } from "../../realtime/ws/http-protocol";
+import {
+  HTTP_FALLBACK_CAUSES,
+  type HTTPFallbackCause,
+  type HTTPOperation,
+  type HTTPRequestHead,
+} from "../../realtime/ws/http-protocol";
 import { isRecord } from "../../utils/is-record";
 import { ownFields } from "../../utils/own";
 
@@ -11,13 +16,15 @@ export interface HTTPRequest {
 }
 
 const OPERATIONS: ReadonlySet<string> = new Set<HTTPOperation>(["stream", "poll", "send", "close"]);
+const CAUSES: ReadonlySet<unknown> = new Set<HTTPFallbackCause>(HTTP_FALLBACK_CAUSES);
 
 /**
  * Read a request's body: its head, and the frames after it.
  *
  * Frames come on the request that opens a connection and on `send`, and
  * `send` numbers the first of them; a body that breaks either rule, or whose
- * head is no head, is none of the transport's.
+ * head is no head, is none of the transport's. A cause the server does not
+ * know, as a later client may name, is read as none.
  *
  * @param text - The body
  * @returns The request, or `undefined` for a body that is none
@@ -51,7 +58,7 @@ function headOf(line: string): HTTPRequestHead | undefined {
     return undefined;
   }
   if (!isRecord(value)) return undefined;
-  const { op, v, token, ack, seq, code } = ownFields(value);
+  const { op, v, token, ack, seq, code, cause } = ownFields(value);
   if (typeof op !== "string" || !OPERATIONS.has(op)) return undefined;
   const holds =
     absentOr(v, isCount) &&
@@ -59,7 +66,9 @@ function headOf(line: string): HTTPRequestHead | undefined {
     absentOr(ack, isAck) &&
     absentOr(seq, isCount) &&
     absentOr(code, isCode);
-  return holds ? ({ op, v, token, ack, seq, code } as HTTPRequestHead) : undefined;
+  if (!holds) return undefined;
+  const named = CAUSES.has(cause) ? (cause as HTTPFallbackCause) : undefined;
+  return { op, v, token, ack, seq, code, cause: named } as HTTPRequestHead;
 }
 
 function absentOr(value: unknown, check: (value: unknown) => boolean): boolean {

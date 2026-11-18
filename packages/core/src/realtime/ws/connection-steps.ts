@@ -1,7 +1,9 @@
 import { fromErrorCode, type RealtimeError } from "../errors";
 import type {
+  Deadline,
   MachineContext,
   MachineEffect,
+  MachineEvent,
   MachineState,
   ReconnectCause,
   Refusal,
@@ -9,6 +11,11 @@ import type {
 } from "./connection-machine-types";
 import { classifyClose, type SocketClosure } from "./reconnect-classifier";
 import { WS_CODE } from "./ws-codes";
+
+/** The wait a state is in, if it is in one. */
+export function deadlineOf(state: MachineState): Deadline | undefined {
+  return "deadline" in state ? state.deadline : undefined;
+}
 
 /** The same state, nothing to do. */
 export function stay(state: MachineState): Step {
@@ -102,10 +109,9 @@ export function schedule(
 export function onClosed(
   state: MachineState,
   ctx: MachineContext,
-  closure: SocketClosure,
-  announced: boolean,
-  error: unknown,
+  event: Extract<MachineEvent, { readonly type: "closed" }>,
 ): Step {
+  const { closure, announced, error, opened } = event;
   const live = state.phase === "open" || state.phase === "reauthenticating";
   const before: MachineEffect[] = [
     ...(announced ? [{ type: "drop-socket", code: WS_CODE.NORMAL, reason: "" } as const] : []),
@@ -132,7 +138,6 @@ export function onClosed(
       ]);
     }
     case "retry": {
-      const opened = state.phase !== "connecting";
       const cause: ReconnectCause = {
         kind: "closed",
         code: closure.code,

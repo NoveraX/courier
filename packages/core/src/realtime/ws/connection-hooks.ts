@@ -87,6 +87,7 @@ function admit(runtime: ConnectionRuntime, reading: FrameReading, parts: HookPar
       type: "admitted",
       connectionId: frame.connectionId,
       heartbeat: frame.heartbeat,
+      transport: runtime.transport,
     });
   } else if (frame?.type === "auth_error" || frame?.type === "disconnect") {
     runtime.dispatch(closingWith(frame));

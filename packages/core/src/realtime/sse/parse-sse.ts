@@ -26,10 +26,10 @@ const WHOLE_NUMBER = /^\d+$/;
  * sets only an `id` or a `retry` still says so, since both change how a
  * client reconnects. A block the stream ends in the middle of is discarded,
  * its `id` too: the event it began may have lost part of its data. A line or
- * a block longer than `SSE_MAX_EVENT_LENGTH` ends the read: no blank line may
- * ever come.
+ * a block longer than `bound` ends the read: no blank line may ever come.
  *
  * @param stream - Response body from fetch
+ * @param bound - How many characters a line or a block may run to: an SSE stream's `SSE_MAX_EVENT_LENGTH` unless given
  * @returns The blocks, in order; a heartbeat is a block that says nothing
  * @throws EventTooLarge for a line or a block that runs past its bound
  * @example
@@ -42,15 +42,16 @@ const WHOLE_NUMBER = /^\d+$/;
  */
 export async function* parseSSEFrames(
   stream: ReadableStream<Uint8Array>,
+  bound: number = CLIENT_LIMITS.SSE_MAX_EVENT_LENGTH,
 ): AsyncGenerator<SSEFrame, void, unknown> {
-  let block = createBlock();
-  for await (const line of readSSELines(stream)) {
+  let block = createBlock(bound);
+  for await (const line of readSSELines(stream, bound)) {
     if (line !== "") {
       block.take(line);
       continue;
     }
     if (block.said) yield block.frame();
-    block = createBlock();
+    block = createBlock(bound);
   }
 }
 
@@ -63,7 +64,7 @@ export async function* parseSSEFrames(
  *
  * @param stream - Response body from fetch (ReadableStream<Uint8Array>)
  * @returns Async generator yielding RawSSEEvent or null
- * @throws ConnectionError of code 1009 for a line or an event longer than 1 MiB of text
+ * @throws EventTooLarge for a line or an event longer than 1 MiB of text
  * @example
  * ```ts
  * for await (const event of parseSSEStream(response.body)) {
@@ -77,8 +78,8 @@ export async function* parseSSEStream(
   for await (const frame of parseSSEFrames(stream)) yield frame.event ?? null;
 }
 
-/** The fields of the block being read. */
-function createBlock() {
+/** The fields of the block being read, its text no longer than `bound`. */
+function createBlock(bound: number) {
   let data: string[] | undefined;
   let type = "";
   let id: string | undefined;
@@ -95,7 +96,7 @@ function createBlock() {
       said = true;
       /* Its text as the stream sent it, each line's end counted. */
       length += line.length + 1;
-      if (length > CLIENT_LIMITS.SSE_MAX_EVENT_LENGTH) throw new EventTooLarge();
+      if (length > bound) throw new EventTooLarge(bound);
       if (line.startsWith(":")) return;
       const colon = line.indexOf(":");
       const field = colon === -1 ? line : line.slice(0, colon);

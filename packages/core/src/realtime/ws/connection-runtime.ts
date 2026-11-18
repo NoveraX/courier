@@ -6,8 +6,10 @@ import type {
   MachineEffect,
   MachineEvent,
   MachineState,
+  WSTransport,
 } from "./connection-machine-types";
 import { connectionSocket } from "./connection-socket";
+import { deadlineOf } from "./connection-steps";
 import { credentialsEvent } from "./credentials-event";
 import type { WSCredentials } from "./ws-credentials";
 import type { WSConnectionConfig, WSSocketFactory } from "./ws-types";
@@ -41,6 +43,8 @@ export interface ConnectionRuntime {
   send(frame: string): boolean;
   /** What the socket has yet to put on the network, in bytes */
   readonly buffered: number;
+  /** What carries the socket's frames now */
+  readonly transport: WSTransport;
   /** Hear each new state. */
   onChange(listener: (state: MachineState) => void): () => void;
 }
@@ -164,6 +168,9 @@ export function createConnectionRuntime(options: RuntimeOptions): ConnectionRunt
     get buffered() {
       return socket.buffered;
     },
+    get transport() {
+      return socket.transport;
+    },
     dispatch,
     send: socket.send,
     onChange(listener) {
@@ -172,8 +179,4 @@ export function createConnectionRuntime(options: RuntimeOptions): ConnectionRunt
     },
   };
   return runtime;
-}
-
-function deadlineOf(state: MachineState) {
-  return "deadline" in state ? state.deadline : undefined;
 }

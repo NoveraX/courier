@@ -111,7 +111,7 @@ describe("createWSConnection", () => {
     expect(conn.state).toEqual({ phase: "authenticating", attempt: 1 });
     lastWs().simulateAdmission();
     expect(conn.status).toBe("connected");
-    expect(conn.state).toEqual({ phase: "open", connectionId: "c1" });
+    expect(conn.state).toEqual({ phase: "open", connectionId: "c1", transport: "websocket" });
     expect(statuses).toEqual(["connecting", "connected"]);
     conn.close();
   });

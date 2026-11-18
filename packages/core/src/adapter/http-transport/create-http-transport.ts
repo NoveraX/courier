@@ -1,6 +1,10 @@
 import type { RefusalLog } from "../../logger/refusal-log";
 import type { PubSubAdapter, WebSocketLike } from "../../realtime/adapters";
-import { HTTP_TRANSPORT_VERSION } from "../../realtime/ws/http-protocol";
+import {
+  HTTP_REFUSALS,
+  HTTP_TRANSPORT_VERSION,
+  type HTTPFallbackCause,
+} from "../../realtime/ws/http-protocol";
 import { errorResponse } from "../parse";
 import { readBodyText } from "../read-body-text";
 import { answeredOf, answerHeld, events, gone } from "./http-answers";
@@ -27,6 +31,8 @@ export interface HTTPTransportStats {
   readonly resent: number;
   /** Streams ended after `streamMs`, since, so their clients asked for the next */
   readonly rotated: number;
+  /** Connections opened, since, by why their clients were on HTTP; an opening that says no cause is not counted */
+  readonly fallbacks: Readonly<Record<HTTPFallbackCause, number>>;
 }
 
 /** A handler's HTTP transport: its requests answered, its connections held. */
@@ -75,6 +81,13 @@ export function createHTTPTransport(
   const held = new Map<string, HTTPConnection>();
   const forwarding = cluster && createForwarding({ ...cluster, replica: tokens.replica, serve });
   const counts: HTTPCounts = { resent: 0, rotated: 0 };
+  const fallbacks: Record<HTTPFallbackCause, number> = {
+    refused: 0,
+    held: 0,
+    silent: 0,
+    dropped: 0,
+    remembered: 0,
+  };
   let forwarded = 0;
 
   async function open(kind: DeliveryKind, frames: readonly string[], request: Request) {
@@ -133,9 +146,10 @@ export function createHTTPTransport(
         return errorResponse(
           400,
           `This server speaks version ${HTTP_TRANSPORT_VERSION} of the HTTP transport`,
-          "TRANSPORT_VERSION",
+          HTTP_REFUSALS.version,
         );
       }
+      if (head.cause !== undefined) fallbacks[head.cause]++;
       return open(head.op, frames, request);
     },
     stats() {
@@ -145,7 +159,14 @@ export function createHTTPTransport(
         if (connection.delivering === "stream") streaming++;
         else if (connection.delivering === "poll") polling++;
       }
-      return { connections: held.size, streaming, polling, forwarded, ...counts };
+      return {
+        connections: held.size,
+        streaming,
+        polling,
+        forwarded,
+        ...counts,
+        fallbacks: { ...fallbacks },
+      };
     },
     destroy() {
       forwarding?.destroy();

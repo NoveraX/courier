@@ -18,11 +18,8 @@ import { defineGroup } from "../src/define/group";
 import { createMemoryBus } from "../src/realtime/memory-bus";
 import { createWSConnection } from "../src/realtime/ws/ws-connection";
 import type { WSConnection } from "../src/realtime/ws/ws-types";
-import {
-  createHTTPSocket,
-  type HTTPMode,
-  type HTTPSocket,
-} from "../src/realtime/ws-http/http-socket";
+import { createHTTPSocket } from "../src/realtime/ws-http/http-socket";
+import type { HTTPMode, HTTPSocket } from "../src/realtime/ws-http/http-socket-types";
 import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { type EntryWay, entryTo, holdingStreams } from "./helpers/http-entry";
 

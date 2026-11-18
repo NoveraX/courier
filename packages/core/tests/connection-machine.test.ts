@@ -55,6 +55,7 @@ const open = (openedAt = NOW): MachineState => ({
   failures: 0,
   authSeq: 1,
   connectionId: "c1",
+  transport: "websocket",
   heartbeat: HEARTBEAT,
   openedAt,
   fingerprint: "f1",
@@ -64,6 +65,7 @@ const reauthenticating: MachineState = {
   failures: 0,
   authSeq: 2,
   connectionId: "c1",
+  transport: "websocket",
   heartbeat: HEARTBEAT,
   openedAt: NOW,
   fingerprint: "f1",
@@ -98,12 +100,18 @@ const failed: MachineState = {
 const closedByServer: MachineState = { phase: "closed", by: "server", failures: 0, authSeq: 1 };
 const closedByClient: MachineState = { phase: "closed", by: "client", failures: 0, authSeq: 1 };
 
-const closed = (code: number, reason = "", announced = false): MachineEvent => ({
+const closed = (code: number, reason = "", announced = false, opened = true): MachineEvent => ({
   type: "closed",
   closure: { code, reason },
   announced,
+  opened,
 });
-const admitted: MachineEvent = { type: "admitted", connectionId: "c1", heartbeat: HEARTBEAT };
+const admitted: MachineEvent = {
+  type: "admitted",
+  connectionId: "c1",
+  heartbeat: HEARTBEAT,
+  transport: "websocket",
+};
 
 function step(state: MachineState, event: MachineEvent, now = NOW) {
   return transition(state, event, ctx(now));
@@ -226,6 +234,7 @@ describe("an attempt that does not get through", () => {
       type: "closed",
       closure: { code: 1002, reason: "Protocol version 1 is spoken here, not 2", version: 1 },
       announced: true,
+      opened: true,
     };
 
     expect(step(authenticating, refusal)).toMatchObject({
@@ -242,6 +251,7 @@ describe("an attempt that does not get through", () => {
       type: "closed",
       closure: { code: 1002, reason: "Protocol version 2 required: reload the page", version },
       announced: true,
+      opened: true,
     };
     const { state } = step(authenticating, refusal);
 
@@ -252,8 +262,11 @@ describe("an attempt that does not get through", () => {
     ]);
   });
 
-  it("says a socket that closed before it opened had not opened", () => {
-    const { state } = step(connecting({ socket: true, fingerprint: "f1" }), closed(1006));
+  it.each([
+    ["a WebSocket whose handshake was not done", connecting({ socket: true, fingerprint: "f1" })],
+    ["one over HTTP, open to carry its first frames, whose server never answered", authenticating],
+  ])("says a socket that closed before it opened had not opened: %s", (_which, from) => {
+    const { state } = step(from, closed(1006, "", false, false));
 
     expect(state).toMatchObject({
       phase: "reconnecting",
@@ -306,6 +319,7 @@ describe("an open connection that drops", () => {
       type: "closed",
       closure: { code: 1001, reason: "", retryAfterMs: 2500 },
       announced: false,
+      opened: true,
     });
 
     expect(state).toMatchObject({

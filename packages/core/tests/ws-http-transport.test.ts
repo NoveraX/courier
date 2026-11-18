@@ -62,6 +62,7 @@ describe("WSHandler.handleHTTP", () => {
       forwarded: 0,
       resent: 0,
       rotated: 0,
+      fallbacks: { refused: 0, held: 0, silent: 0, dropped: 0, remembered: 0 },
     });
     await events.cancel();
   });

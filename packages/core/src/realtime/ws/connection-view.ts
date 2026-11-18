@@ -32,7 +32,7 @@ function viewOf(state: MachineState): WSConnectionState {
       return { phase: state.phase, attempt: state.failures + 1 };
     case "open":
     case "reauthenticating":
-      return { phase: state.phase, connectionId: state.connectionId };
+      return { phase: state.phase, connectionId: state.connectionId, transport: state.transport };
     case "reconnecting":
       return {
         phase: "reconnecting",

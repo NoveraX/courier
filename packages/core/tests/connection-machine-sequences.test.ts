@@ -58,13 +58,17 @@ function nextEvent(random: () => number, state: MachineState, socket: Socket): M
       ...(random() < 0.3 && { retryAfterMs: 500 }),
       ...(random() < 0.3 && { version: pick([1, 2, 3]) }),
     };
-    world.push({ type: "closed", closure, announced: random() < 0.5 });
+    /* A socket over HTTP is open before its server answers, and may close before it does. */
+    const opened = socket === "open" && random() < 0.8;
+    world.push({ type: "closed", closure, announced: random() < 0.5, opened });
     world.push(
       {
         type: "admitted",
         connectionId: "c1",
         heartbeat: { intervalMs: 25_000, timeoutMs: 10_000 },
+        transport: pick(["websocket", "stream", "poll"] as const),
       },
+      { type: "transport", transport: pick(["websocket", "stream", "poll"] as const) },
       { type: "mismatch", frame: "subscribed" },
       { type: "renewed" },
       { type: "silent", forMs: 35_000 },

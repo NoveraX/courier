@@ -1,4 +1,4 @@
-export type { ReconnectCause, WSConnectionState } from "./connection-machine-types";
+export type { ReconnectCause, WSConnectionState, WSTransport } from "./connection-machine-types";
 export type { Heartbeat, HeartbeatConfig } from "./heartbeat";
 export { createHeartbeat } from "./heartbeat";
 export type { MessageQueue, MessageQueueConfig } from "./message-queue";
@@ -16,5 +16,6 @@ export type {
   WSClientSocket,
   WSConnection,
   WSConnectionConfig,
+  WSFallbackOptions,
   WSSocketFactory,
 } from "./ws-types";

@@ -29,6 +29,28 @@ export const HTTP_TRANSPORT_VERSION = 1;
  */
 export type HTTPOperation = "stream" | "poll" | "send" | "close";
 
+/** Why a client opens its connection over HTTP, as the request that opens it says. */
+export type HTTPFallbackCause =
+  /** Its WebSocket closed before it opened: the upgrade was refused */
+  | "refused"
+  /** Its WebSocket did not open in time: the upgrade was held */
+  | "held"
+  /** Its WebSocket opened, and the server's frames did not come in time: held back on the way */
+  | "silent"
+  /** Its WebSocket opened, and was dropped before the server answered on it */
+  | "dropped"
+  /** The page, or the tab, found earlier that no WebSocket gets through, and starts on HTTP */
+  | "remembered";
+
+/** Every cause, in the order the transport's stats list them. */
+export const HTTP_FALLBACK_CAUSES: readonly HTTPFallbackCause[] = [
+  "refused",
+  "held",
+  "silent",
+  "dropped",
+  "remembered",
+];
+
 /** The first line of a request: what it asks for, and for which connection. */
 export interface HTTPRequestHead {
   readonly op: HTTPOperation;
@@ -42,6 +64,8 @@ export interface HTTPRequestHead {
   readonly seq?: number | undefined;
   /** On `close`, the code the client closes with */
   readonly code?: number | undefined;
+  /** On the request that opens a connection, why the client is on HTTP */
+  readonly cause?: HTTPFallbackCause | undefined;
 }
 
 /** What the `open` event that begins the answer to a connection's first request says. */
@@ -62,6 +86,8 @@ export const HTTP_REFUSALS = {
   unreachable: "HOLDER_UNREACHABLE",
   /** 503: the replicas cannot reach each other now; its client asks again */
   unavailable: "FORWARDING_UNAVAILABLE",
+  /** 400: another version of the transport, as a replica a rollout replaces speaks; its client opens another */
+  version: "TRANSPORT_VERSION",
 } as const;
 
 /** The names of the events an answer carries besides the frames. */

@@ -1,3 +1,4 @@
+import type { PlatformFetch } from "../../http-client/source-transport";
 import { REQUEST_MEMBERS } from "../../utils/request-members";
 import { retryAfterWait } from "../../utils/retry-after";
 import { withinSignal } from "../../utils/within-signal";
@@ -8,7 +9,7 @@ export interface PostTerms {
   /** The socket's path, over HTTP */
   readonly url: string;
   /** The source's `fetch`, else the platform's */
-  readonly fetch?: typeof fetch | undefined;
+  readonly fetch?: PlatformFetch | undefined;
   /**
    * What every request is made with besides its method, headers, body and
    * signal: the source's credentials policy, its dispatcher. Cookies go
@@ -21,8 +22,12 @@ export interface PostTerms {
 export type Posted =
   /** 200, with its events, or 204 */
   | { readonly kind: "answered"; readonly response: Response }
-  /** Not answered now — by the network, an entry or the replicas — so it is made again, not before `afterMs` when one was asked for */
-  | { readonly kind: "again"; readonly afterMs: number | undefined }
+  /**
+   * Not answered now — by the network, an entry or the replicas — so it is
+   * made again, not before `afterMs` when one was asked for; `error` is
+   * what the platform said of a request the network did not carry
+   */
+  | { readonly kind: "again"; readonly afterMs: number | undefined; readonly error?: unknown }
   /** The connection is no more: no replica holds it, or the one that does cannot be reached */
   | { readonly kind: "gone" }
   /** No HTTP transport answers at the socket's path */
@@ -121,8 +126,8 @@ export async function post(
       late.body?.cancel().catch(() => undefined);
     });
     return await postedOf(response, signal);
-  } catch {
-    return { kind: "again", afterMs: undefined };
+  } catch (error) {
+    return { kind: "again", afterMs: undefined, error };
   }
 }
 
@@ -140,9 +145,23 @@ async function postedOf(response: Response, signal: AbortSignal): Promise<Posted
     };
   }
   const reason = said.message ?? `The server answered ${status}`;
-  /* Another version of the transport, a body too large for the server, or a request it refused. */
-  const code = status === 400 ? 1002 : status === 413 ? 1009 : 1006;
-  return { kind: "refused", code, reason };
+  return { kind: "refused", code: closeCodeOf(status, said), reason };
+}
+
+/*
+ * The code a socket closes with for the same refusal: the server's own, a
+ * JSON body with its message, as its sockets' closes say it — a request it
+ * cannot read, an origin or a host it does not serve — and a body too large
+ * for the server or an entry. Another version of the transport, a replica a
+ * rollout replaces, and any entry's refusal close as a socket an entry
+ * refuses does, with 1006, and are tried again.
+ */
+function closeCodeOf(status: number, said: { readonly code?: unknown; readonly message?: string }) {
+  if (status === 413) return 1009;
+  if (said.message === undefined) return 1006;
+  if (status === 400) return said.code === HTTP_REFUSALS.version ? 1006 : 1002;
+  if (status === 403) return 4403;
+  return status === 421 ? 4421 : 1006;
 }
 
 /* The code and message of a server's JSON refusal; an entry's page says neither. */

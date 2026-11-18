@@ -1,7 +1,7 @@
 import { groupOptionsOf } from "../../define/group-options-of";
 import { groupChain } from "../../define/group-tree";
 import { type ResolvedTransport, resolveTransport } from "../../http-client/resolve-transport";
-import type { SourceWebSocket } from "../../http-client/source-transport";
+import type { PlatformFetch, SourceWebSocket } from "../../http-client/source-transport";
 import { SOCKET_CONNECTION_KEYS } from "../../http-client/transport-options";
 import { fieldOf } from "./read-definition";
 
@@ -86,6 +86,30 @@ export function socketTransportOf(transport: ResolvedTransport): SocketTransport
   return {
     ...(transport.webSocket && { webSocket: transport.webSocket }),
     ...(Object.keys(socketInit).length > 0 && { socketInit }),
+  };
+}
+
+/**
+ * What a channel's socket makes its requests with where no WebSocket gets
+ * through and HTTP carries its connection: the transport's `fetch`, and
+ * what a request that stays open takes of the source and its transport.
+ *
+ * @param options - The source's options, as the channel's call read them
+ * @param transport - The channel's transport
+ * @returns The `fetch` and the init; empty for the platform's `fetch` as it is
+ * @example
+ * ```ts
+ * socketRequestsOf(api.options, transportOf(api, api.options, "")); // { fetchInit: { credentials: "include" } }
+ * ```
+ */
+export function socketRequestsOf(
+  options: unknown,
+  transport: ResolvedTransport,
+): { readonly fetch?: PlatformFetch; readonly fetchInit?: RequestInit } {
+  const init = streamInitOf(options, transport);
+  return {
+    ...(transport.fetch && { fetch: transport.fetch }),
+    ...(Object.keys(init).length > 0 && { fetchInit: init }),
   };
 }
 

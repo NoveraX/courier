@@ -2,7 +2,7 @@ import type { ResolvedTransport } from "../../http-client/resolve-transport";
 import { type SocketHeaders, socketOptions } from "../../realtime/ws/ws-credentials";
 import type { CallerWSOptions, WSConnectionConfig } from "../../realtime/ws/ws-types";
 import { layerHeaders } from "../../utils/layer-headers";
-import { socketTransportOf } from "./source-transport";
+import { socketRequestsOf, socketTransportOf } from "./source-transport";
 import { sourceHeadersOf } from "./stream-request";
 import type { StreamSession } from "./stream-session";
 
@@ -28,7 +28,8 @@ const opened = new WeakMap<DirectSocketDefaults, WeakMap<object, Map<string, Soc
  * the user's session's and `forward`'s — asked for anew before every
  * connect, and the channel's `webSocket` and connection options — the
  * `dispatcher` that carries a client certificate or a proxy on Node, Bun's
- * `proxy` and `tls` — from the call, its group or the API. A socket is kept
+ * `proxy` and `tls` — from the call, its group or the API, with the `fetch`
+ * its requests go through where HTTP carries the connection. A socket is kept
  * to whose session it carries — the one user of a browser or an app, the
  * request being served on a server — and to its transport, so two users'
  * channels never share one, nor two channels that carry different
@@ -70,7 +71,7 @@ function optionsOf(
     defaults.ws,
     socketHeaders(defaults, sourceHeadersOf(source), session),
   );
-  const transport = socketTransportOf(resolved);
+  const transport = { ...socketTransportOf(resolved), ...socketRequestsOf(source, resolved) };
   return Object.keys(transport).length === 0 ? options : { ...options, ...transport };
 }
 

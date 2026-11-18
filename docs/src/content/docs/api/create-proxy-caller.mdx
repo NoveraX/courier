@@ -1,4 +1,4 @@
-export const metadata = { title: "createProxyCaller", description: "Factory function that creates a typed client with dot-notation access for proxy-mode HTTP calls from the browser.", mode: "proxy", updated: "2026-11-15" }
+export const metadata = { title: "createProxyCaller", description: "Factory function that creates a typed client with dot-notation access for proxy-mode HTTP calls from the browser.", mode: "proxy", updated: "2026-11-18" }
 
 ## Import
 
@@ -67,6 +67,7 @@ type ProxyCallerOptions = {
 type CallerWSOptions = {
   auth?: WSAuthParams | (() => WSAuthParams | undefined | Promise<WSAuthParams | undefined>)
   backoff?: { initialMs?: number; maxMs?: number; factor?: number; jitter?: boolean }
+  fallback?: false | { after?: number; remember?: boolean }
   messageQueue?: { maxCount?: number; maxBytes?: number; overflow?: "reject" | "drop-oldest" }
   protocols?: string[]
   reconnectOnResume?: boolean

@@ -5,16 +5,17 @@
  * server that never ends one — a `data:` line with no line end, a block
  * with no blank line after it — would otherwise hold the client's memory
  * for as long as it sends, and each piece it sent was searched again for a
- * line end. Past the limit the stream ends with a ConnectionError of 1009,
- * as a socket's message too large is told: reconnecting would read the
- * same event again. The streams here are the test's own; no network.
+ * line end. Past the limit the read ends with EventTooLarge, and a
+ * subscription with a ConnectionError of 1009, as a socket's message too
+ * large is told: reconnecting would read the same event again. The streams
+ * here are the test's own; no network.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ConnectionError } from "../src/realtime/errors";
 import { parseSSEFrames } from "../src/realtime/sse/parse-sse";
 import { subscribeSSE } from "../src/realtime/sse/sse-client";
-import { readSSELines } from "../src/realtime/sse/sse-lines";
+import { EventTooLarge, readSSELines } from "../src/realtime/sse/sse-lines";
 import type { CloseInfo, Subscription } from "../src/realtime/subscription-types";
 
 const LIMIT = 1_048_576;
@@ -76,8 +77,8 @@ describe("a stream's lines", () => {
       }
     });
 
-    expect(error).toBeInstanceOf(ConnectionError);
-    expect(error).toMatchObject({ code: 1009 });
+    expect(error).toBeInstanceOf(EventTooLarge);
+    expect(error).toMatchObject({ bound: LIMIT });
     expect(read.pieces * PIECE).toBeLessThanOrEqual(LIMIT + 2 * PIECE);
   });
 
@@ -101,7 +102,8 @@ describe("a stream's events", () => {
       }
     });
 
-    expect(error).toMatchObject({ code: 1009 });
+    expect(error).toBeInstanceOf(EventTooLarge);
+    expect(error).toMatchObject({ bound: LIMIT });
     expect(read.pieces * PIECE).toBeLessThanOrEqual(LIMIT + 2 * PIECE);
   });
 });
@@ -122,6 +124,7 @@ describe("a subscription whose server never ends a line", () => {
     await vi.waitFor(() => expect(closed).toHaveLength(1), { timeout: 5_000 });
 
     expect(closed[0]).toMatchObject({ reason: "failed", error: { code: 1009 } });
+    expect(closed[0]).toMatchObject({ error: expect.any(ConnectionError) });
     expect(requests).toBe(1);
   });
 });

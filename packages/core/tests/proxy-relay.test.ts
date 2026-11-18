@@ -31,7 +31,6 @@ import { ForbiddenError, type RealtimeError } from "../src/realtime/errors";
 import type { Subscription } from "../src/realtime/subscription-types";
 import { studioHooks } from "../src/studio";
 import type { StreamStatusEvent } from "../src/studio/hooks-stream";
-import { refusedSocketCause } from "./helpers/refused-socket-cause";
 
 const { stream, channel } = courier();
 const closers: Array<() => Promise<void>> = [];
@@ -418,7 +417,9 @@ describe("a channel another server serves, through the proxy", () => {
       .toEqual([[4000, "Room closed"]]);
   });
 
-  it("tells Studio how its upstream connection stands, under the subscription's id", async () => {
+  it("tells Studio how its upstream connection stands, under the subscription's id", {
+    timeout: 15_000,
+  }, async () => {
     const closed = createServer();
     const gone = await listen(closed);
     await new Promise<void>((resolve) => closed.close(() => resolve()));
@@ -440,7 +441,7 @@ describe("a channel another server serves, through the proxy", () => {
     closers.push(async () => room.close());
     await expect
       .poll(() => told.filter((event) => event.status === "reconnecting").length, {
-        timeout: 2_000,
+        timeout: 10_000,
       })
       .toBeGreaterThanOrEqual(1);
 
@@ -449,7 +450,7 @@ describe("a channel another server serves, through the proxy", () => {
     expect(told.find((event) => event.status === "reconnecting")).toMatchObject({
       requestId: opened[0]?.requestId,
       failures: 1,
-      cause: await refusedSocketCause(),
+      cause: { code: "ECONNREFUSED", message: expect.stringContaining("ECONNREFUSED") },
     });
   });
 

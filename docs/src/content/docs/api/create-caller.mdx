@@ -1,4 +1,4 @@
-export const metadata = { title: "createCaller", description: "Factory function that creates a typed caller for server-side direct HTTP calls — no proxy hop needed.", mode: "direct", updated: "2026-11-11" }
+export const metadata = { title: "createCaller", description: "Factory function that creates a typed caller for server-side direct HTTP calls — no proxy hop needed.", mode: "direct", updated: "2026-11-18" }
 
 ## Import
 
@@ -52,6 +52,7 @@ type CallerDefaults = {
 type CallerWSOptions = {
   auth?: WSAuthParams | (() => WSAuthParams | undefined | Promise<WSAuthParams | undefined>)
   backoff?: { initialMs?: number; maxMs?: number; factor?: number; jitter?: boolean }
+  fallback?: false | { after?: number; remember?: boolean }
   messageQueue?: { maxCount?: number; maxBytes?: number; overflow?: "reject" | "drop-oldest" }
   protocols?: string[]
   reconnectOnResume?: boolean

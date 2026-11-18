@@ -53,7 +53,7 @@ export type {
   WrapMiddleware,
 } from "../middleware/types";
 export type { ProxyCallerOptions, ProxyPath } from "../proxy-caller";
-export type { CallerWSOptions } from "../realtime/ws/ws-types";
+export type { CallerWSOptions, WSFallbackOptions } from "../realtime/ws/ws-types";
 export type {
   CsrfOptions,
   EndpointSession,

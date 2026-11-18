@@ -99,7 +99,7 @@ export function closingWith(
           version: frame.v,
         }
       : { code: frame.code, reason: frame.reason, retryAfterMs: frame.retryAfterMs };
-  return { type: "closed", closure, announced: true };
+  return { type: "closed", closure, announced: true, opened: true };
 }
 
 /**

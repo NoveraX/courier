@@ -1,4 +1,4 @@
-import type { SourceWebSocket } from "../../http-client/source-transport";
+import type { PlatformFetch, SourceWebSocket } from "../../http-client/source-transport";
 import type { RealtimeError } from "../errors";
 import type { BackoffConfig, ConnectionStatus } from "../types";
 import type { WSConnectionState } from "./connection-machine-types";
@@ -60,6 +60,29 @@ export type WSSocketFactory = (
 // ---------------------------------------------------------------------------
 
 /**
+ * How a connection whose WebSocket does not get through — an upgrade a
+ * proxy, an antivirus, a WAF or a CDN refuses or holds, frames held back
+ * on the way — carries on over HTTP requests to the socket's own path.
+ */
+export interface WSFallbackOptions {
+  /**
+   * How long a WebSocket may go unanswered by the server, and an HTTP
+   * stream without its first bytes, before the next rung carries the
+   * connection, in ms (default 3000): under the 15 s a socket has to open.
+   * A WebSocket refused or dropped before the server answered gives way at
+   * once.
+   */
+  after?: number | undefined;
+  /**
+   * Whether the tab's `sessionStorage` keeps the rung a connection fell to
+   * (default `true`), so the page loaded again on the same network starts
+   * there instead of waiting for a WebSocket first. The page keeps it
+   * either way, for every connection it opens to the same path.
+   */
+  remember?: boolean | undefined;
+}
+
+/**
  * How a WebSocket connection is made. What the server pings it by and the
  * largest message it takes come from the server, in the `auth_ok` that
  * admits the connection: a socket nothing has come on for the server's
@@ -97,6 +120,21 @@ export interface WSConnectionConfig {
   onStatusChange?: ((status: ConnectionStatus) => void) | undefined;
   /** Max bufferedAmount before dropping sends (default 1MB) */
   maxBufferedAmount?: number | undefined;
+  /**
+   * Where no WebSocket gets through, the same connection over HTTP requests
+   * to the socket's path — on a stream, or on polls where a stream is held
+   * back — or `false` to stay on WebSocket. On by default where the
+   * connection opens the platform's WebSocket; with a `socketFactory` of
+   * the application's own, it is off unless given. A server without the
+   * HTTP transport answers its requests 404, and the connection stays on
+   * WebSocket. It needs a `fetch` whose answers stream: one without them —
+   * React Native's — keeps to WebSocket.
+   */
+  fallback?: false | WSFallbackOptions | undefined;
+  /** The `fetch` the HTTP fallback's requests go through — the source's — in place of the platform's */
+  fetch?: PlatformFetch | undefined;
+  /** What each of those requests is made with besides its method, headers and body: the source's `credentials`, its `dispatcher` */
+  fetchInit?: RequestInit | undefined;
   /** WebSocket factory — override for testing */
   socketFactory?: WSSocketFactory | undefined;
   /**
@@ -131,7 +169,7 @@ export interface WSConnectionConfig {
  */
 export type CallerWSOptions = Pick<
   WSConnectionConfig,
-  "backoff" | "messageQueue" | "protocols" | "reconnectOnResume"
+  "backoff" | "fallback" | "messageQueue" | "protocols" | "reconnectOnResume"
 > & {
   /**
    * What the client tells the server about itself — a token, a tenant —

@@ -1,6 +1,7 @@
 import type { ScopedLogger } from "../../logger";
 import { ConnectionError } from "../errors";
-import type { MachineEvent } from "./connection-machine-types";
+import type { MachineEvent, WSTransport } from "./connection-machine-types";
+import type { LadderSocket } from "./transport-ladder-types";
 import type { WSCredentials } from "./ws-credentials";
 import type { WSClientSocket, WSConnectionConfig, WSSocketFactory } from "./ws-types";
 
@@ -25,6 +26,8 @@ export interface ConnectionSocket {
   send(frame: string): boolean;
   /** What the socket has yet to put on the network, in bytes */
   readonly buffered: number;
+  /** What carries the socket's frames: a WebSocket, unless it is one that falls back to HTTP */
+  readonly transport: WSTransport;
 }
 
 /**
@@ -55,11 +58,14 @@ export function connectionSocket(options: SocketOptions): ConnectionSocket {
     let error: unknown;
     let isOpen = false;
     const mine = (): boolean => socket === opened;
+    /* A ladder's socket over HTTP opens at once, and has opened once its server answers. */
+    const reached = (): boolean => (isLadder(opened) ? opened.reached : isOpen);
     const closed = (code: number, reason: string): void => {
       if (!mine()) return;
       socket = undefined;
       release(opened);
-      dispatch({ type: "closed", closure: { code, reason }, announced: false, error });
+      const closure = { code, reason };
+      dispatch({ type: "closed", closure, announced: false, error, opened: reached() });
     };
     opened.onopen = () => {
       isOpen = true;
@@ -69,6 +75,11 @@ export function connectionSocket(options: SocketOptions): ConnectionSocket {
       if (mine()) message(event.data);
     };
     opened.onclose = (event) => closed(event.code, event.reason);
+    if (isLadder(opened)) {
+      opened.ontransport = (transport) => {
+        if (mine()) dispatch({ type: "transport", transport });
+      };
+    }
     /* What the error said is told with the close that follows it. Node 22's
        WebSocket reports a refused connection with an error alone, its socket
        left connecting, so one that has not opened is taken as closed — with
@@ -92,6 +103,7 @@ export function connectionSocket(options: SocketOptions): ConnectionSocket {
    */
   function release(dropped: WSClientSocket, code?: number, reason?: string): void {
     dropped.onopen = dropped.onmessage = dropped.onclose = null;
+    if (isLadder(dropped)) dropped.ontransport = null;
     dropped.onerror = (event) => log.debug("A socket let go of reported an error", event);
     if (dropped.readyState >= 2) return;
     try {
@@ -112,5 +124,13 @@ export function connectionSocket(options: SocketOptions): ConnectionSocket {
     get buffered() {
       return socket?.bufferedAmount ?? 0;
     },
+    get transport() {
+      return socket !== undefined && isLadder(socket) ? socket.transport : "websocket";
+    },
   };
+}
+
+/* A socket of the transport ladder, which says what carries it. */
+function isLadder(socket: WSClientSocket): socket is LadderSocket {
+  return "ontransport" in socket;
 }

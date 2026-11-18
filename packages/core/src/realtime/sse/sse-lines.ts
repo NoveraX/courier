@@ -1,21 +1,21 @@
 import { CLIENT_LIMITS } from "../client-limits";
-import { ConnectionError } from "../errors";
-import { WS_CODE } from "../ws/ws-codes";
 
 const LINE_END = /\r\n|\r|\n/;
 
 /**
- * A line or an event of a stream longer than the client reads: a server
+ * A line or an event of a stream longer than its reader takes: a server
  * that never ends one, or the answer of something that is no event stream.
- * The stream ends with it, as reading it again would meet it again; its
- * code is a socket's for a message too large.
+ * The read ends with it, as reading the stream again would meet it again;
+ * what that ends is the reader's to say — an SSE subscription ends with a
+ * ConnectionError of 1009, a socket's code for a message too large.
  */
-export class EventTooLarge extends ConnectionError {
-  constructor() {
-    super(
-      `A line or an event of the stream ran past ${CLIENT_LIMITS.SSE_MAX_EVENT_LENGTH} characters`,
-      WS_CODE.MESSAGE_TOO_BIG,
-    );
+export class EventTooLarge extends Error {
+  constructor(
+    /** How many characters a line or an event may run to */
+    readonly bound: number,
+  ) {
+    super(`A line or an event of the stream ran past ${bound} characters`);
+    this.name = "EventTooLarge";
   }
 }
 
@@ -28,11 +28,12 @@ export class EventTooLarge extends ConnectionError {
  * of it. A CR that ends a chunk is held until the next one says whether an LF
  * follows it, so a CRLF split across chunks is one line ending, not two. Text
  * after the last line ending is not a line: a stream that ends there ended in
- * the middle of one. Text that runs past `SSE_MAX_EVENT_LENGTH` with no line
- * end ends the read, rather than being held, and searched again for one with
- * each piece that comes.
+ * the middle of one. Text that runs past `bound` with no line end ends the
+ * read, rather than being held, and searched again for one with each piece
+ * that comes.
  *
  * @param stream - The response body
+ * @param bound - How many characters a line may run to: an SSE stream's `SSE_MAX_EVENT_LENGTH` unless given
  * @returns Each complete line, without its ending
  * @throws EventTooLarge for a line that runs past its bound
  * @example
@@ -44,6 +45,7 @@ export class EventTooLarge extends ConnectionError {
  */
 export async function* readSSELines(
   stream: ReadableStream<Uint8Array>,
+  bound: number = CLIENT_LIMITS.SSE_MAX_EVENT_LENGTH,
 ): AsyncGenerator<string, void, unknown> {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
@@ -54,7 +56,7 @@ export async function* readSSELines(
       const { done, value } = await reader.read();
       pending += done ? decoder.decode() : decoder.decode(value, { stream: true });
       const { lines, rest } = splitLines(pending, done);
-      if (rest.length > CLIENT_LIMITS.SSE_MAX_EVENT_LENGTH) throw new EventTooLarge();
+      if (rest.length > bound) throw new EventTooLarge(bound);
       pending = rest;
       yield* lines;
       if (done) return;

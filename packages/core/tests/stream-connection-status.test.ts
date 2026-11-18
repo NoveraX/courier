@@ -27,7 +27,6 @@ import { studioHooks } from "../src/studio";
 import type { StudioHooks } from "../src/studio/hooks";
 import type { StreamStatusEvent } from "../src/studio/hooks-stream";
 import { instrumentSSE, instrumentWSChannel, instrumentWSPush } from "../src/transport/instrument";
-import { refusedSocketCause } from "./helpers/refused-socket-cause";
 import { type ServedWS, serveWS, stopWS } from "./helpers/ws-server";
 
 const { stream, channel } = courier();
@@ -260,8 +259,11 @@ describe("a stream that opens no connection", () => {
 
 describe("a channel whose socket cannot be opened", () => {
   const WS_META = { ...META, transport: "ws" as const };
+  const REFUSED = { code: "ECONNREFUSED", message: expect.stringContaining("ECONNREFUSED") };
 
-  it("says why the socket closed before it opened: the platform's words, or its close where it gives none", async () => {
+  it("says why in the platform's words for the request over HTTP its refused socket gave way to", {
+    timeout: 15_000,
+  }, async () => {
     const url = `ws://127.0.0.1:${await closedPort()}/api/ws`;
 
     const ch = instrumentWSChannel(
@@ -269,16 +271,18 @@ describe("a channel whose socket cannot be opened", () => {
       WS_META,
     );
     closers.push(() => ch.close());
-    await expect.poll(() => reconnects().length, { timeout: 5_000 }).toBeGreaterThanOrEqual(2);
+    await expect.poll(() => reconnects().length, { timeout: 10_000 }).toBeGreaterThanOrEqual(2);
 
     expect(statuses[0]).toMatchObject({ status: "connecting" });
     expect(reconnects().slice(0, 2)).toEqual([
-      expect.objectContaining({ failures: 1, cause: await refusedSocketCause() }),
+      expect.objectContaining({ failures: 1, cause: REFUSED }),
       expect.objectContaining({ failures: 2 }),
     ]);
   });
 
-  it("says the same of a push subscription, whose socket is the connection's", async () => {
+  it("says the same of a push subscription, whose socket is the connection's", {
+    timeout: 15_000,
+  }, async () => {
     const url = `ws://127.0.0.1:${await closedPort()}/api/ws`;
 
     const push = instrumentWSPush(
@@ -287,13 +291,9 @@ describe("a channel whose socket cannot be opened", () => {
       "req_push",
     );
     closers.push(() => push.close());
-    await expect.poll(() => reconnects().length, { timeout: 5_000 }).toBeGreaterThanOrEqual(1);
+    await expect.poll(() => reconnects().length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
 
-    expect(reconnects()[0]).toMatchObject({
-      requestId: "req_push",
-      failures: 1,
-      cause: await refusedSocketCause(),
-    });
+    expect(reconnects()[0]).toMatchObject({ requestId: "req_push", failures: 1, cause: REFUSED });
   });
 
   it("gives the platform's code and text, where its socket's error event carries them", async () => {

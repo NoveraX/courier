@@ -75,6 +75,8 @@ export type {
   WSConnection,
   WSConnectionConfig,
   WSConnectionState,
+  WSFallbackOptions,
   WSSocketFactory,
+  WSTransport,
 } from "./ws";
 export { createWSConnection, qualifyTopic, unqualifyTopic } from "./ws";

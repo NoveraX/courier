@@ -1,4 +1,4 @@
-export const metadata = { title: "Realtime Connections", description: "The connection a caller's streams and channels share: what it opens with, how it comes back after a dropped network, a hidden page or a restarted server, what each close code means, and who the server takes it to be.", mode: "both", updated: "2026-11-15" }
+export const metadata = { title: "Realtime Connections", description: "The connection a caller's streams and channels share: what it opens with, how it comes back after a dropped network, a hidden page or a restarted server, what each close code means, how it goes on where no WebSocket gets through, and who the server takes it to be.", mode: "both", updated: "2026-11-18" }
 
 ## Connection options
 
@@ -19,6 +19,7 @@ export const client = createProxyCaller(routes.api, {
 
 - `auth` — what the client tells the server about itself, as socket.io's `auth` does: an object, or a function that returns one, called anew before every connect and reconnect so the token in it is current. It is sent in the socket's first frame, never in its URL, where proxies and servers log it, and the server's `onConnect` reads it as `auth` — see [Who a connection is](#who-a-connection-is). It is sent again, asked for anew, when the server asks with `connections.requireAuth`; a caller without it leaves that request unanswered, and the server closes the connection at its deadline. What JSON cannot carry — a `BigInt`, as an ORM gives a bigint column, an object that points back at itself — ends the connection with a `ConnectionError` that says so, as no attempt could send it.
 - `backoff` — the wait before each reconnect: `initialMs` (1 s), `maxMs` (30 s), `factor` (2), `jitter` (on). See [Staying connected](#staying-connected).
+- `fallback` — where no WebSocket gets through, the same connection over HTTP requests to the socket's own path; `false` keeps it on WebSocket. `after` (3 s) is how long a WebSocket the server has not answered on is waited for, and an HTTP stream that brings no bytes; `remember` (on) keeps the rung a connection fell to for the tab's session. See [When no WebSocket gets through](#when-no-websocket-gets-through).
 - `messageQueue` — what the socket keeps to send while it cannot: messages sent while it reconnects, and those sent on a channel the server has not confirmed yet. `maxCount` (100) and `maxBytes` (1 MB) hold for all its channels together. `overflow` says what a message that finds no room does: with `"reject"`, the default, it is dropped with a warning and its `send` answers `false`; with `"drop-oldest"`, it is kept, and the oldest message waiting goes instead — its channel hears a `4429` error.
 - `reconnectOnResume` — whether the page's signals act on the socket, `true` unless set to `false`. See [Staying connected](#staying-connected).
 - `protocols` — WebSocket sub-protocols for the handshake.
@@ -73,6 +74,17 @@ A stream reconnects on the same rules, with what an HTTP stream has in place of 
 - The page's signals bring back a stream that waits to reconnect, once a wait its server asked for is over, as a socket's. A stream has no ping to be checked with, and a Courier server comments on it every 25 s: one open when a signal comes is opened again only if it has heard nothing for longer than its `heartbeatTimeout`, 45 s, as after the computer slept. A stream that hears nothing for that long while the page is in use is opened again too.
 
 `subscribeSSE` from `@noverax/courier/realtime` takes `backoff`, `heartbeatTimeout`, `maxAttempts` and `reconnectOnResume` for a stream opened directly; a caller's streams keep these defaults.
+
+## When no WebSocket gets through
+
+A corporate proxy, an antivirus that inspects TLS, a WAF or a CDN with WebSockets turned off may refuse the upgrade, hold it, or let it through and hold back what the server sends, while plain HTTP through the same entry gets through. The connection then goes on over HTTP requests to the socket's own path, which a Courier server answers there: the same frames, subscriptions and limits, one transport at a time, so the server admits it once.
+
+- **A WebSocket first.** A connection whose WebSocket works sends no request over HTTP, and the page never loads the code that makes them.
+- **A stream, at once for a refusal.** A WebSocket refused, or dropped before the server answered on it, gives way at once: what the connection sent on it, its credentials and subscriptions, goes with the request that opens it over HTTP, and the server's frames come on a stream it holds open. A WebSocket whose upgrade is not done in `after`, or whose server has not answered on it by then, gives way then, and is closed.
+- **Polls, where a stream is held back.** A stream that brings no bytes in `after` is held by something on the way, as a proxy that buffers what it carries holds it: polls carry the server's frames from then on, each answered as soon as there is one.
+- **Where it stood.** The page's next connection to the same path starts on the rung the last one reached, and with `remember` so does the page loaded again in the same tab; the URL's query is not kept. A server that answers no HTTP transport there is kept to WebSocket for the page.
+
+`state.transport` of an open connection says what carries it: `"websocket"`, `"stream"` or `"poll"`. A connection whose WebSocket and request over HTTP both failed never opened: its `state.cause.opened` is `false`, and the cause carries what the platform said of the request. A caller whose sockets come from a `socketFactory` of its own climbs no ladder unless `fallback` is given, and React Native, whose `fetch` cannot read an answer as it comes, keeps to WebSocket.
 
 ## Who a connection is
 

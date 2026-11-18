@@ -2,7 +2,8 @@ import { createLogger } from "../../logger";
 import { isFieldRecord } from "../../utils/body-kind";
 import { ONCE, ownFields } from "../../utils/own";
 import type { StreamFailure } from "../describe-failure";
-import { fromErrorCode, RealtimeError } from "../errors";
+import { ConnectionError, fromErrorCode, RealtimeError } from "../errors";
+import { WS_CODE } from "../ws/ws-codes";
 import { SSE_CONTROL_EVENTS } from "./control-events";
 import { parseSSEFrames, type RawSSEEvent, type SSEFrame } from "./parse-sse";
 import type { SSEConnectionCtx } from "./sse-connection";
@@ -77,7 +78,7 @@ export async function readConnection<TData>(
   } catch (error) {
     if (!(error instanceof EventTooLarge)) throw error;
     log.error("An SSE event ran past what the client reads, not reconnecting", error);
-    return error;
+    return new ConnectionError(error.message, WS_CODE.MESSAGE_TOO_BIG);
   } finally {
     clearTimeout(silence);
     if (ctx.current === connection) ctx.current = undefined;

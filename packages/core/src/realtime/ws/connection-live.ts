@@ -29,7 +29,7 @@ export function fromOpen(
         ? { state: backToOpen(state), effects: [] }
         : stay(state);
     case "closed":
-      return onClosed(state, ctx, event.closure, event.announced, event.error);
+      return onClosed(state, ctx, event);
     case "silent":
       return schedule(
         state,
@@ -49,6 +49,10 @@ export function fromOpen(
       return connect(state, ctx, 0, undefined, dropped(4000, "Reconnecting"));
     case "resume":
       return { state, effects: [{ type: "probe", heartbeat: state.heartbeat }] };
+    case "transport":
+      return event.transport === state.transport
+        ? stay(state)
+        : { state: { ...state, transport: event.transport }, effects: [] };
     default:
       return stay(state);
   }
@@ -68,8 +72,17 @@ function startRenewal(state: Phase<"open">, ctx: MachineContext): Step {
 }
 
 function backToOpen(state: Phase<"reauthenticating">): Phase<"open"> {
-  const { failures, authSeq, connectionId, heartbeat, openedAt, fingerprint } = state;
-  return { phase: "open", failures, authSeq, connectionId, heartbeat, openedAt, fingerprint };
+  const { failures, authSeq, connectionId, transport, heartbeat, openedAt, fingerprint } = state;
+  return {
+    phase: "open",
+    failures,
+    authSeq,
+    connectionId,
+    transport,
+    heartbeat,
+    openedAt,
+    fingerprint,
+  };
 }
 
 /* Leave an open socket: let it go, stop watching it, and hold the subscriptions for the next. */

@@ -19,8 +19,12 @@ export interface DeliveryRequest {
 export type Delivered =
   /** It ended, its frames taken: the next is asked for at once */
   | { readonly kind: "next" }
-  /** It was not answered, was cut short, or ended with nothing as soon as it began: the next after a wait, the server's when it asked for one */
-  | { readonly kind: "again"; readonly afterMs: number | undefined }
+  /**
+   * It was not answered, was cut short, or ended with nothing as soon as it
+   * began: the next after a wait, the server's when it asked for one;
+   * `error` is what the platform said of a request the network did not carry
+   */
+  | { readonly kind: "again"; readonly afterMs: number | undefined; readonly error?: unknown }
   /** A stream whose first bytes did not come in time: something on the way holds answers back */
   | { readonly kind: "held" }
   /** The connection is gone, the transport is not there, or the request was refused */

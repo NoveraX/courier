@@ -13,7 +13,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import { EventBus } from "../src/event-bus";
 import type { AnyStudioEvent } from "../src/events";
 import { wireStreamHooks } from "../src/runtime/hooks/stream";
-import { refusedSocketCause } from "./helpers/refused-socket-cause";
 
 const { stream, channel } = courier();
 const closers: Array<() => void> = [];
@@ -76,7 +75,7 @@ describe("a stream's connection, as Studio is told it", () => {
     });
   });
 
-  it("is the close a channel's socket reported, as a direct caller opened it", async () => {
+  it("is the platform's word for the request over HTTP a direct caller's refused socket gave way to", async () => {
     const events = wired();
     const api = defineApi({
       expose: true,
@@ -98,7 +97,7 @@ describe("a stream's connection, as Studio is told it", () => {
     ).toMatchObject({
       requestId: opened?.id,
       failures: 1,
-      cause: await refusedSocketCause(),
+      cause: { code: "ECONNREFUSED", message: expect.stringContaining("ECONNREFUSED") },
     });
   });
 

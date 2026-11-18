@@ -1,4 +1,4 @@
-export const metadata = { title: "Streams & Channels", description: "Serve server-sent event streams and WebSocket channels, share a topic between subscribers, and broadcast to it.", mode: "both", updated: "2026-11-15" }
+export const metadata = { title: "Streams & Channels", description: "Serve server-sent event streams and WebSocket channels, share a topic between subscribers, and broadcast to it.", mode: "both", updated: "2026-11-18" }
 
 ## Overview
 
@@ -184,7 +184,7 @@ A server whose WebSocket layer closes the socket over a frame too large to read,
 
 ## Connections
 
-A caller's channels and push subscriptions share one socket on each URL, which the caller's `ws` options open. [Realtime Connections](/docs/advanced/realtime-connections) says what those options are, how a socket and a stream come back after a dropped network, a hidden page or a restarted server, what each close code means, and who the server takes a connection to be.
+A caller's channels and push subscriptions share one socket on each URL, which the caller's `ws` options open. [Realtime Connections](/docs/advanced/realtime-connections) says what those options are, how a socket and a stream come back after a dropped network, a hidden page or a restarted server, what each close code means, how a connection goes on where no WebSocket gets through, and who the server takes a connection to be.
 
 ## Next steps
 

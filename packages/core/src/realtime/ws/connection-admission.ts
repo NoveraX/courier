@@ -39,7 +39,7 @@ export function fromConnecting(
       };
     }
     case "closed":
-      return onClosed(state, ctx, event.closure, event.announced, event.error);
+      return onClosed(state, ctx, event);
     case "timeout": {
       const drop = state.socket
         ? [{ type: "drop-socket", code: 4100, reason: "Connect timed out" } as const]
@@ -83,6 +83,7 @@ export function fromAuthenticating(
           failures: state.failures,
           authSeq: state.authSeq,
           connectionId: event.connectionId,
+          transport: event.transport,
           heartbeat: event.heartbeat,
           openedAt: ctx.now,
           fingerprint: state.fingerprint,
@@ -95,7 +96,7 @@ export function fromAuthenticating(
         { type: "subscriptions-wait" },
       ]);
     case "closed":
-      return onClosed(state, ctx, event.closure, event.announced, event.error);
+      return onClosed(state, ctx, event);
     case "timeout":
       return schedule(state, ctx, { kind: "timeout", waitingFor: "admission" }, [
         { type: "drop-socket", code: 4100, reason: "Admission timed out" },

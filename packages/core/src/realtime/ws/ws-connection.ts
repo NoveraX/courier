@@ -14,7 +14,7 @@ import { type ConnectionRuntime, createConnectionRuntime } from "./connection-ru
 import { publicStateOf, retryOfState, statusOf } from "./connection-view";
 import { createLiveness } from "./liveness";
 import { createMessageQueue } from "./message-queue";
-import { platformSocketFactory } from "./platform-socket";
+import { socketFactoryOf } from "./socket-factory";
 import { sendToTopic, subscribeToTopic, type TopicOpsContext } from "./topic-operations";
 import type { Subscription } from "./topic-subscription";
 import { WS_CODE } from "./ws-codes";
@@ -30,9 +30,12 @@ const DEFAULT_MAX_BUFFERED = 1_048_576;
  * connects, proves who it is, and stays connected — reconnecting after a
  * drop with a backoff, at once when asked or when the page says the network
  * or the page is back, and taking a socket that has gone silent for dead.
- * Its status is `connected` once the server has admitted it.
+ * Its status is `connected` once the server has admitted it. Where no
+ * WebSocket gets through, the same connection goes over HTTP requests to
+ * the socket's path, unless `fallback` is `false`; `state.transport` says
+ * what carries it.
  *
- * @throws {ConfigurationError} `URL_NOT_ABSOLUTE` for a path where no page resolves it, `INVALID_BACKOFF` or `INVALID_MESSAGE_QUEUE` for limits that do not hold
+ * @throws {ConfigurationError} `URL_NOT_ABSOLUTE` for a path where no page resolves it, `INVALID_BACKOFF`, `INVALID_MESSAGE_QUEUE` or `INVALID_FALLBACK` for limits that do not hold
  * @example
  * const conn = createWSConnection({ url: "wss://realtime.example.com/ws" });
  * const unsub = conn.subscribe("chat:room", (msg) => console.log(msg));
@@ -90,7 +93,7 @@ export function createWSConnection(given: WSConnectionConfig): WSConnection {
   const runtime = createConnectionRuntime({
     config,
     log,
-    factory: config.socketFactory ?? platformSocketFactory(config.webSocket, config.socketInit),
+    factory: socketFactoryOf(config),
     context,
     hooks: connectionHooks({
       topics,

@@ -3,6 +3,13 @@ import type { ResumeSignal } from "../resume-signals";
 import type { SocketClosure } from "./reconnect-classifier";
 import type { ServerHeartbeat } from "./server-frame-types";
 
+/**
+ * How a connection's frames travel: on a WebSocket, or — where none gets
+ * through — over HTTP requests to the socket's path, on a stream the server
+ * holds open or, where something on the way holds a stream back, on polls.
+ */
+export type WSTransport = "websocket" | "stream" | "poll";
+
 /** Why a connection is waiting to reconnect. */
 export type ReconnectCause =
   /** The socket closed: before it opened, or while it was open */
@@ -10,6 +17,7 @@ export type ReconnectCause =
       readonly kind: "closed";
       readonly code: number;
       readonly reason: string;
+      /** Whether it had opened: a WebSocket's handshake done, or over HTTP the request that opens the connection answered */
       readonly opened: boolean;
       /** What the socket's error event carried before it closed */
       readonly error?: unknown;
@@ -37,10 +45,14 @@ export type WSConnectionState =
   | { readonly phase: "connecting"; readonly attempt: number }
   /** The socket is open, and the server has yet to admit it */
   | { readonly phase: "authenticating"; readonly attempt: number }
-  /** Admitted; `connectionId` is what the server's logs name the connection by */
-  | { readonly phase: "open"; readonly connectionId: string }
+  /** Admitted; `connectionId` is what the server's logs name the connection by, `transport` what carries it */
+  | { readonly phase: "open"; readonly connectionId: string; readonly transport: WSTransport }
   /** Open, and proving who it is again */
-  | { readonly phase: "reauthenticating"; readonly connectionId: string }
+  | {
+      readonly phase: "reauthenticating";
+      readonly connectionId: string;
+      readonly transport: WSTransport;
+    }
   | {
       readonly phase: "reconnecting";
       readonly attempt: number;
@@ -91,6 +103,7 @@ export type MachineState =
   | (Memory & {
       readonly phase: "open";
       readonly connectionId: string;
+      readonly transport: WSTransport;
       readonly heartbeat: ServerHeartbeat;
       readonly openedAt: number;
       readonly fingerprint: string;
@@ -98,6 +111,7 @@ export type MachineState =
   | (Memory & {
       readonly phase: "reauthenticating";
       readonly connectionId: string;
+      readonly transport: WSTransport;
       readonly heartbeat: ServerHeartbeat;
       readonly openedAt: number;
       readonly fingerprint: string;
@@ -131,12 +145,15 @@ export type MachineEvent =
    */
   | { readonly type: "socket-failed"; readonly error: RealtimeError }
   | { readonly type: "socket-open" }
-  /** The server took the first `auth`: `auth_ok`, with how it pings the connection */
+  /** The server took the first `auth`: `auth_ok`, with how it pings the connection, on the transport that carried it */
   | {
       readonly type: "admitted";
       readonly connectionId: string;
       readonly heartbeat: ServerHeartbeat;
+      readonly transport: WSTransport;
     }
+  /** The connection's frames travel another way from now on: a stream held back, so polls */
+  | { readonly type: "transport"; readonly transport: WSTransport }
   /** The server's first frame answered no `auth`: the kind of frame it was */
   | { readonly type: "mismatch"; readonly frame: string }
   /** The server asked for the credentials again, or the application did */
@@ -151,6 +168,12 @@ export type MachineEvent =
       readonly closure: SocketClosure;
       readonly announced: boolean;
       readonly error?: unknown;
+      /**
+       * Whether the socket had opened: a WebSocket's handshake done, or the
+       * request that opens a connection over HTTP answered — a socket over
+       * HTTP is open at once, to carry the client's first frames with it
+       */
+      readonly opened: boolean;
     }
   | { readonly type: "silent"; readonly forMs: number }
   | { readonly type: "timeout" }

@@ -11,6 +11,8 @@ export type ConfigurationErrorCode =
   | "INVALID_BACKOFF"
   /** A realtime connection's `messageQueue` names a limit that is not a whole number from 0, or an unknown `overflow`. */
   | "INVALID_MESSAGE_QUEUE"
+  /** A WebSocket connection's `fallback.after` is not a whole number of ms from 1 and under the 15 s a socket has to open. */
+  | "INVALID_FALLBACK"
   /** A subscription was asked to tell an event it does not have: it has `data`, `error`, `status`, `open` and `close`. */
   | "UNKNOWN_EVENT"
   /** A relative `proxyPath` value was given but no origin is available (SSR without explicit origin injection). */

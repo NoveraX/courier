@@ -1,35 +1,8 @@
 import { HTTP_TRANSPORT_VERSION, type HTTPOpening, PONG_FRAME } from "../ws/http-protocol";
-import type { WSClientSocket } from "../ws/ws-types";
 import { deliverOnce } from "./http-delivery";
 import { createOutbox } from "./http-outbox";
 import { endingOf, type PostTerms, post, waitBeforeAgain } from "./http-post";
-
-/** How the server's frames come: on a stream held open, or on polls. */
-export type HTTPMode = "stream" | "poll";
-
-/** What a socket over HTTP is made with. */
-export interface HTTPSocketOptions {
-  /** The source's `fetch`, else the platform's */
-  readonly fetch?: typeof fetch | undefined;
-  /** What every request is made with besides its method, headers, body and signal */
-  readonly init?: RequestInit | undefined;
-  /** Headers of the request that opens the connection: the handshake's, where a script may set them */
-  readonly headers?: Readonly<Record<string, string>> | undefined;
-  /** How the server's frames come first */
-  readonly mode: HTTPMode;
-  /** How long a stream's first bytes may take before polls carry the frames instead */
-  readonly probeMs: number;
-}
-
-/** A WebSocket connection carried over HTTP requests, as the client drives a socket. */
-export interface HTTPSocket extends WSClientSocket {
-  /** How the server's frames come now */
-  readonly mode: HTTPMode;
-  /** Told when they come another way from then on: a stream held back, so polls */
-  onmode: ((mode: HTTPMode) => void) | null;
-  /** Whether it closed because no HTTP transport answers at its path */
-  readonly absent: boolean;
-}
+import type { HTTPSocket, HTTPSocketOptions } from "./http-socket-types";
 
 /**
  * A socket whose frames travel over the HTTP transport of a WebSocket
@@ -42,6 +15,13 @@ export interface HTTPSocket extends WSClientSocket {
  * was taken. A stream whose first bytes do not come in `probeMs` is held
  * back on the way, so polls carry the frames from then on. The heartbeat's
  * ping is answered by the requests themselves: its pong is not sent.
+ *
+ * The request that opens the connection is made once: one the network or
+ * the server does not answer closes the socket with 1006, before it holds
+ * any connection, and the connection's backoff decides when to try again,
+ * as for a socket that does not open — the platform's error first, where
+ * the network did not carry the request, as a WebSocket's handshake that
+ * failed reports it.
  *
  * @param url - The socket's address, `ws:` or `wss:`
  * @param options - How its requests are made, and how its frames come first
@@ -113,7 +93,7 @@ export function createHTTPSocket(url: string, options: HTTPSocketOptions): HTTPS
     for (let failures = 0; readyState === 1; ) {
       const first = token === undefined;
       const head = first
-        ? { op: mode, v: HTTP_TRANSPORT_VERSION }
+        ? { op: mode, v: HTTP_TRANSPORT_VERSION, cause: options.cause }
         : { op: mode, token, ack: acknowledged() };
       const delivered = await deliverOnce(
         {
@@ -130,6 +110,11 @@ export function createHTTPSocket(url: string, options: HTTPSocketOptions): HTTPS
         absent = first && delivered.posted.kind === "absent";
         const { code, reason } = endingOf(delivered.posted);
         end(code, reason);
+      } else if (delivered.kind === "again" && first) {
+        /* As a WebSocket whose handshake failed: what the platform said, then the close. */
+        if (delivered.error !== undefined)
+          socket.onerror?.({ type: "error", error: delivered.error });
+        end(1006, "The server did not answer the connection's opening");
       } else if (delivered.kind === "again") {
         const ms = waitBeforeAgain(delivered.afterMs, failures++);
         await new Promise((resume) => setTimeout(resume, ms));
@@ -160,6 +145,9 @@ export function createHTTPSocket(url: string, options: HTTPSocketOptions): HTTPS
     },
     get absent() {
       return absent;
+    },
+    get reached() {
+      return token !== undefined;
     },
     send(frame) {
       if (readyState !== 1 || frame === PONG_FRAME) return;

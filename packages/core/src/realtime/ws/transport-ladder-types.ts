@@ -2,6 +2,7 @@ import type { PlatformFetch } from "../../http-client/source-transport";
 import type { HTTPSocket, HTTPSocketOptions } from "../ws-http/http-socket-types";
 import type { WSTransport } from "./connection-machine-types";
 import type { RungMemory } from "./rung-memory";
+import type { WebSocketWatch } from "./websocket-probe";
 import type { WSClientSocket, WSSocketFactory } from "./ws-types";
 
 /** A socket of the transport ladder: it says what carries it, and when that changes. */
@@ -15,6 +16,14 @@ export interface LadderSocket extends WSClientSocket {
   readonly reached: boolean;
   /** Told when its frames travel another way from then on: a stream held back, so polls */
   ontransport: ((transport: WSTransport) => void) | null;
+  /** Told when a WebSocket gets through again while HTTP carries it: the connection is made anew, on one */
+  onclimb: (() => void) | null;
+}
+
+/** What the ladder loads to carry a connection over HTTP, and to watch for its way back up. */
+export interface HTTPRung {
+  readonly createHTTPSocket: (url: string, options: HTTPSocketOptions) => HTTPSocket;
+  readonly watchForWebSocket: (watch: WebSocketWatch) => () => void;
 }
 
 /** What the ladder climbs down with. */
@@ -27,6 +36,8 @@ export interface LadderOptions {
   /** The source's `fetch`, and what its requests are made with */
   readonly fetch?: PlatformFetch | undefined;
   readonly init?: RequestInit | undefined;
-  /** Loads the HTTP transport, which a page that never needs it never loads */
-  readonly load: () => Promise<(url: string, options: HTTPSocketOptions) => HTTPSocket>;
+  /** Whether the page's resume signals send a probe for a WebSocket too: the connection's `reconnectOnResume` */
+  readonly resume: boolean;
+  /** Loads the HTTP transport and the watch for the way back, which a page that never needs them never loads */
+  readonly load: () => Promise<HTTPRung>;
 }

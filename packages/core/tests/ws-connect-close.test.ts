@@ -184,7 +184,7 @@ describe("a client that sends no auth frame", () => {
     const socket = createSocket();
     handler.handleSocket(socket, new Request("http://localhost/api/ws", { headers: ADDRESS }));
 
-    socket.emit("message", { data: JSON.stringify({ type: "ping" }) });
+    socket.emit("message", { data: JSON.stringify({ type: "subscribe", id: "s1", topic: "t" }) });
     await wait(10);
 
     expect(onConnect).not.toHaveBeenCalled();
@@ -192,5 +192,62 @@ describe("a client that sends no auth frame", () => {
       { type: "auth_error", error: { code: 1002, message: "The first frame is auth" }, v: 2 },
     ]);
     expect(socket.closedWith).toBe(1002);
+  });
+});
+
+describe("a client that pings before it says who it is", () => {
+  it("is answered with pong, and let in on the auth that follows", async () => {
+    const onConnect = vi.fn(() => ({}));
+    const handler = handlerWith({ onConnect });
+    const socket = createSocket();
+    handler.handleSocket(socket, new Request("http://localhost/api/ws", { headers: ADDRESS }));
+
+    socket.emit("message", { data: JSON.stringify({ type: "ping" }) });
+    await wait(10);
+    const answered = socket.sent.map((frame) => JSON.parse(frame));
+    socket.emit("message", { data: JSON.stringify(authFrame({})) });
+    await wait(10);
+
+    expect(answered).toEqual([{ type: "pong" }]);
+    expect(onConnect).toHaveBeenCalledOnce();
+    expect(JSON.parse(socket.sent[1] ?? "{}")).toMatchObject({ type: "auth_ok" });
+    expect(socket.closedWith).toBeUndefined();
+    expect(handler.connections.count).toBe(1);
+  });
+
+  it("is refused with 4408 as the wait counted from its open runs out, the ping no reprieve", async () => {
+    const onConnect = vi.fn(() => ({}));
+    const handler = handlerWith({ authTimeoutMs: 40, onConnect });
+    const socket = createSocket();
+    handler.handleSocket(socket, new Request("http://localhost/api/ws", { headers: ADDRESS }));
+
+    await wait(25);
+    socket.emit("message", { data: JSON.stringify({ type: "ping" }) });
+    await wait(30);
+
+    expect(onConnect).not.toHaveBeenCalled();
+    expect(socket.sent.map((frame) => JSON.parse(frame))).toEqual([
+      { type: "pong" },
+      { type: "auth_error", error: { code: 4408, message: "No auth frame within 40 ms" }, v: 2 },
+    ]);
+    expect(socket.closedWith).toBe(4408);
+  });
+
+  it("that leaves once answered is never handed to onConnect, and gives its address's slot back", async () => {
+    const onConnect = vi.fn(() => ({}));
+    const handler = handlerWith({ maxConnectionsPerIP: 1, onConnect });
+    const socket = createSocket();
+    handler.handleSocket(socket, new Request("http://localhost/api/ws", { headers: ADDRESS }));
+
+    socket.emit("message", { data: JSON.stringify({ type: "ping" }) });
+    await wait(10);
+    socket.emit("close", { code: 1000 });
+    await wait(10);
+    const next = connect(handler);
+    await wait(20);
+
+    expect(onConnect).toHaveBeenCalledOnce();
+    expect(next.closedWith).toBeUndefined();
+    expect(handler.connections.count).toBe(1);
   });
 });

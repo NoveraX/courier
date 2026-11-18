@@ -79,6 +79,9 @@ export function connectionSocket(options: SocketOptions): ConnectionSocket {
       opened.ontransport = (transport) => {
         if (mine()) dispatch({ type: "transport", transport });
       };
+      opened.onclimb = () => {
+        if (mine()) dispatch({ type: "reconnect" });
+      };
     }
     /* What the error said is told with the close that follows it. Node 22's
        WebSocket reports a refused connection with an error alone, its socket
@@ -103,7 +106,7 @@ export function connectionSocket(options: SocketOptions): ConnectionSocket {
    */
   function release(dropped: WSClientSocket, code?: number, reason?: string): void {
     dropped.onopen = dropped.onmessage = dropped.onclose = null;
-    if (isLadder(dropped)) dropped.ontransport = null;
+    if (isLadder(dropped)) dropped.ontransport = dropped.onclimb = null;
     dropped.onerror = (event) => log.debug("A socket let go of reported an error", event);
     if (dropped.readyState >= 2) return;
     try {

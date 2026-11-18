@@ -13,7 +13,7 @@ import {
   PROTOCOL_VERSION,
   type WSMessage,
 } from "@noverax/courier/internal";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 
 import { createMockServer, type MockServer } from "../src/server/create-mock-server";
@@ -103,6 +103,18 @@ describe("a socket's first frame", () => {
 
     expect(frames).toEqual([{ type: "auth_error", error: expect.objectContaining(error), v: 2 }]);
     expect(code).toBe(error.code);
+  });
+
+  it("answers a ping before it with pong, and lets the auth that follows in", async () => {
+    const { socket, frames, opened } = watched(await boot());
+    await opened;
+
+    socket.send(encodeMessage({ type: "ping" }));
+    await vi.waitFor(() => expect(frames).toEqual([{ type: "pong" }]));
+    const answer = await admit(socket);
+
+    expect(answer).toMatchObject({ type: "auth_ok", id: "a1" });
+    socket.close();
   });
 
   it("refuses an auth frame no client sends", async () => {

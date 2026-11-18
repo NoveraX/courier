@@ -2,7 +2,7 @@ import type { WSAuthParams } from "../realtime/ws/ws-credentials";
 import type { SessionClose } from "./ws-close";
 import type { WSSocketContext } from "./ws-context";
 import { frameCredentials, withFrameHeaders } from "./ws-frame-credentials";
-import { readFirstFrame } from "./ws-handshake";
+import { type FirstFrame, readFirstFrame } from "./ws-handshake";
 import type { WSInbox } from "./ws-inbox";
 
 /**
@@ -21,7 +21,9 @@ export type Admission =
  * refused — the version with 1002 and why, so a page left from an older
  * build is told to reload rather than retry. It is read as it comes: a
  * first frame that is refused is refused for itself, whatever the client
- * sent after it, and nothing more is kept.
+ * sent after it, and nothing more is kept. A `ping` before it — a client
+ * checking that its WebSocket gets through — is answered with `pong`, and
+ * the `auth` is waited for in what is left of `timeoutMs`.
  *
  * @param ctx - The connection
  * @param inbox - What its socket has sent
@@ -38,19 +40,31 @@ export function awaitCredentials(
   inbox: WSInbox,
   timeoutMs: number,
 ): Promise<Admission> {
+  const until = performance.now() + timeoutMs;
   return new Promise((resolve) => {
-    inbox.first(timeoutMs, (raw) => {
+    const read = (raw: string | undefined): boolean => {
+      const first = raw === undefined ? undefined : readFirstFrame(raw, ctx.maxMessageSize);
+      if (first !== undefined && "ping" in first) {
+        ctx.sendMessage({ type: "pong" });
+        inbox.first(Math.max(0, until - performance.now()), read);
+        return true;
+      }
       const admission: Admission =
-        raw === undefined ? { refused: { kind: "no-auth-frame", timeoutMs } } : admitted(ctx, raw);
+        first === undefined
+          ? { refused: { kind: "no-auth-frame", timeoutMs } }
+          : admitted(ctx, first);
       resolve(admission);
       return !("refused" in admission);
-    });
+    };
+    inbox.first(timeoutMs, read);
   });
 }
 
 /* What a first frame admits its connection with; its headers go on the connection's request. */
-function admitted(ctx: WSSocketContext, raw: string): Admission {
-  const first = readFirstFrame(raw, ctx.maxMessageSize);
+function admitted(
+  ctx: WSSocketContext,
+  first: Exclude<FirstFrame, { readonly ping: true }>,
+): Admission {
   if ("refused" in first) return first;
   const id = typeof first.auth.id === "string" ? first.auth.id : undefined;
   const credentials = frameCredentials(first.auth.payload);

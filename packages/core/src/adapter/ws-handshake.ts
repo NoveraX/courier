@@ -1,8 +1,16 @@
 import { decodeMessage, PROTOCOL_VERSION, type WSMessage } from "../realtime/ws/ws-protocol";
 import type { SessionClose } from "./ws-close";
 
-/** A client's first frame, read: its `auth`, of the version spoken here, or why its connection is refused. */
-export type FirstFrame = { readonly auth: WSMessage } | { readonly refused: SessionClose };
+/**
+ * A client's first frame, read: its `auth`, of the version spoken here; a
+ * `ping`, which a client that only checks a WebSocket gets through sends,
+ * answered with `pong` while its `auth` is still waited for; or why its
+ * connection is refused.
+ */
+export type FirstFrame =
+  | { readonly auth: WSMessage }
+  | { readonly ping: true }
+  | { readonly refused: SessionClose };
 
 /** What `auth_ok` tells a client of the connection it was let in on. */
 export interface AuthOkFields {
@@ -18,10 +26,11 @@ export interface AuthOkFields {
 
 /**
  * Read a client's first frame as the protocol has it: an `auth` that names
- * the version spoken here. One of another kind, or larger than the server
- * reads, an `auth` naming no version or another one, is refused with 1002
- * and why — a page left from an older build is told to reload rather than
- * retry. Every server of the protocol reads it with this, a mock's too.
+ * the version spoken here, or a `ping` before it. One of another kind, or
+ * larger than the server reads, an `auth` naming no version or another one,
+ * is refused with 1002 and why — a page left from an older build is told to
+ * reload rather than retry. Every server of the protocol reads it with this,
+ * a mock's too.
  *
  * @param raw - The frame as the socket delivered it
  * @param maxMessageSize - The largest message the server reads
@@ -34,6 +43,7 @@ export interface AuthOkFields {
  */
 export function readFirstFrame(raw: string, maxMessageSize: number): FirstFrame {
   const first = raw.length > maxMessageSize ? undefined : decoded(raw);
+  if (first?.type === "ping") return PING;
   if (first?.type !== "auth") return mismatch("The first frame is auth");
   if (first.v === undefined) {
     return mismatch(`Protocol version ${PROTOCOL_VERSION} required: reload the page`);
@@ -75,6 +85,8 @@ function decoded(raw: string): WSMessage | undefined {
     return undefined;
   }
 }
+
+const PING: FirstFrame = { ping: true };
 
 function mismatch(reason: string): FirstFrame {
   return { refused: { kind: "version", reason } };

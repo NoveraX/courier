@@ -86,13 +86,29 @@ export function attemptWebSocket(
   };
 }
 
-/* A WebSocket given up on: nothing it does is heard any more, and one still opening is aborted. */
-function letGo(socket: WSClientSocket): void {
+/**
+ * Let go of a WebSocket: nothing it does is heard any more, and one still
+ * opening is aborted, one open closed — by default as one that did not
+ * answer as it should in time.
+ *
+ * @param socket - The WebSocket
+ * @param code - What it is closed with
+ * @param reason - Why
+ * @example
+ * ```ts
+ * letGo(probe, 1000, "");
+ * ```
+ */
+export function letGo(
+  socket: WSClientSocket,
+  code = GAVE_UP,
+  reason = "Not answered in time",
+): void {
   socket.onopen = socket.onmessage = socket.onclose = null;
   socket.onerror = () => undefined;
   if (socket.readyState >= 2) return;
   try {
-    socket.close(GAVE_UP, "Not answered in time");
+    socket.close(code, reason);
   } catch {
     /* A socket that cannot be closed is gone already. */
   }

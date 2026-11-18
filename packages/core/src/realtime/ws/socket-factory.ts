@@ -48,7 +48,8 @@ export function socketFactoryOf(config: WSConnectionConfig): WSSocketFactory {
     memory: rungMemory(remember !== false),
     fetch: config.fetch,
     init: config.fetchInit,
-    load: async () => (await import("../ws-http/http-socket")).createHTTPSocket,
+    resume: config.reconnectOnResume !== false,
+    load: () => import("./http-rung"),
   });
 }
 

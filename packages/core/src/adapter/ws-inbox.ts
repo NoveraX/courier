@@ -24,7 +24,8 @@ export interface WSInbox {
    * read of the socket, its own answer comes first. It counts among what
    * the socket may send, and is not held. `read` is given `undefined` when
    * `ms` pass without one, or the socket closes first, and says whether
-   * the connection goes on: once it does not, nothing more is kept.
+   * the connection goes on: once it does not, nothing more is kept. Asked
+   * again, from `read` itself, it reads the frame after the one read.
    */
   first(ms: number, read: (raw: string | undefined) => boolean): void;
   /**

@@ -114,8 +114,10 @@ export function activateChannelSocket(
   ws.on("message", (raw: Buffer | string) => {
     if (refused) return;
     if (alive === undefined) {
+      const admitted = admitSocket(socket, raw.toString(), heartbeat);
+      if (admitted === "waiting") return;
       clearTimeout(waiting);
-      if (admitSocket(socket, raw.toString(), heartbeat)) alive = keepAlive(ws, heartbeat);
+      if (admitted === "admitted") alive = keepAlive(ws, heartbeat);
       else refused = true;
       return;
     }

@@ -1,7 +1,7 @@
 import type { HTTPMode } from "../ws-http/http-socket-types";
 import type { WSTransport } from "./connection-machine-types";
 import type { HTTPFallbackCause } from "./http-protocol";
-import type { LadderOptions, LadderSocket } from "./transport-ladder-types";
+import type { HTTPRung, LadderOptions, LadderSocket } from "./transport-ladder-types";
 import { ABNORMAL_CLOSE, attemptWebSocket } from "./websocket-attempt";
 import type { WSClientSocket, WSMessageEventLike, WSSocketFactory } from "./ws-types";
 
@@ -15,13 +15,16 @@ import type { WSClientSocket, WSMessageEventLike, WSSocketFactory } from "./ws-t
  * the request that opens the connection over HTTP. A WebSocket the server
  * answered on stays, whatever happens to it next. The rung the HTTP
  * transport reached is kept, so the next socket to the path starts there,
- * and one where no HTTP transport answers is kept to the WebSocket.
+ * and one where no HTTP transport answers is kept to the WebSocket. While
+ * HTTP carries the connection, the path is probed for a WebSocket getting
+ * through again; once one does, the rung is forgotten and the socket says
+ * so: the connection is made anew, on a WebSocket.
  *
  * @param options - The WebSocket, the wait, the memory, and the HTTP transport's loader
  * @returns The socket factory
  * @example
  * ```ts
- * const factory = ladderFactory({ webSocket, afterMs: 3000, memory: rungMemory(true), load });
+ * const factory = ladderFactory({ webSocket, afterMs: 3000, memory: rungMemory(true), resume: true, load });
  * const socket = factory("wss://api.example.com/ws");
  * ```
  */
@@ -48,6 +51,8 @@ function ladderSocket(
   let reached = (): boolean => false;
   /* What the client sent before the server answered, sent again over HTTP should the WebSocket give way. */
   let early: string[] = [];
+  /* Ends the watch for a WebSocket getting through again, while HTTP carries the connection. */
+  let climbing: (() => void) | undefined;
 
   function opened(): void {
     if (readyState !== 0) return;
@@ -68,7 +73,20 @@ function ladderSocket(
     if (readyState === 3) return;
     readyState = 3;
     current = undefined;
+    stopClimbing();
     ladder.onclose?.({ code, reason });
+  }
+
+  function stopClimbing(): void {
+    climbing?.();
+    climbing = undefined;
+  }
+
+  /* A WebSocket gets through again: the next socket to the path opens one. */
+  function climbed(): void {
+    climbing = undefined;
+    memory.forget(url);
+    ladder.onclimb?.();
   }
 
   function viaWebSocket(): void {
@@ -90,20 +108,29 @@ function ladderSocket(
     transport = mode;
     current = undefined;
     reached = () => false;
-    let create: Awaited<ReturnType<LadderOptions["load"]>>;
+    let rung: HTTPRung;
     try {
-      create = await options.load();
+      rung = await options.load();
     } catch {
       return ended(ABNORMAL_CLOSE, "The HTTP transport could not be loaded");
     }
     if (readyState >= 2) return ended(ABNORMAL_CLOSE, "");
-    const { fetch, init, afterMs } = options;
-    const socket = create(url, { fetch, init, headers, mode, probeMs: afterMs, cause });
+    const { fetch, init, afterMs, resume } = options;
+    const socket = rung.createHTTPSocket(url, {
+      fetch,
+      init,
+      headers,
+      mode,
+      probeMs: afterMs,
+      cause,
+    });
     current = socket;
     reached = () => socket.reached;
     socket.onopen = () => {
       opened();
       for (const frame of early.splice(0)) socket.send(frame);
+      const open = () => options.webSocket(url, protocols, headers);
+      climbing = rung.watchForWebSocket({ open, afterMs, resume, climbed });
     };
     socket.onmessage = heard;
     socket.onmode = (next) => {
@@ -124,6 +151,7 @@ function ladderSocket(
     onclose: null,
     onerror: null,
     ontransport: null,
+    onclimb: null,
     get readyState() {
       return readyState;
     },
@@ -146,6 +174,7 @@ function ladderSocket(
     close(code, reason) {
       if (readyState >= 2) return;
       readyState = 2;
+      stopClimbing();
       if (current === undefined) queueMicrotask(() => ended(code ?? 1000, reason ?? ""));
       else current.close(code, reason);
     },

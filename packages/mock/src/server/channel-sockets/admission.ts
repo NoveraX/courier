@@ -27,39 +27,44 @@ const admitted = new WeakSet<NodeWebSocket>();
 /**
  * Let a socket in on its first frame, as a Courier server does: an `auth`
  * of the protocol's version, its headers taken over the handshake's,
- * answered with `auth_ok`. Any other first frame — another version's, or
- * one no client sends — closes the socket and says why. A mock asks for no
- * credentials: what the frame carries only reaches the mocks.
+ * answered with `auth_ok`. A `ping` before it is answered with `pong`, and
+ * its `auth` waited for still. Any other first frame — another version's,
+ * or one no client sends — closes the socket and says why. A mock asks for
+ * no credentials: what the frame carries only reaches the mocks.
  *
  * @param socket - The socket
  * @param raw - Its first frame
  * @param heartbeat - What the mock pings it by
- * @returns Whether it was let in
+ * @returns Whether it was let in, answered and still waited for, or refused
  * @example
  * ```ts
- * if (admitSocket(socket, String(raw), heartbeat)) alive = keepAlive(ws, heartbeat);
+ * if (admitSocket(socket, String(raw), heartbeat) === "admitted") alive = keepAlive(ws, heartbeat);
  * ```
  */
 export function admitSocket(
   socket: ChannelSocket,
   raw: string,
   heartbeat: SocketHeartbeat,
-): boolean {
+): "admitted" | "waiting" | "refused" {
   const first = readFirstFrame(raw, WS_DEFAULTS.maxMessageSize);
+  if ("ping" in first) {
+    sendFrame(socket.ws, { type: "pong" });
+    return "waiting";
+  }
   if ("refused" in first) {
     closeWithNotice(socket.ws, first.refused, false);
-    return false;
+    return "refused";
   }
   const { id } = first.auth;
   const headers = frameHeaders(socket, first.auth);
   if (headers === undefined) {
     closeWithNotice(socket.ws, { kind: "bad-auth-frame", id }, false);
-    return false;
+    return "refused";
   }
   socket.headers = headers;
   admitted.add(socket.ws);
   sendFrame(socket.ws, admission(socket, id, heartbeat));
-  return true;
+  return "admitted";
 }
 
 /**

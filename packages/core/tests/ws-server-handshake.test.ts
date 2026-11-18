@@ -24,6 +24,10 @@ describe("readFirstFrame", () => {
     });
   });
 
+  it("takes a ping before the auth, which a client checking that its WebSocket gets through sends", () => {
+    expect(readFirstFrame('{"type":"ping"}', 65_536)).toEqual({ ping: true });
+  });
+
   it.each([
     ['{"type":"auth","id":"a1"}', "Protocol version 2 required: reload the page"],
     ['{"type":"auth","v":1}', "Protocol version 2 is spoken here, not 1"],

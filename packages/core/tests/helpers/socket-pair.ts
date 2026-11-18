@@ -14,6 +14,8 @@ export type SocketWay = "pass" | "refuse" | "hold" | "silent";
 export interface SocketsTo {
   readonly factory: WSSocketFactory;
   readonly opened: () => number;
+  /** What the way does with each socket opened from now on */
+  way: SocketWay;
 }
 
 /**
@@ -22,8 +24,8 @@ export interface SocketsTo {
  * network's does, and the server's end closes as the client's does.
  *
  * @param handler - The handler each socket reaches
- * @param way - What the way between them does with each socket
- * @returns The factory, and how many sockets it opened
+ * @param way - What the way between them does with each socket, until it is changed
+ * @returns The factory, how many sockets it opened, and its way
  * @example
  * ```ts
  * const sockets = socketsTo(handler, "refuse");
@@ -32,13 +34,15 @@ export interface SocketsTo {
  */
 export function socketsTo(handler: WSHandler, way: SocketWay): SocketsTo {
   let opened = 0;
-  return {
+  const sockets: SocketsTo = {
+    way,
     factory: (url) => {
       opened++;
-      return pairedSocket(handler, url, way);
+      return pairedSocket(handler, url, sockets.way);
     },
     opened: () => opened,
   };
+  return sockets;
 }
 
 function pairedSocket(handler: WSHandler, url: string, way: SocketWay): WSClientSocket {

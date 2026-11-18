@@ -127,8 +127,11 @@ export interface WSConnectionConfig {
    * connection opens the platform's WebSocket; with a `socketFactory` of
    * the application's own, it is off unless given. A server without the
    * HTTP transport answers its requests 404, and the connection stays on
-   * WebSocket. It needs a `fetch` whose answers stream: one without them —
-   * React Native's — keeps to WebSocket.
+   * WebSocket. While HTTP carries it, the path is probed for a WebSocket
+   * getting through again — within 30 s, then up to every 5 minutes, and on
+   * the page's resume signals — and once one does, the connection reconnects
+   * on a WebSocket. It needs a `fetch` whose answers stream: one without
+   * them — React Native's — keeps to WebSocket.
    */
   fallback?: false | WSFallbackOptions | undefined;
   /** The `fetch` the HTTP fallback's requests go through — the source's — in place of the platform's */

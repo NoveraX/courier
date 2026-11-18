@@ -6,6 +6,8 @@
  * so the socket is answered the same however its reads cut what it sent:
  * a first frame that is no `auth` of the protocol's version is refused
  * with 1002, and more than it may send — its `auth` among it — with 4429.
+ * A `ping` before the `auth`, which a client checking that its WebSocket
+ * gets through sends, is answered with `pong`, and counts among it.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -41,6 +43,7 @@ const room = channel
 
 const ping: WSMessage = { type: "ping" };
 const pings = (count: number): WSMessage[] => Array.from({ length: count }, () => ping);
+const subscribe: WSMessage = { type: "subscribe", id: "s1", topic: "api.live.room" };
 
 describe("a client whose connection onConnect is still deciding on", () => {
   it("is subscribed once it is admitted, and hears what the channel sends", async () => {
@@ -95,7 +98,7 @@ describe("a client whose connection onConnect is still deciding on", () => {
     );
     const { socket, closed, frames } = await opened(served.url);
 
-    for (const frame of pings(5)) socket.send(JSON.stringify(frame));
+    for (const frame of [subscribe, ...pings(4)]) socket.send(JSON.stringify(frame));
 
     expect(await closed).toBe(1002);
     expect(frames).toEqual([
@@ -156,8 +159,8 @@ describe.each([
 ])("a socket onConnect is still deciding on, %s", (_, together) => {
   it.each([
     {
-      sent: "five pings and no auth",
-      frames: pings(5),
+      sent: "a subscription and four pings, and no auth",
+      frames: [subscribe, ...pings(4)],
       code: 1002,
       reason: "The first frame is auth",
     },
@@ -181,6 +184,27 @@ describe.each([
 
     await expect.poll(() => socket.closed).toMatchObject({ code, reason });
     expect(socket.sent).toEqual([expect.objectContaining({ type: "auth_error" })]);
+  });
+
+  it("answers four pings before any auth with pong, and closes it with 4429 on a fifth", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { socket } = deciding();
+
+    await deliver(socket, pings(5), together);
+
+    await expect
+      .poll(() => socket.closed)
+      .toMatchObject({
+        code: 4429,
+        reason: "Too much sent before the connection was accepted",
+      });
+    expect(socket.sent.map((frame) => frame.type)).toEqual([
+      "pong",
+      "pong",
+      "pong",
+      "pong",
+      "auth_error",
+    ]);
   });
 
   it("holds an auth and three pings, as much as it may send, until it is admitted", async () => {

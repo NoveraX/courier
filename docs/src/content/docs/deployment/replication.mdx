@@ -564,7 +564,7 @@ const ws = createWSHandler({
 
 `maxBytes` counts the frames kept. A topic held without a subscriber, `maxTopics` of them at most (10 000 by default), keeps its name besides, as long as the subscription's variables made it: where nothing bounds them, a name runs to `maxMessageSize`, 64 KiB by default, over half a GiB for all the topics held. Bound the variables in the endpoint's schema, or hold fewer topics.
 
-Each event of a topic carries `seq`, dense from 1 on the replica that delivers it, and `subscribed` states the position with the epoch that names its sequence. Frames sent to one connection, such as a snapshot from `onJoin`, carry no number. A topic its last subscriber left is held for `maxAgeMs`, its events numbered and kept, so a client back within that time is sent them before `onJoin` runs — after the middleware and `authorize`, which is where to check who may hold the topic. `onJoin` reads `ctx.recovered` and need not send its snapshot again. The client has to come back to the same replica, which sticky sessions give it. A position the history no longer reaches, another epoch or another replica answers `recovered: false`, and the client starts over from `onJoin`. Once the pub/sub adapter is `ready` — its server reached, back from an outage or for the first time after a replica started without it, and the subscriptions made there answered — each subscription is told `resync`: what other replicas published meanwhile never arrived, and what they publish after does.
+Each event of a topic carries `seq`, dense from 1 on the replica that delivers it, and `subscribed` states the position with the epoch that names its sequence. Frames sent to one connection, such as a snapshot from `onJoin`, carry no number. A topic its last subscriber left is held for `maxAgeMs`, its events numbered and kept, so a client back within that time is sent them before `onJoin` runs — after the middleware and `authorize`, which is where to check who may hold the topic. `onJoin` reads `ctx.recovered` and need not send its snapshot again. Only the replica the client left can resume it; with a log, below, any replica can. A position the history no longer reaches, another epoch or another replica answers `recovered: false`, and the client starts over from `onJoin`. Once the pub/sub adapter is `ready` — its server reached, back from an outage or for the first time after a replica started without it, and the subscriptions made there answered — each subscription is told `resync`: what other replicas published meanwhile never arrived, and what they publish after does.
 
 Replicas whose pub/sub adapter keeps a log share one sequence a topic instead, and need no `history`. The log numbers each event as it is published; every replica delivers it, the sender's too, and any replica resumes a subscription from the log, so a client need not come back to the one it left. What arrives live while a subscription resumes is sent after what it missed. A replica that missed events reads them from the log and sends them before the next; where the log no longer keeps them, or began another sequence, its subscribers are told `resync`. Once its adapter is `ready`, back from an outage or for the first time, a replica catches each topic up from the log. With Redis, the [topic log](/docs/deployment/redis#topic-log) is `createRedisPubSub({ publisher, subscriber, log: {} })`; handlers in one process share one through their bus:
 
@@ -590,13 +590,13 @@ With a log, no replica delivers an event the log did not number: one sent by `pu
 
 ## Sticky Sessions
 
-Multi-replica deployments **require sticky sessions** for both SSE and WebSocket. The load balancer must route all requests from the same client to the same replica for the duration of a connection.
+Replicas need none. A WebSocket, or an SSE stream, is one connection to one replica while it lasts. A connection that fell back to HTTP lives on the replica that admitted it, and a request of its that the entry deals to another replica is sent on to that one — see [HTTP Fallback](/docs/deployment/http-fallback#replicas). A client that comes back after its connection ended may reach any replica:
 
-Configure this at the infrastructure level:
+- with a [topic log](#resuming-subscriptions), any replica resumes its subscriptions where they stood;
+- with `createRedisStream()`, any replica resumes a stream after its `Last-Event-ID` — see [Stream Adapter](/docs/deployment/redis#stream-adapter).
 
-- **nginx**: `upstream` with `ip_hash` or cookie-based affinity
-- **Traefik**: `sticky.cookie` in service definition
+Where a handler keeps `history` without a log, only the replica a client left resumes its subscriptions, and one that reaches another starts over from `onJoin`. Affinity there keeps more clients on the replica they left, and it spares the requests of a connection over HTTP their hop to its replica; nothing depends on it:
+
+- **nginx**: `upstream` with `ip_hash`, or `hash` on a cookie
+- **Traefik**: `sticky.cookie` in the service definition
 - **K8s Ingress**: `nginx.ingress.kubernetes.io/affinity: cookie`
-- **Cloudflare**: Enabled by default for WebSocket
-
-See the [Docker](/docs/deployment/docker) and [Kubernetes](/docs/deployment/kubernetes) pages for specific configuration.

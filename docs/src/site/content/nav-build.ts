@@ -106,6 +106,7 @@ export const BUILD_SECTIONS: NavSection[] = [
       { title: "Standalone Server", href: "/docs/deployment/standalone-server" },
       { title: "Redis Adapters", href: "/docs/deployment/redis" },
       { title: "Replication Guide", href: "/docs/deployment/replication" },
+      { title: "HTTP Fallback", href: "/docs/deployment/http-fallback" },
       { title: "Docker", href: "/docs/deployment/docker" },
       { title: "Kubernetes", href: "/docs/deployment/kubernetes" },
       { title: "Cloudflare Workers", href: "/docs/deployment/cloudflare" },

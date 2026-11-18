@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Deployment Overview",
   description: "Choose the right deployment strategy for your Courier application — standalone server, framework adapter, single or multi-replica.",
-  updated: "2026-11-15",
+  updated: "2026-11-18",
 }
 
 ## Deployment Models
@@ -41,7 +41,7 @@ A single process needs no adapter to broadcast. The stream and presence adapters
 
 3. **How many replicas?**
    - Single → no pub/sub adapter; memory stream and presence adapters where your handlers need them
-   - Multiple → Redis adapters + sticky sessions
+   - Multiple → Redis adapters; replicas need no [sticky sessions](/docs/deployment/replication#sticky-sessions)
 
 ## Health Checks
 
@@ -131,6 +131,7 @@ defineApi({
 - [Standalone Server](/docs/deployment/standalone-server) — full API and CLI reference
 - [Redis Adapters](/docs/deployment/redis) — multi-replica setup
 - [Replication Guide](/docs/deployment/replication) — per-framework examples
+- [HTTP Fallback](/docs/deployment/http-fallback) — connections where no WebSocket gets through, and what the entry must let through
 - [Docker](/docs/deployment/docker) — Dockerfile, Compose, and Swarm
 - [Kubernetes](/docs/deployment/kubernetes) — manifests, ingress, HPA
 - [Cloudflare Workers](/docs/deployment/cloudflare) — edge deployment

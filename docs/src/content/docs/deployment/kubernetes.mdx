@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Kubernetes",
-  description: "Deploy Courier on Kubernetes with nginx-ingress, sticky sessions, PodDisruptionBudget, and HPA scaling on connection count.",
-  updated: "2026-11-15",
+  description: "Deploy Courier on Kubernetes with nginx-ingress, connection drain, PodDisruptionBudget, and HPA scaling on connection count.",
+  updated: "2026-11-18",
 }
 
 ## Deployment
@@ -125,21 +125,12 @@ kind: Ingress
 metadata:
   name: courier-ingress
   annotations:
-    # Sticky sessions — required for SSE/WS
-    nginx.ingress.kubernetes.io/affinity: "cookie"
-    nginx.ingress.kubernetes.io/affinity-mode: "persistent"
-    nginx.ingress.kubernetes.io/session-cookie-name: "courier_affinity"
-    nginx.ingress.kubernetes.io/session-cookie-max-age: "86400"
-    nginx.ingress.kubernetes.io/session-cookie-path: "/"
-    nginx.ingress.kubernetes.io/session-cookie-secure: "true"
-    nginx.ingress.kubernetes.io/session-cookie-samesite: "Strict"
-
     # Long-lived connection timeouts
     nginx.ingress.kubernetes.io/proxy-read-timeout: "86400"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "86400"
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
 
-    # SSE — disable buffering
+    # SSE, and the HTTP fallback's streams — disable buffering
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
 
     # WebSocket support
@@ -173,10 +164,8 @@ spec:
 
 | Annotation | Value | Purpose |
 |-----------|-------|---------|
-| `affinity: cookie` | Sticky sessions | Routes same client to same pod for SSE/WS |
-| `session-cookie-max-age: 86400` | 24h | Cookie lifetime — clients stick for a day |
 | `proxy-read-timeout: 86400` | 24h | SSE/WS connections can live up to 24 hours |
-| `proxy-buffering: off` | Disable | SSE events must not be buffered |
+| `proxy-buffering: off` | Disable | SSE events, and the [HTTP fallback](/docs/deployment/http-fallback)'s streams, must not be buffered |
 | `enable-websockets: true` | Enable | Allow WebSocket upgrade |
 
 ## PodDisruptionBudget
@@ -341,7 +330,6 @@ helm install redis oci://registry-1.docker.io/bitnamicharts/redis \
 - [ ] `terminationGracePeriodSeconds: 60` for connection drain
 - [ ] `preStop` hook with `sleep 5` for LB deregistration
 - [ ] Liveness probe on `/health`, readiness on `/readyz`
-- [ ] Ingress with sticky sessions (`affinity: cookie`)
 - [ ] Ingress with `proxy-read-timeout: 86400` and `proxy-buffering: off`
 - [ ] PodDisruptionBudget with `minAvailable: 2`
 - [ ] HPA on CPU or custom connection metric

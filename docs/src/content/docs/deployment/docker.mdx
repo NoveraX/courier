@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Docker",
   description: "Deploy Courier with Docker — multi-stage Dockerfile, Docker Compose with Redis, and Docker Swarm with Traefik for horizontal scaling.",
-  updated: "2026-11-15",
+  updated: "2026-11-18",
 }
 
 ## Dockerfile
@@ -155,7 +155,6 @@ events {
 
 http {
   upstream courier {
-    ip_hash;  # sticky sessions for SSE/WS
     server courier:3001;
   }
 
@@ -175,7 +174,7 @@ http {
       proxy_set_header Upgrade $http_upgrade;
       proxy_set_header Connection $connection_upgrade;
 
-      # SSE — disable buffering
+      # SSE, and the HTTP fallback's streams — disable buffering
       proxy_buffering off;
       proxy_cache off;
       proxy_set_header X-Accel-Buffering no;
@@ -256,13 +255,6 @@ services:
         - "traefik.http.routers.courier.tls.certresolver=letsencrypt"
         - "traefik.http.services.courier.loadbalancer.server.port=3001"
 
-        # Sticky sessions (required for SSE/WS)
-        - "traefik.http.services.courier.loadbalancer.sticky.cookie=true"
-        - "traefik.http.services.courier.loadbalancer.sticky.cookie.name=courier_affinity"
-        - "traefik.http.services.courier.loadbalancer.sticky.cookie.httponly=true"
-        - "traefik.http.services.courier.loadbalancer.sticky.cookie.secure=true"
-        - "traefik.http.services.courier.loadbalancer.sticky.cookie.samesite=strict"
-
         # Timeouts for long-lived connections
         - "traefik.http.services.courier.loadbalancer.responseforwarding.flushinterval=1ms"
         - "traefik.http.middlewares.courier-timeout.headers.customrequestheaders.X-Accel-Buffering=no"
@@ -320,7 +312,6 @@ docker stack deploy -c docker-compose.swarm.yml courier
 |---------|-------|-----|
 | `update_config.order: start-first` | Zero-downtime | New replica accepts traffic before old one stops |
 | `update_config.delay: 30s` | Connection drain | Time for existing connections to gracefully close |
-| `sticky.cookie` | Session affinity | SSE/WS connections must stay on the same replica |
 | `flushinterval: 1ms` | SSE streaming | Traefik flushes response immediately (no buffering) |
 | `responseHeaderTimeout: 0s` | Long-lived | Traefik never times out SSE/WS connections |
 
@@ -331,11 +322,9 @@ If using Dokploy, configure these settings in the application dashboard:
 1. **Replicas**: Set to 3+ in the deployment section
 2. **Environment variables**: Add `REDIS_URL`, `ALLOWED_ORIGIN`, `PORT`, `HOST`
 3. **Health check**: Path `/readyz`, interval 15s
-4. **Traefik labels**: Dokploy auto-generates basic Traefik labels. Add sticky session labels manually in the "Advanced" tab:
+4. **Traefik labels**: Dokploy auto-generates basic Traefik labels. Add the flush interval manually in the "Advanced" tab:
 
 ```
-traefik.http.services.${SERVICE}.loadbalancer.sticky.cookie=true
-traefik.http.services.${SERVICE}.loadbalancer.sticky.cookie.name=courier_affinity
 traefik.http.services.${SERVICE}.loadbalancer.responseforwarding.flushinterval=1ms
 ```
 

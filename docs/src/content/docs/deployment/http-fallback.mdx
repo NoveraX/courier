@@ -1,0 +1,85 @@
+export const metadata = {
+  title: "HTTP Fallback",
+  description: "Carry realtime connections over HTTP where no WebSocket gets through: what the entry in front of the replicas must let through, what it costs, and how to turn it on and off.",
+  updated: "2026-11-18",
+}
+
+A corporate proxy, an antivirus that inspects TLS, a WAF or a CDN with WebSockets turned off lets no WebSocket through, while plain HTTP through the same entry gets through. There a Courier connection goes on over HTTP requests to the socket's own path: on a stream, where answers come as they are sent, or on polls, where something on the way holds them back. [When no WebSocket gets through](/docs/advanced/realtime-connections#when-no-websocket-gets-through) says how the client climbs down to them and back up; this page says what a deployment needs for it.
+
+## Turning It On and Off
+
+Both ends have it on by default. A WebSocket handler answers the transport's `POST` requests at its socket's path, and the client climbs down only when its WebSocket does not get through: one whose WebSocket works sends no request over HTTP, and its page never loads the code that makes them.
+
+```ts title="ws.ts" side="server"
+import { createWSHandler } from "@noverax/courier/server"
+
+const ws = createWSHandler({
+  http: { holdMs: 25_000, streamMs: 60_000 }, // the defaults; false turns the transport off
+})
+```
+
+- `holdMs` — the longest a poll is held while the server has nothing to send; it is answered as soon as there is a frame, a ping among them. Keep it under the idle timeout of every proxy in front of the server.
+- `streamMs` — the longest one stream runs: the server then ends it, and the client asks for the next with what it has taken, losing nothing.
+- `http: false` — the handler answers the transport's requests `404`, and its clients stay on WebSocket.
+
+On the client, `fallback: false` keeps a connection on WebSocket, and `fallback: { after, remember }` sets how long a WebSocket, and a stream's first bytes, are waited for (3 s) and whether the tab keeps the transport it fell to (on) — see [Connection options](/docs/advanced/realtime-connections#connection-options).
+
+Where the requests are answered:
+
+- The [standalone server](/docs/deployment/standalone-server) answers them on its port.
+- A Node server of your own takes them off with `attachWebSocketUpgrade` from `@noverax/courier/node`, ahead of its other handlers: `onHTTP: (request, peer) => ws.handleHTTP(request, peer)`.
+- Express's and NestJS's `courierWSAttach` takes them, ahead of the application's body parsers and routes; with Fastify and Hono, route them: `fastify.post("/ws", ws.http)`, `app.post("/ws", ws.http)` — as the [Replication Guide](/docs/deployment/replication) shows for each.
+
+`stats().http` counts the connections held over HTTP — on a stream, on a poll — the requests sent on to another replica, frames sent again, streams rotated, and the connections opened by why their clients were on HTTP: an upgrade refused, held, or let through with nothing coming back, a socket dropped, or the tab's memory of an earlier one.
+
+## What the Entry Must Let Through
+
+The load balancer, ingress or CDN between the pages and the replicas needs:
+
+- **`POST` to the socket's path**, on its host: `wss://api.example.com/ws` takes `POST https://api.example.com/ws`. Nothing in the URL names or admits a connection: its token travels in the bodies of its requests, never in a URL or a header a log keeps.
+- **Answers as they come.** A stream sends each frame as it is written. An entry that holds an answer until it ends holds the stream, and the client goes on polls, each answered whole: that works, at about ten times the server's processor time a message. Turn buffering off for the path — `proxy_buffering off` on nginx; the server's answers also say `X-Accel-Buffering: no`, which nginx honours.
+- **Timeouts above the pings.** The server pings every connection every 25 s, on its stream as on a socket, so an idle timeout above that never cuts a live one; an answer may last `streamMs`. A stream cut sooner loses nothing: the client asks for the next where it ended.
+- **Bodies of `max(1 MiB, 2 × maxMessageSize)`**, the most a request carries: nginx's default `client_max_body_size` of `1m` is that at the handler's defaults.
+- **No compression of event streams, or a flush after each chunk.** The server does not compress them and says `Cache-Control: no-store, no-transform`. An entry that gzips them anyway without a flush holds every frame, and the connection goes on polls.
+- **HTTP/2 or HTTP/3 to the browsers.** Over HTTP/1.1 a browser opens six connections to a host for all its tabs together. Each connection over HTTP holds one — its stream, or its poll — and its sends take another for a moment, so six tabs of the app hold them all, and their sends wait; over HTTP/2 they share one.
+- **Origins and cookies as for the socket.** A page on another origin needs it in `allowedOrigins`, as its WebSocket does, and the transport answers it the CORS headers it needs. The page's requests carry its cookies, as its WebSocket's handshake does.
+
+On nginx, the socket's path then reads as follows; `$connection_upgrade` is the map the [Docker](/docs/deployment/docker) page's configuration sets:
+
+```nginx title="nginx.conf"
+location /ws {
+  proxy_pass http://courier;
+  proxy_http_version 1.1;
+  proxy_set_header Upgrade $http_upgrade;
+  proxy_set_header Connection $connection_upgrade;
+
+  proxy_buffering off;      # each frame of a stream as it is sent
+  proxy_read_timeout 120s;  # longer than the 25 s between pings
+  client_max_body_size 1m;  # max(1 MiB, 2 × maxMessageSize)
+}
+```
+
+## Replicas
+
+Replicas need no sticky sessions for it. A connection over HTTP lives on the replica that admitted it — its stream or poll, its subscriptions, its frames to send — and only the client's requests travel. Each carries the connection's token, which names that replica; one that reaches another replica is sent on to it over the pub/sub adapter the replicas share for broadcasts, and its answer comes back the same way, a stream's frames as they come. Give every replica the same [`cluster.secret`](/docs/deployment/replication#signing-the-commands): each message sent on is signed with it, and each token carries a MAC of it, so a replica tells a forged token without asking the one it names.
+
+- **The connection's replica gone** — stopped, killed, or not answering within 5 s: the request is answered `504`, and the client opens another connection on a replica that answers; its channels resume where they stood from the [topic log](/docs/deployment/replication#resuming-subscriptions), or start over from `onJoin` without one.
+- **Redis away:** requests that reach the connection's own replica, and the streams, go on. One to be sent on is answered `503` at once and made again after a second. Once the adapter is back, each subscription is told `resync`, as after any outage.
+- **A rolling deploy:** a replica of an earlier release, with no HTTP transport, answers `404`. An opening that reaches one tries a WebSocket again, then a request, which the entry deals to another replica; a request of a connection that opened is made again. A replica that does not speak the version of a message sent on to it skips it, and the client, told its connection's replica is out of reach, opens another: it never waits for an answer that cannot come.
+- **Draining:** `destroy()` closes the connections a replica holds with `1001`, over HTTP as over a socket, and they reconnect elsewhere after the wait it names.
+
+## What It Costs
+
+A connection whose WebSocket works costs nothing more: no request over HTTP, and its page loads only the switch between the two. Measured on one machine with the [scale tests](/docs/advanced/scale#each-transport-of-a-connection), 2000 connections of Courier's client on each transport, Node 24:
+
+| Measured | WebSocket | HTTP stream | Polls |
+| --- | --- | --- | --- |
+| The server's heap a connection | 18.2 KB | 30.4 KB | 33.4 KB |
+| The server's processor time a message delivered | 9.3 µs | 14.6 µs, 1.6× | 96.4 µs, 10× |
+| A broadcast to all 2000, until each has it, p50 / p99 | 13 / 36 ms | 17 / 39 ms | 64 / 130 ms |
+
+Behind an entry that refuses the upgrade, a client's subscription had its first data under 40 ms after it asked, on a stream. Behind one that holds the upgrade, or lets it through and holds back what the server sends, it had it after `after`, 3 s, on a stream; behind one that also holds every answer until it ends, after the same 3 s, on polls.
+
+Between replicas with no affinity, sharing Redis with the topic log, behind an entry that deals each request to the next replica in turn and lets no WebSocket through: a request sent on to the connection's replica took up to 1.4 ms more at p99, run to run, and one replica sent on 8040 to 9170 a second with 64 in flight. With 6000 connections on streams, a third on each of three replicas, one replica drained and stopped: 99 % were subscribed again in 5.7 s and all in 6.1 s, none missing an event or having one twice. With the entry letting WebSockets through again, 1000 connections that had climbed down to HTTP were all on WebSocket within 30 s, none missing an event or having one twice.
+
+Compression would not pay its way on the server. Of a stream's frames, gzip with a flush after each saved about 80 % of the bytes — a 115-byte event came to 18, a 313-byte one to 55 — for 20–33 µs of processor time a frame and 314 KiB of memory a connection, ten times what the connection holds; without a flush, frames waited for hundreds of later ones, and the web platform's `CompressionStream`, the only one every runtime has, cannot flush. An entry that compresses with a flush after each chunk added about 0.1 ms at p50 here.

@@ -44,9 +44,9 @@ The same handler on a server of its own, 2000 connections of Courier's client in
 
 | Measured | WebSocket | HTTP stream | Polls |
 | --- | --- | --- | --- |
-| The server's heap a connection | 18.1 KB | 30.4 KB | 33.4 KB |
-| The server's processor time a message delivered | 8.9 µs | 14.2 µs, 1.6× | 90.9 µs, 10× |
-| A broadcast to all 2000, until each has it, p50 / p99 | 12 / 34 ms | 13 / 35 ms | 57 / 119 ms |
+| The server's heap a connection | 18.2 KB | 30.4 KB | 33.4 KB |
+| The server's processor time a message delivered | 9.3 µs | 14.6 µs, 1.6× | 96.4 µs, 10× |
+| A broadcast to all 2000, until each has it, p50 / p99 | 13 / 36 ms | 17 / 39 ms | 64 / 130 ms |
 
 Every connection had every broadcast once, in order, on each transport.
 
@@ -56,8 +56,8 @@ Replicas sharing Redis with the topic log, their connections over HTTP, behind a
 
 | Measured | Figure |
 | --- | --- |
-| A request that reaches a replica other than the one holding its connection, sent on to it over Redis | 1.4 ms more at p99; 9170 a second sent on by one replica, 64 in flight |
-| 6000 connections on streams, a third on each of three replicas, an event every 200 ms; one replica drained, then stopped | 99 % subscribed again in 5.6 s, all in 6.1 s; none missed an event or had one twice |
+| A request that reaches a replica other than the one holding its connection, sent on to it over Redis | up to 1.4 ms more at p99, run to run; 8040 to 9170 a second sent on by one replica, 64 in flight |
+| 6000 connections on streams, a third on each of three replicas, an event every 200 ms; one replica drained, then stopped | 99 % subscribed again in 5.7 s, all in 6.1 s; none missed an event or had one twice |
 | 1000 connections that climbed down to HTTP, the entry then letting WebSockets through | all on WebSocket again in 30 s; none missed an event or had one twice |
 
 ### Large answers

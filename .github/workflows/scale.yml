@@ -3,10 +3,11 @@ name: Scale
 # Courier on a large company's project: five APIs with a thousand
 # endpoints, the hundreds of files that call them, their libraries, the
 # mocks and Studio — every figure scripts/scale measures, each held to its
-# budget: the type check, the client, the import of an OpenAPI document,
-# large answers, Studio and its mocks under load, the app's server with
-# Studio attached, the editor's questions, the VS Code extension and
-# Studio's pages in Chromium.
+# budget: the type check, the client, the WebSocket handler and each of its
+# transports, replicas on Redis without affinity, the import of an OpenAPI
+# document, large answers, Studio and its mocks under load, the app's
+# server with Studio attached, the editor's questions, the VS Code
+# extension and Studio's pages in Chromium.
 # Every night, and by hand at another size. Each run keeps its report.
 on:
   workflow_dispatch:
@@ -29,6 +30,19 @@ jobs:
   scale:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # The Redis the replicas measured share, with the topic log
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      REDIS_URL: redis://127.0.0.1:6379
     steps:
       - uses: actions/checkout@v7
 

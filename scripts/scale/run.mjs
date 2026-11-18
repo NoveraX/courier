@@ -11,9 +11,10 @@
  *   node scripts/scale/run.mjs --endpoints 3000
  *   node scripts/scale/run.mjs --only studio,ui --json scale-report.json
  *
- * The steps: tsc, runtime, realtime, codegen, payloads, studio (with proxy, editor,
- * extension, mocks and ui inside it). Studio listens on --ports + 1, its mocks from
- * --ports + 10, the app on --ports.
+ * The steps: tsc, runtime, realtime, transports, replicas, codegen, payloads, studio
+ * (with proxy, editor, extension, mocks and ui inside it). Studio listens on --ports
+ * + 1, its mocks from --ports + 10, the app on --ports. replicas needs a Redis it may
+ * write to, named by REDIS_URL.
  */
 import { writeFileSync } from "node:fs";
 import { arch, cpus, platform, tmpdir, totalmem } from "node:os";
@@ -35,6 +36,7 @@ import { measureRealtime } from "./measure/realtime.mjs";
 import { measureRuntime } from "./measure/runtime.mjs";
 import { measureStudio } from "./measure/studio.mjs";
 import { measureStudioUi } from "./measure/studio-ui.mjs";
+import { measureReplicas, measureTransports } from "./measure/transports.mjs";
 import { measureTypecheck } from "./measure/typecheck.mjs";
 
 const REPO = resolve(import.meta.dirname, "../..");
@@ -42,6 +44,8 @@ const STEPS = [
   "tsc",
   "runtime",
   "realtime",
+  "transports",
+  "replicas",
   "codegen",
   "payloads",
   "studio",
@@ -102,6 +106,8 @@ async function step(name, measure) {
 await step("tsc", () => measureTypecheck(fixture));
 await step("runtime", () => measureRuntime(fixture));
 await step("realtime", () => measureRealtime(fixture));
+await step("transports", () => measureTransports(fixture));
+await step("replicas", () => measureReplicas(fixture));
 await step("codegen", () => measureCodegen(fixture));
 await step("payloads", () => measurePayloads(fixture));
 await step("studio", () =>

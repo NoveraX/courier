@@ -1,7 +1,7 @@
 export const metadata = {
   title: "HTTP Fallback",
   description: "Carry realtime connections over HTTP where no WebSocket gets through: what the entry in front of the replicas must let through, what it costs, and how to turn it on and off.",
-  updated: "2026-11-18",
+  updated: "2026-11-27",
 }
 
 A corporate proxy, an antivirus that inspects TLS, a WAF or a CDN with WebSockets turned off lets no WebSocket through, while plain HTTP through the same entry gets through. There a Courier connection goes on over HTTP requests to the socket's own path: on a stream, where answers come as they are sent, or on polls, where something on the way holds them back. [When no WebSocket gets through](/docs/advanced/realtime-connections#when-no-websocket-gets-through) says how the client climbs down to them and back up; this page says what a deployment needs for it.
@@ -76,7 +76,7 @@ A connection whose WebSocket works costs nothing more: no request over HTTP, and
 | --- | --- | --- | --- |
 | The server's heap a connection | 18.3 KB | 24.5 KB | 23.5 KB |
 | The server's processor time a message delivered | 6.0 µs | 12.5 µs, 2.0× to 2.2× run to run | 37 µs, 6.0× to 6.3× |
-| A broadcast to all 2000, until each has it, p50 / p99 | 9 / 27 ms | 12 / 31 ms | 35 / 80 ms |
+| A broadcast to all 2000, until each has it, p50 / p99 | 9 / 21 ms | 10 / 22 ms | 30 / 62 ms |
 
 Behind an entry that refuses the upgrade, a client's subscription had its first data 30 to 32 ms after it asked, run to run, on a stream; behind one that lets the upgrade through, 23 to 25 ms, on its WebSocket. Behind one that holds the upgrade, or lets it through and holds back what the server sends, it had it after `after`, 3 s, on a stream; behind one that also holds every answer until it ends, after the same 3 s, on polls.
 

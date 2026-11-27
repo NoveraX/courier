@@ -3,13 +3,15 @@
  * side — WebSocket, an HTTP stream, polls — its connections opened by
  * Courier's own client in processes of their own, so what is read off the
  * replica's process is the replica's alone. The three are open at once,
- * each on a replica of its own, broadcast to at the same pace, and timed
- * over the same windows. For each: the heap a connection holds, the
- * processor time of each message delivered, and how long a broadcast takes
- * to reach each subscriber, from its start to the client's hands. Each
- * broadcast waits a gap after the last, so what is timed is a broadcast's,
- * not a queue's. Prints what it saw, as JSON, or `{ failed }` with why it
- * saw nothing, and exits with 1.
+ * each on a replica of its own. For each: the heap a connection holds; the
+ * processor time of each message delivered, the three broadcast to at the
+ * same pace and timed over the same windows; and how long a broadcast takes
+ * to reach each subscriber, from its start to the client's hands, timed
+ * apart in rounds of one broadcast on each transport, each sent once the
+ * last is in every client's hands and every request over HTTP is held again
+ * (`transports-fanout.mjs`), so what is timed is a broadcast's, not a
+ * queue's, on any machine. Prints what it saw, as JSON, or `{ failed }` with
+ * why it saw nothing, and exits with 1.
  *
  *   node transports-probe.mjs [connections]
  */
@@ -18,6 +20,7 @@ import { argv, exit, stdout } from "node:process";
 import { setTimeout as sleep } from "node:timers/promises";
 
 import { percentiles } from "./metrics.mjs";
+import { timeFanout } from "./transports-fanout.mjs";
 import { startClients, startReplica } from "./transports-processes.mjs";
 
 const [connectionsArg = "2000"] = argv.slice(2);
@@ -35,6 +38,8 @@ const GAP_MS = 250;
 /* After the last broadcast is in every client's hands, for what it set off — the polls asked
    again — to be done before the processor time is read. */
 const SETTLE_MS = 300;
+/* The rounds a broadcast's reach is timed over, one broadcast on each transport a round. */
+const FANOUT_ROUNDS = 20;
 
 const TRANSPORTS = ["websocket", "stream", "poll"];
 
@@ -72,36 +77,38 @@ async function open(transport, opened) {
  * load — it does to all three alike; and none waits idle for a turn, which a replica in service
  * does not either, and after which the machine runs it slower for a while: an HTTP stream timed
  * after ten seconds of waiting cost up to twice as much a message, in the kernel's time for the
- * same writes as in its own.
+ * same writes as in its own. Then a broadcast's reach, timed apart: at the steady pace, a machine
+ * too slow for it delivers each broadcast behind the queue of the one before.
  */
 async function measure() {
   const seen = {
     connections: CONNECTIONS,
     rounds: ROUNDS,
     windows: WINDOWS,
+    fanoutRounds: FANOUT_ROUNDS,
     clientProcesses: PROCESSES,
   };
   const opened = [];
   try {
     for (const transport of TRANSPORTS) await open(transport, opened);
-    await broadcastRounds(opened, WARM_ROUNDS, false);
+    await broadcastRounds(opened, WARM_ROUNDS);
     await Promise.all(opened.map(({ clients, n }) => clients.awaitEvent(n)));
     const windows = [];
     for (let window = 0; window < WINDOWS; window++) windows.push(await timedWindow(opened));
+    const reached = await timeFanout(opened, { rounds: FANOUT_ROUNDS, connections: CONNECTIONS });
     for (const [index, run] of opened.entries()) {
-      const timed = windows.map((each) => each[index]);
-      const last = timed.at(-1).heard;
+      const { latencies, last } = reached.get(run.transport);
       seen[run.transport] = {
         heapPerConnectionKb: run.heapPerConnectionKb,
-        cpuPerMessageUs: median(timed.map(({ cpuPerMessageUs }) => cpuPerMessageUs)),
-        fanout: percentiles(timed.flatMap(({ heard }) => heard.latencies).map((us) => us / 1000)),
+        cpuPerMessageUs: median(windows.map((each) => each[index])),
+        fanout: percentiles(latencies.map((us) => us / 1000)),
         delivered: last.short === 0 && last.missed === 0 && last.twice === 0,
         carried: carriedOf(last.transports),
       };
     }
     const ofWebSocket = (transport) => {
       const at = TRANSPORTS.indexOf(transport);
-      return median(windows.map((each) => each[at].cpuPerMessageUs / each[0].cpuPerMessageUs));
+      return median(windows.map((each) => each[at] / each[0]));
     };
     seen.streamOfWebSocket = ofWebSocket("stream");
     seen.pollOfWebSocket = ofWebSocket("poll");
@@ -113,11 +120,11 @@ async function measure() {
 }
 
 /* Rounds of broadcasts: each round one on each replica, a third of the gap after the last. */
-async function broadcastRounds(opened, rounds, timed) {
+async function broadcastRounds(opened, rounds) {
   const sent = [];
   for (let round = 0; round < rounds; round++) {
     for (const run of opened) {
-      sent.push(run.replica.ask("broadcast", { n: ++run.n, timed }));
+      sent.push(run.replica.ask("broadcast", { n: ++run.n }));
       await sleep(GAP_MS / opened.length);
     }
   }
@@ -125,17 +132,14 @@ async function broadcastRounds(opened, rounds, timed) {
 }
 
 /* A window of rounds, timed on every replica alike: the processor time of each message it
-   delivered, and what its clients had once the last broadcast was in every one's hands. */
+   delivered, read once the last broadcast was in every client's hands. */
 async function timedWindow(opened) {
   const begun = await Promise.all(opened.map(({ replica }) => replica.ask("cpu")));
-  await broadcastRounds(opened, ROUNDS, true);
-  const heard = await Promise.all(opened.map(({ clients, n }) => clients.awaitEvent(n)));
+  await broadcastRounds(opened, ROUNDS);
+  await Promise.all(opened.map(({ clients, n }) => clients.awaitEvent(n)));
   await sleep(SETTLE_MS);
   const ended = await Promise.all(opened.map(({ replica }) => replica.ask("cpu")));
-  return opened.map((_run, index) => ({
-    cpuPerMessageUs: (ended[index].us - begun[index].us) / (CONNECTIONS * ROUNDS),
-    heard: heard[index],
-  }));
+  return opened.map((_run, index) => (ended[index].us - begun[index].us) / (CONNECTIONS * ROUNDS));
 }
 
 const median = (values) => percentiles(values).p50;

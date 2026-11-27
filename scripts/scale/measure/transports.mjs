@@ -42,6 +42,7 @@ const BUDGETS = {
 export async function measureTransports({ repo }) {
   const seen = probe(repo, "transports-probe.mjs", CONNECTIONS, (figures) => figures.poll);
   const of = `${seen.connections} connections, ${seen.clientProcesses} client processes, the median of ${seen.windows} windows`;
+  const reach = `${seen.fanoutRounds} broadcasts, each once the last on every transport was in every client's hands`;
   const figures = [];
   for (const transport of ["websocket", "stream", "poll"]) {
     const each = seen[transport];
@@ -56,7 +57,9 @@ export async function measureTransports({ repo }) {
       measured(`transports.${transport}.cpuPerMessage`, each.cpuPerMessageUs, "µs", budget.cpuUs, {
         note: of,
       }),
-      measured(`transports.${transport}.fanout.p50`, each.fanout.p50, "ms", budget.fanoutMs),
+      measured(`transports.${transport}.fanout.p50`, each.fanout.p50, "ms", budget.fanoutMs, {
+        note: reach,
+      }),
       measured(`transports.${transport}.fanout.p99`, each.fanout.p99, "ms", budget.fanoutMs, {
         note: `every one delivered once, in order: ${each.delivered}`,
       }),

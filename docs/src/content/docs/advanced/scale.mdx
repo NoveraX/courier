@@ -1,4 +1,4 @@
-export const metadata = { title: "Performance at Scale", description: "How Courier, Studio, its mocks and the VS Code extension behave on a large company's project — five APIs with a thousand endpoints, the hundreds of files that call them — every figure measured every night and held to a budget, and how to run the measurements on your own machine.", mode: "both", updated: "2026-11-18" }
+export const metadata = { title: "Performance at Scale", description: "How Courier, Studio, its mocks and the VS Code extension behave on a large company's project — five APIs with a thousand endpoints, the hundreds of files that call them — every figure measured every night and held to a budget, and how to run the measurements on your own machine.", mode: "both", updated: "2026-11-27" }
 
 ## The project they are measured on
 
@@ -40,13 +40,13 @@ Courier's WebSocket handler driven with ten thousand sockets held in memory, the
 
 ### Each transport of a connection
 
-The same handler on three servers of its own, one for each of the [transports a connection climbs down to](/docs/advanced/realtime-connections#when-no-websocket-gets-through), 2000 connections of Courier's client on each, in 8 processes a transport on the same machine. The three are broadcast to at the same pace, each every 250 ms and a third of that apart, and timed over the same three windows of 20 broadcasts: a figure is the median of its windows, and a multiple of WebSocket's the median of the windows' own. A server that waited idle costs more a message for a while after, an HTTP stream's up to twice as much, so none of them waits its turn. A connection holds sockets and their buffers here, which the figures above leave out.
+The same handler on three servers of its own, one for each of the [transports a connection climbs down to](/docs/advanced/realtime-connections#when-no-websocket-gets-through), 2000 connections of Courier's client on each, in 8 processes a transport on the same machine. The three are broadcast to at the same pace, each every 250 ms and a third of that apart, and their processor time is timed over the same three windows of 20 broadcasts: a figure is the median of its windows, and a multiple of WebSocket's the median of the windows' own. A server that waited idle costs more a message for a while after, an HTTP stream's up to twice as much, so none of them waits its turn. A broadcast's reach is timed apart: 20 broadcasts on each, the three in turn, each sent once the one before it is in every client's hands and every connection over HTTP holds a stream or a poll again. It times a broadcast, then, not the queue behind the one before, which a machine too slow for the pace would add. A connection holds sockets and their buffers here, which the figures above leave out.
 
 | Measured | WebSocket | HTTP stream | Polls |
 | --- | --- | --- | --- |
 | The server's heap a connection | 18.3 KB | 24.5 KB | 23.5 KB |
 | The server's processor time a message delivered | 6.0 µs | 12.5 µs, 2.0× to 2.2× run to run | 37 µs, 6.0× to 6.3× |
-| A broadcast to all 2000, until each has it, p50 / p99 | 9 / 27 ms | 12 / 31 ms | 35 / 80 ms |
+| A broadcast to all 2000, until each has it, p50 / p99 | 9 / 21 ms | 10 / 22 ms | 30 / 62 ms |
 
 Every connection had every broadcast once, in order, on each transport.
 

@@ -11,14 +11,17 @@
  * streams. With `EXPO_PUBLIC_USE_RN_FETCH` an Expo app keeps React Native's
  * own fetch, and the streams.
  *
- * React Native's Blob, FileReader and XMLHttpRequest are modelled on their
- * sources in `Libraries/Blob` and `Libraries/Network`, and expo/fetch's
- * answer on `expo/src/winter/fetch/FetchResponse.ts`; what their native side
- * does — the network, the blob store — Node does here.
+ * React Native's Blob, FileReader, XMLHttpRequest and WebSocket are
+ * modelled on their sources in `Libraries/Blob`, `Libraries/Network` and
+ * `Libraries/WebSocket`, and expo/fetch's answer on
+ * `expo/src/winter/fetch/FetchResponse.ts`; what their native side does —
+ * the network, the blob store, OkHttp's and SocketRocket's sockets — Node
+ * and the `ws` package do here.
  */
 import { request } from "node:http";
 import { createRequire } from "node:module";
 import { vi } from "vitest";
+import { WebSocket as WsClient } from "ws";
 
 /** Whose `fetch` the app has. */
 export type AppFetch = "react-native" | "expo" | "expo-with-react-native-fetch";
@@ -475,6 +478,260 @@ async function expoBody(body: unknown): Promise<Uint8Array> {
   return sendable(body instanceof URLSearchParams ? body.toString() : body);
 }
 
+/** React Native's MessageEvent, as its WebSocket dispatches one. */
+class NativeMessageEvent extends Event {
+  constructor(readonly data: unknown) {
+    super("message");
+  }
+}
+
+/** React Native's CloseEvent: its WebSocket gives it a code and a reason, and never `wasClean`. */
+class NativeCloseEvent extends Event {
+  readonly wasClean = false;
+
+  constructor(
+    readonly code: number,
+    readonly reason: string,
+  ) {
+    super("close");
+  }
+}
+
+/** A close React Native's native side did not make: Android's OkHttp refuses its code or its reason. */
+export interface RefusedClose {
+  readonly code: number;
+  readonly reason: string;
+}
+
+/* What OkHttp closes a socket with: a code from 1000 to 4999 that RFC 6455 does not reserve, and
+   a reason of 123 bytes at most. Any other it refuses, and React Native logs it and leaves the
+   socket open. */
+function closeTaken(code: number, reason: string): boolean {
+  const reserved = (code >= 1004 && code <= 1006) || (code >= 1015 && code <= 2999);
+  return code >= 1000 && code < 5000 && !reserved && Buffer.byteLength(reason) <= 123;
+}
+
+/* What the native side opens a socket with: the app's headers, and an `Origin` of the socket's own
+   address — its scheme as HTTP's, its host and port — where they name none, as Android's module and
+   iOS's SocketRocket both send. */
+function handshakeOf(
+  url: string,
+  headers: Readonly<Record<string, string>>,
+): Record<string, string> {
+  if (Object.keys(headers).some((name) => name.toLowerCase() === "origin")) return { ...headers };
+  const { protocol, host } = new URL(url);
+  const scheme =
+    protocol === "wss:" ? "https" : protocol === "ws:" ? "http" : protocol.slice(0, -1);
+  return { ...headers, origin: `${scheme}://${host}` };
+}
+
+type NativeListener = { readonly handleEvent: (event: Event) => void };
+
+/**
+ * React Native's WebSocket, as `Libraries/WebSocket/WebSocket.js` has it;
+ * its native side, OkHttp's and SocketRocket's, the `ws` package's client.
+ * It is made with an address, protocols and `{ headers }`, and opens with
+ * them and the `Origin` of its own address. What happens to it comes as
+ * events: its opening; a message — text, or bytes as an ArrayBuffer, or a
+ * Blob once `binaryType` is `"blob"`; a close the server sent, with its code
+ * and reason; and a failure — refused, cut, unreachable — as an `error`, then
+ * a close of 1006 whose reason is the native side's message. It throws on a
+ * send while it connects, never sets `bufferedAmount`, and a close with a
+ * code or a reason OkHttp refuses leaves its socket open, as on Android.
+ */
+export class NativeWebSocket extends EventTarget {
+  static readonly CONNECTING = 0;
+  static readonly OPEN = 1;
+  static readonly CLOSING = 2;
+  static readonly CLOSED = 3;
+  /** Each socket made, in order, until `forgetSockets()` */
+  static readonly made: NativeWebSocket[] = [];
+  /** Each close the native side refused, until `forgetSockets()` */
+  static readonly refused: RefusedClose[] = [];
+
+  readonly CONNECTING = 0;
+  readonly OPEN = 1;
+  readonly CLOSING = 2;
+  readonly CLOSED = 3;
+  /** Declared and never set, as React Native's is. */
+  readonly bufferedAmount?: number;
+  readyState = 0;
+  protocol: string | undefined;
+  readonly url: string;
+  /** The headers the native side opened the socket with */
+  readonly handshake: Readonly<Record<string, string>>;
+  readonly #native: WsClient;
+  readonly #handlers = new Map<string, NativeListener>();
+  #binaryType: "blob" | "arraybuffer" | undefined;
+  #ended = false;
+  #stalled = false;
+
+  constructor(
+    url: string,
+    protocols?: string | string[] | null,
+    options?: { readonly headers?: Readonly<Record<string, string>> } | null,
+  ) {
+    super();
+    this.url = url;
+    const listed = typeof protocols === "string" ? [protocols] : (protocols ?? []);
+    const { headers = {}, ...unrecognized } = options ?? {};
+    if (Object.keys(unrecognized).length > 0) {
+      console.warn(
+        `Unrecognized WebSocket connection option(s) \`${Object.keys(unrecognized).join("`, `")}\`. Did you mean to put these under \`headers\`?`,
+      );
+    }
+    this.handshake = handshakeOf(url, headers);
+    this.#native = new WsClient(url, listed, { headers: this.handshake });
+    NativeWebSocket.made.push(this);
+    this.#native.on("open", () => {
+      this.readyState = 1;
+      this.protocol = this.#native.protocol;
+      this.dispatchEvent(new Event("open"));
+    });
+    this.#native.on("message", (data: Buffer, binary: boolean) => {
+      if (this.#stalled) return;
+      this.dispatchEvent(new NativeMessageEvent(binary ? this.#bytes(data) : data.toString()));
+    });
+    this.#native.on("error", (error: Error) => this.#failed(error.message));
+    /* A socket that ends with no close of the server's — cut on the way — fails, as OkHttp's does. */
+    this.#native.on("close", (code: number, reason: Buffer) => {
+      if (code === 1006) this.#failed("Socket closed");
+      else this.#closed(code, reason.toString());
+    });
+  }
+
+  get binaryType(): "blob" | "arraybuffer" | undefined {
+    return this.#binaryType;
+  }
+
+  set binaryType(type: "blob" | "arraybuffer") {
+    if (type !== "blob" && type !== "arraybuffer") {
+      throw new Error("binaryType must be either 'blob' or 'arraybuffer'");
+    }
+    this.#binaryType = type;
+  }
+
+  get onopen(): ((event: Event) => void) | null {
+    return this.#handler("open");
+  }
+
+  set onopen(callback: ((event: Event) => void) | null) {
+    this.#handle("open", callback);
+  }
+
+  get onmessage(): ((event: Event) => void) | null {
+    return this.#handler("message");
+  }
+
+  set onmessage(callback: ((event: Event) => void) | null) {
+    this.#handle("message", callback);
+  }
+
+  get onclose(): ((event: Event) => void) | null {
+    return this.#handler("close");
+  }
+
+  set onclose(callback: ((event: Event) => void) | null) {
+    this.#handle("close", callback);
+  }
+
+  get onerror(): ((event: Event) => void) | null {
+    return this.#handler("error");
+  }
+
+  set onerror(callback: ((event: Event) => void) | null) {
+    this.#handle("error", callback);
+  }
+
+  send(data: unknown): void {
+    if (this.readyState === 0) throw new Error("INVALID_STATE_ERR");
+    /* Android's module, asked to send on a socket it has let go of, reports it failed. */
+    if (this.#native.readyState !== 1) {
+      this.#failed("client is null");
+      return;
+    }
+    if (this.#stalled) return;
+    if (data instanceof NativeBlob) this.#native.send(bytesOf(data));
+    else if (typeof data === "string") this.#native.send(data);
+    else if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) this.#native.send(data);
+    else throw new Error("Unsupported data type");
+  }
+
+  ping(): void {
+    if (this.readyState === 0) throw new Error("INVALID_STATE_ERR");
+    this.#native.ping();
+  }
+
+  close(code?: number, reason?: string): void {
+    if (this.readyState === 2 || this.readyState === 3) return;
+    this.readyState = 2;
+    const statusCode = typeof code === "number" ? code : 1000;
+    const closeReason = typeof reason === "string" ? reason : "";
+    if (!closeTaken(statusCode, closeReason)) {
+      NativeWebSocket.refused.push({ code: statusCode, reason: closeReason });
+      return;
+    }
+    this.#native.close(statusCode, closeReason);
+  }
+
+  /** Cut the socket's connection where it runs, as a network that went away does. */
+  cut(): void {
+    this.#native.terminate();
+  }
+
+  /**
+   * Let nothing through any more, either way, and close nothing: the socket a
+   * network the device left behind holds open, as a NAT that forgot it does.
+   */
+  stall(): void {
+    this.#stalled = true;
+  }
+
+  #bytes(data: Buffer): ArrayBuffer | NativeBlob {
+    const bytes = new Uint8Array(data);
+    return this.#binaryType === "blob" ? NativeBlob.made(bytes, "") : bytes.buffer;
+  }
+
+  #failed(message: string): void {
+    if (this.#ended || this.#stalled) return;
+    this.#ended = true;
+    this.readyState = 3;
+    this.dispatchEvent(new Event("error"));
+    this.dispatchEvent(new NativeCloseEvent(1006, message));
+    this.#native.terminate();
+  }
+
+  #closed(code: number, reason: string): void {
+    if (this.#ended || this.#stalled) return;
+    this.#ended = true;
+    this.readyState = 3;
+    this.dispatchEvent(new NativeCloseEvent(code, reason));
+  }
+
+  #handler(type: string): ((event: Event) => void) | null {
+    return this.#handlers.get(type)?.handleEvent ?? null;
+  }
+
+  /* As React Native's event handler attributes: a listener of its own, replaced when set again. */
+  #handle(type: string, callback: ((event: Event) => void) | null | undefined): void {
+    const current = this.#handlers.get(type);
+    if (current !== undefined) {
+      this.removeEventListener(type, current);
+      this.#handlers.delete(type);
+    }
+    if (typeof callback !== "function") return;
+    const listener: NativeListener = { handleEvent: callback };
+    this.addEventListener(type, listener);
+    this.#handlers.set(type, listener);
+  }
+}
+
+/** Forget the sockets an app made and the closes refused, and cut those still open. */
+export function forgetSockets(): void {
+  for (const socket of NativeWebSocket.made.splice(0)) socket.cut();
+  NativeWebSocket.refused.length = 0;
+}
+
 /** React Native's AbortController: `abort()` keeps no reason. */
 class ReasonlessAbortController extends AbortController {
   constructor() {
@@ -501,6 +758,7 @@ export function asReactNative(fetch: AppFetch): void {
   vi.stubGlobal("Blob", NativeBlob);
   vi.stubGlobal("FileReader", NativeFileReader);
   vi.stubGlobal("XMLHttpRequest", NativeXMLHttpRequest);
+  vi.stubGlobal("WebSocket", NativeWebSocket);
   vi.stubGlobal("Response", polyfill.Response);
   vi.stubGlobal("Headers", polyfill.Headers);
   vi.stubGlobal("Request", polyfill.Request);

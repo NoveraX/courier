@@ -77,7 +77,8 @@ const checkedFetches = new WeakMap<SourceFetch, PlatformFetch>();
 /**
  * A source's `fetch` as Courier sends with it: what it answers is checked
  * to be a `Response` — the platform's, or another `fetch`'s, undici's,
- * which is one in all but its type. One `fetch` is wrapped once, so the
+ * which is one in all but its type, or React Native's, which has no `body`.
+ * One `fetch` is wrapped once, so the
  * calls of a source that names its own send through one function, and
  * identical reads in flight together are joined as anyone's are.
  *
@@ -130,10 +131,11 @@ export function notAFunction(
   );
 }
 
+/* A Response of any fetch's, known by what Courier reads of one: its status, its headers and its
+   text. React Native's, the whatwg-fetch polyfill, has no `body`. */
 function isResponse(value: object): value is Response {
+  const { status, headers, text } = value as Partial<Response>;
   return (
-    typeof Reflect.get(value, "status") === "number" &&
-    typeof Reflect.get(value, "headers") === "object" &&
-    "body" in value
+    typeof status === "number" && typeof headers?.get === "function" && typeof text === "function"
   );
 }

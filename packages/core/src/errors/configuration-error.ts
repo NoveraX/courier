@@ -307,7 +307,7 @@ export type ConfigurationErrorCode =
   /**
    * A source's own transport cannot be used: its `fetch` or `webSocket` is
    * not a function, or its `fetch` answered with something other than a
-   * `Response`.
+   * `Response` — what has no numeric status, no headers to read or no text.
    */
   | "SOURCE_TRANSPORT_INVALID"
   /**

@@ -181,6 +181,25 @@ describe("a source's transport that cannot be used", () => {
         "[courier] The source's fetch answered https://shop.example/products/p_1 with something that is not a Response.",
     });
   });
+
+  it("fails a call whose fetch answers with what only looks like a Response, its headers a record", async () => {
+    const shop = defineApi({
+      expose: true,
+      name: "shop",
+      baseURL: "https://shop.example",
+      fetch: async () => ({
+        status: 200,
+        headers: { "content-type": "application/json" },
+        text: async () => '{"id":"p_1"}',
+      }),
+      endpoints: { product: endpoint.get("products/p_1") },
+    });
+
+    await expect(createCaller(shop).product()).rejects.toMatchObject({
+      name: "ConfigurationError",
+      code: "SOURCE_TRANSPORT_INVALID",
+    });
+  });
 });
 
 describe("a source's WebSocket", () => {

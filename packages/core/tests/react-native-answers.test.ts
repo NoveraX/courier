@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
+import type { SourceFetch } from "../src/http-client/source-transport";
 import type { DownloadProgress, ResponseParser } from "../src/http-client/types";
 import { isCancellation } from "../src/utils/abort";
 import { type AppFetch, asReactNative, bytesOf, NativeBlob } from "./helpers/react-native";
@@ -75,7 +76,9 @@ function answer(
   }
 }
 
-function api(options: { responseType?: "blob"; responseParser?: ResponseParser } = {}) {
+function api(
+  options: { responseType?: "blob"; responseParser?: ResponseParser; fetch?: SourceFetch } = {},
+) {
   return defineApi({
     baseURL: upstream.url,
     ...options,
@@ -123,6 +126,23 @@ describe.each(ALL)("a source's parser, in an app whose fetch is %s's", (fetch) =
     })();
 
     expect(await outcome(read)).toEqual({ value: { body: GREETING, status: 200 } });
+  });
+});
+
+describe.each(ALL)("a read through the app's own fetch, in an app whose fetch is %s's", (fetch) => {
+  it("resolves to the body the API sent, the request as that fetch sent it", async () => {
+    asReactNative(fetch);
+    /* One that signs each request, over the app's fetch. */
+    const signed: SourceFetch = (url, init) => {
+      const headers = new Headers((init as RequestInit).headers);
+      headers.set("x-signature", "signed");
+      return globalThis.fetch(url, { ...init, headers });
+    };
+
+    const read = createCaller(api({ fetch: signed })).greeting();
+
+    expect(await outcome(read)).toEqual({ value: GREETING });
+    expect(upstream.received.at(-1)?.headers["x-signature"]).toBe("signed");
   });
 });
 
@@ -235,6 +255,7 @@ describe.each(["react-native", "expo"] as const)(
     });
   },
 );
+
 describe("an upload of a stream that reports its progress, in an Expo app", () => {
   it("sends the stream's bytes", async () => {
     asReactNative("expo");

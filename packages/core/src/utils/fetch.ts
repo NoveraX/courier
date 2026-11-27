@@ -3,6 +3,7 @@ import { fetchFailure } from "../http-client/transport-failure";
 import type { DownloadProgress, UploadProgress } from "../http-client/types";
 import type { WebBody } from "../http-client/web-types";
 import { assertAbsoluteUrl } from "./absolute-url";
+import { type Answer, platformAnswer } from "./answer";
 import { anySignal } from "./any-signal";
 import { attemptExpiry } from "./attempt-expiry";
 import { holdsDeviceFiles } from "./device-files";
@@ -14,6 +15,7 @@ import { ownFields } from "./own";
 import { trackDownload } from "./progress";
 import { answerRead, forgetRenderReads } from "./render-memo";
 import { REQUEST_MEMBERS } from "./request-members";
+import { type RequestQuery, withSearchParams } from "./search-params";
 import { sendStreamed } from "./send-streamed";
 import type { SharingCall } from "./shared-answer";
 import { uploadWithoutProgress } from "./upload-without-progress";
@@ -23,7 +25,7 @@ export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
   body?: WebBody | null | undefined;
   signal?: AbortSignal | null | undefined;
   json?: unknown;
-  searchParams?: string | URLSearchParams | Record<string, string> | undefined;
+  searchParams?: RequestQuery | undefined;
   timeout?: number | undefined;
   onUploadProgress?: ((progress: UploadProgress) => void) | undefined;
   onDownloadProgress?: ((progress: DownloadProgress) => void) | undefined;
@@ -65,11 +67,27 @@ export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
   call?: SharingCall | undefined;
 };
 
+/**
+ * Send a request and hand back its answer, read through Courier's reader:
+ * the body of a call that stops waiting, or whose time runs out, is cut
+ * short as its request would be, and a failed read is thrown as the
+ * request's own failure.
+ *
+ * @param method - The verb
+ * @param url - Where the request goes, absolute
+ * @param options - The request, and how it is sent
+ * @returns The answer
+ * @example
+ * ```ts
+ * const answer = await coreFetch("get", "https://api.example.com/users", { timeout: 5_000 });
+ * const users = JSON.parse(await answer.read("text"));
+ * ```
+ */
 export async function coreFetch(
   method: string,
   url: string,
   options: CoreFetchInit = {},
-): Promise<Response> {
+): Promise<Answer> {
   const own = ownFields(options);
   const {
     json,
@@ -175,6 +193,10 @@ export async function coreFetch(
           transport,
           servedFor,
         });
+  /* A read that fails is classified as the request's failure is: the call's cancellation, its
+     timeout, the network. */
+  const failed = (error: unknown): unknown =>
+    fetchFailure(error, signal, { timeout, timedOut: expiry?.aborted === true });
   let response: Response;
   try {
     response =
@@ -182,33 +204,10 @@ export async function coreFetch(
         ? await sendOnce(finalSignal ?? undefined)
         : await answerRead(key, finalSignal ?? undefined, sendOnce, call);
   } catch (error) {
-    throw fetchFailure(error, signal, { timeout, timedOut: expiry?.aborted === true });
+    throw failed(error);
   }
-  return onDownloadProgress ? trackDownload(response, onDownloadProgress) : response;
-}
-
-/**
- * A request's address with its query: `searchParams` — a string, a
- * `URLSearchParams` or a record — after a `?`, or after an `&` where the
- * address holds a query already.
- *
- * @param url - The address
- * @param searchParams - The query to add, if any
- * @returns The address the request is sent to
- * @example
- * ```ts
- * withSearchParams("https://api.example.com/users?page=2", { sort: "name" }); // "https://api.example.com/users?page=2&sort=name"
- * ```
- */
-export function withSearchParams(url: string, searchParams: CoreFetchInit["searchParams"]): string {
-  if (!searchParams) return url;
-  const query =
-    searchParams instanceof URLSearchParams
-      ? searchParams.toString()
-      : typeof searchParams === "string"
-        ? searchParams
-        : new URLSearchParams(searchParams).toString();
-  return query ? `${url}${url.includes("?") ? "&" : "?"}${query}` : url;
+  const counted = onDownloadProgress ? trackDownload(response, onDownloadProgress) : response;
+  return platformAnswer(counted, { signal: finalSignal ?? undefined, failed });
 }
 
 function ignoreProgress(): void {}

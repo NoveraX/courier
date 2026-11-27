@@ -1,7 +1,8 @@
 import { HTTPError } from "../errors";
 import { ConfigurationError } from "../errors/configuration-error";
-import { fetchFailure } from "./transport-failure";
-import type { ResponseType } from "./types";
+import { CourierError } from "../errors/courier-error";
+import type { Answer } from "../utils/answer";
+import type { ResponseParser, ResponseType } from "./types";
 
 /** Statuses the HTTP specification defines as carrying no body at all. */
 const BODILESS = new Set([204, 205, 304]);
@@ -39,57 +40,64 @@ export function assertReadable(response: Response): void {
 }
 
 /**
- * Read a response body, treating "there is no body" as a value rather than
- * as a parse failure.
+ * Read an answer's body into what a call resolves to, treating "there is no
+ * body" as a value rather than as a parse failure: `null` for a status that
+ * has none, or for an empty body read as JSON. A source's parser is handed
+ * the body as `responseType` reads it, and the answer's status and headers.
  *
  * A HEAD request's only standard success is a 200 with no body, and a write
  * that returns nothing answers the same way. Handing those to `JSON.parse`
  * raises a syntax error, which the catch below turns into an `HTTPError`
  * carrying status 200 — a success reported as a transport failure, and
  * indistinguishable from one.
+ *
+ * @param answer - The answer, its body unread
+ * @param responseType - What the body is read as
+ * @param responseParser - Turns the body read into what the call resolves to
+ * @param message - What an error answer that cannot be read says
+ * @returns What the call resolves to
+ * @throws {HTTPError} When a successful answer's body does not parse, or the parser throws
+ * @example
+ * ```ts
+ * const data = await getResponseData(answer, "json");
+ * ```
  */
 export async function getResponseData(
-  response: Response,
+  answer: Answer,
   responseType: ResponseType,
-  responseParser?: (response: Response) => Promise<unknown>,
+  responseParser?: ResponseParser,
   message?: string,
 ): Promise<unknown> {
-  if (BODILESS.has(response.status)) {
-    return null;
-  }
-
-  let body: string;
+  const { response } = answer;
+  if (BODILESS.has(response.status)) return null;
+  const body = await readData(answer, responseType, message);
+  if (!responseParser) return body;
   try {
-    if (responseParser) return await responseParser(response);
-    if (responseType !== "json") return await readAs(response, responseType);
-    /* Reading the text first is what distinguishes an empty body from a
-       malformed one; `response.json()` reports both as a syntax error. */
-    body = await response.text();
+    return await responseParser(body, { status: response.status, headers: response.headers });
   } catch (error) {
-    throw readFailure(response, message, error);
+    throw error instanceof CourierError ? error : unreadable(response, message, error);
   }
+}
 
+/* The body as `responseType` reads it. A read that fails was classified as it was read: the
+   call's cancellation, its timeout, a body that stopped arriving. */
+async function readData(
+  answer: Answer,
+  responseType: ResponseType,
+  message: string | undefined,
+): Promise<unknown> {
+  if (responseType !== "json") return answer.read(responseType);
+  /* Reading the text first is what distinguishes an empty body from a
+     malformed one; `response.json()` reports both as a syntax error. */
+  const body = await answer.read("text");
   if (body === "") return null;
   try {
     return JSON.parse(body);
   } catch (error) {
     /* An error answer's body is the upstream's explanation, in whatever
        form it wrote it; replacing text or HTML with "HTTP 404" lost it. */
-    if (!response.ok) return body;
-    throw unreadable(response, message, error);
-  }
-}
-
-function readAs(response: Response, responseType: Exclude<ResponseType, "json">): Promise<unknown> {
-  switch (responseType) {
-    case "text":
-      return response.text();
-    case "blob":
-      return response.blob();
-    case "arrayBuffer":
-      return response.arrayBuffer();
-    case "formData":
-      return response.formData();
+    if (!answer.response.ok) return body;
+    throw unreadable(answer.response, message, error);
   }
 }
 
@@ -105,22 +113,27 @@ function unreadable(response: Response, message: string | undefined, cause: unkn
   );
 }
 
+/**
+ * An answer's status and headers, and its body read as `getResponseData`
+ * reads it.
+ *
+ * @param answer - The answer, its body unread
+ * @param responseType - What the body is read as
+ * @param responseParser - Turns the body read into what the call resolves to
+ * @param message - What an error answer that cannot be read says
+ * @returns The status, the headers and the data
+ * @example
+ * ```ts
+ * const { status, data } = await getResponse(answer, "json");
+ * ```
+ */
 export async function getResponse(
-  response: Response,
+  answer: Answer,
   responseType: ResponseType,
-  responseParser?: (response: Response) => Promise<unknown>,
+  responseParser?: ResponseParser,
   message?: string,
 ): Promise<{ status: number; headers: Headers; data: unknown }> {
-  const data = await getResponseData(response, responseType, responseParser, message);
-  const { status, headers } = response;
+  const data = await getResponseData(answer, responseType, responseParser, message);
+  const { status, headers } = answer.response;
   return { status, headers, data };
-}
-
-/* A body that stops arriving — its timeout ran out, or the connection
-   dropped — is the request failing, as it would before the answer: a
-   timeout or a network failure, not a body that would not parse. */
-function readFailure(response: Response, message: string | undefined, error: unknown): unknown {
-  const stopped =
-    error instanceof Error && (error.name === "TimeoutError" || error instanceof TypeError);
-  return stopped ? fetchFailure(error, undefined) : unreadable(response, message, error);
 }

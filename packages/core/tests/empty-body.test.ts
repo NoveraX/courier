@@ -7,9 +7,10 @@ import { describe, expect, it } from "vitest";
 
 import { HTTPError } from "../src/errors";
 import { getResponseData } from "../src/http-client/response";
+import { type Answer, platformAnswer } from "../src/utils/answer";
 
-const json = (body: string, status = 200): Response =>
-  new Response(body, { status, headers: { "content-type": "application/json" } });
+const json = (body: string, status = 200): Answer =>
+  platformAnswer(new Response(body, { status, headers: { "content-type": "application/json" } }));
 
 describe("a success with no body", () => {
   it("reads as null on a 200, which is what HEAD returns", async () => {
@@ -22,7 +23,9 @@ describe("a success with no body", () => {
 
   it("reads as null for every status defined as bodiless", async () => {
     for (const status of [204, 205, 304]) {
-      expect(await getResponseData(new Response(null, { status }), "json")).toBeNull();
+      expect(
+        await getResponseData(platformAnswer(new Response(null, { status })), "json"),
+      ).toBeNull();
     }
   });
 
@@ -69,6 +72,6 @@ describe("other response types are untouched", () => {
   });
 
   it("still returns text content", async () => {
-    expect(await getResponseData(new Response("hello"), "text")).toBe("hello");
+    expect(await getResponseData(platformAnswer(new Response("hello")), "text")).toBe("hello");
   });
 });

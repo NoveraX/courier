@@ -1,4 +1,4 @@
-export const metadata = { title: "defineApi", description: "Creates a data source with base URL, options, middleware, and endpoint groups.", mode: "both", updated: "2026-11-15" }
+export const metadata = { title: "defineApi", description: "Creates a data source with base URL, options, middleware, and endpoint groups.", mode: "both", updated: "2026-11-27" }
 
 ## Import
 
@@ -26,7 +26,7 @@ The core configuration for a data source:
 type BaseOptions = {
   baseURL?: string
   responseType?: "json" | "text" | "blob" | "arrayBuffer" | "formData"
-  responseParser?: (response: Response) => Promise<unknown>
+  responseParser?: ResponseParser
   defaultBody?: Record<string, unknown>
   defaultQueryParams?: Record<string, unknown>
   allowedHeaders?: string[]
@@ -111,18 +111,21 @@ Controls response parsing. Supported: `"json"` (default), `"text"`, `"blob"`, `"
 
 ### responseParser
 
-Custom response parser that overrides `responseType`:
+Turns each answer's body, read as `responseType`, into what a call resolves to — an error answer's too, the `data` of its `HTTPError`. It is handed the body Courier read — JSON already parsed, or the text, the Blob, the bytes, the form — and the answer's status and headers, and may return a promise:
 
 ```ts
 const api = defineApi({
   baseURL: "...",
-  responseParser: async (response) => {
-    const text = await response.text()
-    return new DOMParser().parseFromString(text, "text/xml")
-  },
+  responseType: "text",
+  responseParser: (text, { headers }) =>
+    headers.get("content-type")?.includes("xml")
+      ? new DOMParser().parseFromString(String(text), "text/xml")
+      : text,
   groups: { users },
 })
 ```
+
+Courier reads the body itself, the way it reads every answer, so a call that is cancelled, runs out of time or shares its request with another gives up its read or reads its own copy. An answer whose status has no body resolves to `null` without the parser, and a call that names its own `responseType` has its successful answer read as that, without the parser; its error answers are still read as the source's. What the parser throws fails the call with an `HTTPError` of the answer's status; a Courier error it throws is thrown as it is.
 
 ### defaultBody
 

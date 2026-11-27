@@ -31,6 +31,7 @@ export type {
   GroupOptions,
   HttpResponse,
   RequestContext,
+  ResponseParser,
   SearchParamsSerializer,
   UploadProgress,
 } from "../http-client/types";

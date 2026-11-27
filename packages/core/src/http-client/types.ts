@@ -134,6 +134,25 @@ export type MethodOptions<TMethod extends HttpMethod> = TMethod extends "get" | 
 
 export type ResponseType = "json" | "text" | "blob" | "arrayBuffer" | "formData";
 
+/**
+ * Turns an answer's body, read as the source's `responseType`, into what a
+ * call resolves to: JSON already parsed — `null` for an empty body, the
+ * text of an error answer that is no JSON — or the text, the Blob, the
+ * bytes or the form. It is handed the answer's status and headers, and may
+ * return a promise. What it throws fails the call with an `HTTPError` of the
+ * answer's status, a Courier error as it is. An answer whose status has no
+ * body resolves to `null` without it.
+ *
+ * @example
+ * ```ts
+ * const toXml: ResponseParser = (text) => new DOMParser().parseFromString(String(text), "text/xml");
+ * ```
+ */
+export type ResponseParser = (
+  body: unknown,
+  answer: { readonly status: number; readonly headers: Headers },
+) => unknown;
+
 export type SearchParamsSerializer = {
   stringify: (obj: Record<string, unknown>) => string;
   parse: (str: string) => Record<string, unknown>;
@@ -151,8 +170,13 @@ export type BaseOptions = MergeOptions &
     baseURL?: string | undefined;
     /** Response body parsing strategy — defaults to "json" */
     responseType?: ResponseType | undefined;
-    /** Custom response parser replacing the built-in one (receives raw Response) */
-    responseParser?: ((response: Response) => Promise<unknown>) | undefined;
+    /**
+     * Turns each answer's body, read as `responseType`, into what a call
+     * resolves to, error answers' too: an XML document of the text, records
+     * of a JSON envelope. A call that names its own `responseType` has its
+     * successful answer read as that, without it.
+     */
+    responseParser?: ResponseParser | undefined;
     /** Defaults under an object body, or query values on a read or DELETE; a list or raw body is sent alone */
     defaultBody?: Record<string, unknown> | undefined;
     /** Default query params merged into every request URL */

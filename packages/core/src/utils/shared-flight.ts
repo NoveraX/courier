@@ -1,6 +1,5 @@
 import { cancellation } from "./cancellation";
 import { ONCE } from "./own";
-import { readUntilLeft } from "./read-until-left";
 import type { SharingCall } from "./shared-answer";
 
 /** One request in flight, and the calls waiting for its answer, first to wait first. */
@@ -27,11 +26,12 @@ const flights = new Map<string, Flight>();
 
 /**
  * Send a request, or join the identical one already in flight: every call
- * gets an answer of its own — the same status, headers and bytes, a body it
- * reads alone — while one request reaches the server. A call that stops
- * waiting leaves without the others noticing; the request is cancelled when
- * the last one leaves. A request is joined until its answer arrives, never
- * after: a later call sends its own.
+ * gets an answer of its own — the platform's copy of it, the same status,
+ * headers and bytes, a body it reads alone — while one request reaches the
+ * server. A call that stops waiting leaves without the others noticing; the
+ * request is cancelled when the last one leaves, and a call that leaves once
+ * its answer has come gives up its read of it. A request is joined until its
+ * answer arrives, never after: a later call sends its own.
  *
  * The request belongs to the call that still waits for it when its answer
  * comes, the first one to have waited: the one that sent it, or, once that
@@ -92,7 +92,8 @@ function leave(key: string, flight: Flight, waiter: Waiter): void {
   flight.controller.abort(waiter.signal?.reason);
 }
 
-/* Every waiter is handed a copy made before any of them reads; the last takes the answer itself. */
+/* Every waiter is handed the platform's copy, made before any of them reads, as no waiter reads
+   until the last is handed one; the last takes the answer itself. */
 function land(key: string, flight: Flight, response: Response): void {
   if (flights.get(key) === flight) flights.delete(key);
   const waiting = [...flight.waiters].filter((waiter) => !waiter.settled);
@@ -102,13 +103,10 @@ function land(key: string, flight: Flight, response: Response): void {
   }
   flight.keep?.(response, waiting[0]?.call);
   tellShared(waiting);
-  const answers = waiting.map((_, index) =>
-    index === waiting.length - 1 ? response : response.clone(),
-  );
   waiting.forEach((waiter, index) => {
     waiter.settled = true;
     try {
-      waiter.resolve(readUntilLeft(answers[index] ?? response, waiter.signal));
+      waiter.resolve(index === waiting.length - 1 ? response : response.clone());
     } catch (error) {
       waiter.reject(error);
     }

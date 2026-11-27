@@ -1,4 +1,4 @@
-export const metadata = { title: "Options", description: "Full reference of source-level and per-request configuration options.", mode: "both", updated: "2026-11-15" }
+export const metadata = { title: "Options", description: "Full reference of source-level and per-request configuration options.", mode: "both", updated: "2026-11-27" }
 
 ## Overview
 
@@ -13,7 +13,7 @@ type BaseOptions = {
   // URL & encoding
   baseURL?: string                               // Prefix URL for all requests
   responseType?: "json" | "text" | "blob" | "arrayBuffer" | "formData" // Response parsing (default: "json")
-  responseParser?: (response: Response) => Promise<unknown>           // Custom response parser (overrides responseType)
+  responseParser?: ResponseParser                // Turns the body read as responseType into the call's data
   defaultBody?: Record<string, unknown>          // Merged into every request body
   defaultQueryParams?: Record<string, unknown>   // Merged into every query string
   bodySerializer?: (data: Record<string, unknown>) => BodyInit       // Custom body serializer
@@ -44,7 +44,7 @@ type BaseOptions = {
 }
 ```
 
-An endpoint whose `.via()` closure passes its own `responseType` has its successful answer read that way, the source's `responseParser` included; see [Defining APIs](/docs/core-concepts/defining-apis).
+An endpoint whose `.via()` closure passes its own `responseType` has its successful answer read that way, without the source's `responseParser`; its error answers are read as the source's, parser and all. See [Defining APIs](/docs/core-concepts/defining-apis).
 
 ## GroupOptions
 

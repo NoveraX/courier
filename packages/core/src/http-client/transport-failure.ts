@@ -17,13 +17,13 @@ export interface RequestExpiry {
 }
 
 /**
- * What a request that fetch rejected is thrown as — the one place a failure
- * is told apart by what happened, so nothing downstream guesses from a
- * status.
+ * What a request is thrown as when fetch rejected it, or its answer's body
+ * failed as it was read — the one place a failure is told apart by what
+ * happened, so nothing downstream guesses from a status.
  *
- * Only fetch's own rejection is classified here, so a mistake made before
- * the request — a body that would not serialize — is never taken for a
- * network failure. A cancelled request is thrown as an `AbortError`, why
+ * Only fetch's own rejection and the read of its answer are classified
+ * here, so a mistake made before the request — a body that would not
+ * serialize — is never taken for a network failure. A cancelled request is thrown as an `AbortError`, why
  * its signal aborted as the cause, however fetch rejected it — expo/fetch
  * rejects one as a plain `FetchError`. A Courier error stays what it is: a
  * misconfiguration found as the request was sent, a deadline that ran out,
@@ -33,7 +33,7 @@ export interface RequestExpiry {
  * `TimeoutError`, also where fetch only reports an abort, as React
  * Native's does; anything else fetch rejected with is a `NetworkError`.
  *
- * @param error - What fetch rejected with
+ * @param error - What fetch, or the read of its answer, rejected with
  * @param signal - The signal the caller gave, if any
  * @param expiry - The request's timeout, and whether it ran out
  * @returns The error to throw

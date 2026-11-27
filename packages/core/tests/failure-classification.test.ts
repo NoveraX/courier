@@ -101,7 +101,7 @@ describe("an answer that stops arriving", () => {
     );
 
     expect(error).toBeInstanceOf(TimeoutError);
-    expect(error).toMatchObject({ scope: "attempt", message: "Request timed out" });
+    expect(error).toMatchObject({ scope: "attempt", message: "Request timed out after 150 ms" });
   });
 
   it("is a network failure when the connection drops while the body is read", async () => {

@@ -1,4 +1,5 @@
 import { HTTPError } from "../errors";
+import type { Answer } from "../utils/answer";
 import type { EndpointHold } from "../utils/cancel-previous";
 import { cancellation } from "../utils/cancellation";
 import { ownField, ownFields } from "../utils/own";
@@ -15,6 +16,7 @@ import type {
   HttpResponse,
   MethodParameters,
   PathOptions,
+  ResponseParser,
   ResponseType,
   SearchParamsSerializer,
 } from "./types";
@@ -31,8 +33,8 @@ export type BindMethodDeps = {
   defaultBody: Record<string, unknown>;
   bodySerializer: ((data: Record<string, unknown>) => WebBody) | undefined;
   responseType: ResponseType;
-  responseParser: ((response: Response) => Promise<unknown>) | undefined;
-  fetchRequest: (method: string, url: string, options: RequestOptions) => Promise<Response>;
+  responseParser: ResponseParser | undefined;
+  fetchRequest: (method: string, url: string, options: RequestOptions) => Promise<Answer>;
 };
 
 /** A method bound to a client: called with a path and options, it resolves to the answer. */
@@ -125,13 +127,14 @@ export function bindMethod(
       hold?.sending();
       const sending = deps.fetchRequest(method, url, options);
       hold?.sent();
-      const response = await sending;
+      const answer = await sending;
       hold?.returned();
+      const { response } = answer;
       assertReadable(response);
 
       if (!response.ok) {
         const errorResponse = await getResponse(
-          response,
+          answer,
           deps.responseType,
           deps.responseParser,
           `HTTP ${response.status}`,
@@ -142,17 +145,16 @@ export function bindMethod(
       const result = stream
         ? { status: response.status, headers: response.headers, data: response.body }
         : readAs === undefined
-          ? await getResponse(response, deps.responseType, deps.responseParser)
-          : await getResponse(response, readAs);
+          ? await getResponse(answer, deps.responseType, deps.responseParser)
+          : await getResponse(answer, readAs);
 
       return result as HttpResponse<TResponse>;
     } catch (error) {
-      /* Fetch's own rejection was classified where it happened; anything
-         else — a path option that threw, a body that would not serialize —
-         is the caller's own failure and stays what it was. A cancellation
-         that lands while the answer is read stops the read with the
-         caller's reason, and the reader reports that as a body it could
-         not parse; it is rethrown as the cancellation it is. */
+      /* Fetch's own rejection, and a read of its answer that failed, were
+         classified where they happened; anything else — a path option that
+         threw, a body that would not serialize — is the caller's own
+         failure and stays what it was. A call whose signal has fired fails
+         with its cancellation, whatever it met once the caller left. */
       hold?.returned();
       const signal = ownField(options, "signal");
       if (signal?.aborted) throw cancellation(signal);

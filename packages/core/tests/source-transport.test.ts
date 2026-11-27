@@ -85,13 +85,13 @@ describe("a source's fetch", () => {
     const { sent, send } = recording(() => new Response("stored"));
     const progress = vi.fn();
 
-    const response = await coreFetch("POST", "https://files.example/upload", {
+    const answer = await coreFetch("POST", "https://files.example/upload", {
       body: new Blob(["twelve bytes"]),
       onUploadProgress: progress,
       fetch: send,
     });
 
-    expect(await response.text()).toBe("stored");
+    expect(await answer.read("text")).toBe("stored");
     expect(sent.map(({ url }) => url)).toEqual(["https://files.example/upload"]);
     expect(sent[0]?.init.body).toBeInstanceOf(ReadableStream);
     expect(progress).toHaveBeenLastCalledWith({ percent: 1, totalBytes: 12, transferredBytes: 12 });
@@ -104,12 +104,12 @@ describe("a source's fetch", () => {
         : new Response("moved here"),
     );
 
-    const response = await coreFetch("GET", "https://shop.example/old", {
+    const answer = await coreFetch("GET", "https://shop.example/old", {
       withinOrigin: true,
       fetch: send,
     });
 
-    expect(await response.text()).toBe("moved here");
+    expect(await answer.read("text")).toBe("moved here");
     expect(sent.map(({ url }) => url)).toEqual([
       "https://shop.example/old",
       "https://shop.example/new",

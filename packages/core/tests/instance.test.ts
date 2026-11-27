@@ -293,32 +293,37 @@ describe("HttpClient", () => {
   });
 
   describe("responseParser", () => {
-    it("uses custom responseParser when provided", async () => {
+    it("is handed the body read as the source's responseType, and the answer's status and headers", async () => {
       const xmlString = "<root><item>test</item></root>";
       fetchSpy.mockResolvedValue(textResponse(xmlString));
+      const parser = vi.fn(
+        (text: unknown, { status, headers }: { status: number; headers: Headers }) => ({
+          xml: text,
+          status,
+          type: headers.get("content-type"),
+        }),
+      );
 
-      const parser = vi.fn(async (response: Response) => {
-        const text = await response.text();
-        return { xml: text };
+      const instance = new HttpClient({ responseType: "text", responseParser: parser });
+      const { get } = instance.createMethods();
+      const result = await get("data");
+
+      expect(result.data).toEqual({
+        xml: xmlString,
+        status: 200,
+        type: "text/plain;charset=UTF-8",
       });
+    });
 
+    it("is handed JSON parsed, and what it resolves to is the data", async () => {
+      fetchSpy.mockResolvedValue(mockFetchResponse({ data: [1, 2] }));
+
+      const parser = async (body: unknown) => (body as { data: number[] }).data;
       const instance = new HttpClient({ responseParser: parser });
       const { get } = instance.createMethods();
       const result = await get("data");
 
-      expect(parser).toHaveBeenCalled();
-      expect(result.data).toEqual({ xml: xmlString });
-    });
-
-    it("responseParser takes priority over responseType", async () => {
-      fetchSpy.mockResolvedValue(textResponse("custom"));
-
-      const parser = async (response: Response) => `parsed:${await response.text()}`;
-      const instance = new HttpClient({ responseType: "json", responseParser: parser });
-      const { get } = instance.createMethods();
-      const result = await get("data");
-
-      expect(result.data).toBe("parsed:custom");
+      expect(result.data).toEqual([1, 2]);
     });
   });
 

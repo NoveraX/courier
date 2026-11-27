@@ -18,6 +18,7 @@ import { routesOf } from "../src/define/routes-of";
 import { ConfigurationError, HTTPError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/server/sources";
+import { platformAnswer } from "../src/utils/answer";
 import { readWireBody } from "../src/utils/wire-body";
 import { startUpstream, type Upstream } from "./helpers/upstream";
 
@@ -126,7 +127,9 @@ describe("the proxy's binary answer on the wire", () => {
       [...answer.headers].filter(([name]) => SAFELISTED.includes(name.toLowerCase())),
     );
 
-    const data = await readWireBody(new Response(await answer.arrayBuffer(), { headers: visible }));
+    const data = await readWireBody(
+      platformAnswer(new Response(await answer.arrayBuffer(), { headers: visible })),
+    );
 
     expect(answer.headers.get("x-content-type-options")).toBe("nosniff");
     expect(answer.headers.get("content-length")).toBe(String(BYTES.byteLength));

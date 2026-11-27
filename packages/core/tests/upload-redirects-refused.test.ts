@@ -59,7 +59,7 @@ describe("an upload where fetch would copy the stream", () => {
       res.end();
     });
 
-    const response = await coreFetch("POST", `${upstream.url}/start`, { body: form() });
+    const { response } = await coreFetch("POST", `${upstream.url}/start`, { body: form() });
 
     expect(response.status).toBe(200);
     const [first, second] = upstream.received;
@@ -108,7 +108,7 @@ describe("an upload where fetch would copy the stream", () => {
       res.end();
     });
 
-    const response = await coreFetch("POST", `${upstream.url}/start`, {
+    const { response } = await coreFetch("POST", `${upstream.url}/start`, {
       body: form(),
       redirect: "manual",
     });

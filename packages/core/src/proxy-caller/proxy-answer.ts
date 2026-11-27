@@ -9,6 +9,7 @@
 import { CourierError, HTTPError, NetworkError } from "../errors";
 import { isBodilessStatus } from "../http-client/response";
 import { isCancellation } from "../utils/abort";
+import type { Answer } from "../utils/answer";
 import { cancellation } from "../utils/cancellation";
 import { isWireBody, readWireBody } from "../utils/wire-body";
 import { validationFailure } from "./validation-failure";
@@ -24,7 +25,7 @@ import { validationFailure } from "./validation-failure";
  *
  * @example
  * ```ts
- * throw buildHttpError(404, response.headers, await readErrorResponse(response), false);
+ * throw buildHttpError(404, response.headers, await readErrorResponse(answer), false);
  * ```
  */
 export function buildHttpError(
@@ -41,30 +42,31 @@ export function buildHttpError(
   return new HTTPError({ status, headers, data });
 }
 
-export async function readErrorResponse(response: Response): Promise<unknown> {
+export async function readErrorResponse(answer: Answer): Promise<unknown> {
   try {
-    return await readWireBody(response);
+    return await readWireBody(answer);
   } catch {
-    return { success: false, message: `HTTP ${response.status}` };
+    return { success: false, message: `HTTP ${answer.response.status}` };
   }
 }
 
 /**
  * Read the proxy's answer into what the call resolves to.
  *
- * @param response - The proxy's HTTP response
+ * @param answer - The proxy's answer
  * @param raw - Whether the call asked for `.raw`
  * @param stream - Whether the call asked for the unread body
  * @returns The data; with `.raw`, the response around it
  * @throws HTTPError when the proxy answered with an error status
  */
 export async function readProxyAnswer(
-  response: Response,
+  answer: Answer,
   raw: boolean,
   stream: boolean,
 ): Promise<unknown> {
+  const { response } = answer;
   if (!response.ok) {
-    const responseData = await readErrorResponse(response);
+    const responseData = await readErrorResponse(answer);
     const failure = buildHttpError(response.status, response.headers, responseData, raw);
     throw validationFailure(failure.status, failure.data) ?? failure;
   }
@@ -75,7 +77,7 @@ export async function readProxyAnswer(
       ? { status: response.status, headers: response.headers, data: response.body }
       : response.body;
   }
-  const body = await readWireBody(response);
+  const body = await readWireBody(answer);
   if (!raw) return body;
   /* A bodiless answer or one carried as itself has no envelope to unwrap;
      the answer's own status and headers make it, as in direct mode. */

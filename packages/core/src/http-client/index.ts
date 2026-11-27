@@ -1,8 +1,10 @@
 import { sessionTransport } from "../session/one-user-transport";
+import type { Answer } from "../utils/answer";
 import type { EndpointHold } from "../utils/cancel-previous";
 import type { CoreFetchInit } from "../utils/fetch";
-import { coreFetch, withSearchParams } from "../utils/fetch";
+import { coreFetch } from "../utils/fetch";
 import { ownFields } from "../utils/own";
+import { withSearchParams } from "../utils/search-params";
 import { serversCallInit } from "../utils/server-call-marks";
 import { bindMethod, boundParts } from "./bind-method";
 import type { RequestOptions } from "./call-transport";
@@ -16,6 +18,7 @@ import type {
   GroupOptions,
   HttpMethods,
   PathOptions,
+  ResponseParser,
   ResponseType,
   SearchParamsSerializer,
 } from "./types";
@@ -23,7 +26,7 @@ import type { WebBody } from "./web-types";
 
 export class HttpClient {
   private responseType: ResponseType = "json";
-  private responseParser: ((response: Response) => Promise<unknown>) | undefined;
+  private responseParser: ResponseParser | undefined;
   private defaultBody: Record<string, unknown> = {};
   private defaultQueryParams: Record<string, unknown> | undefined;
   private pathOptions: PathOptions | undefined;
@@ -106,7 +109,7 @@ export class HttpClient {
     method: string,
     url: string,
     options: RequestOptions = {},
-  ): Promise<Response> {
+  ): Promise<Answer> {
     const own = ownFields(options);
     const {
       prefixUrl: overridePrefixUrl,

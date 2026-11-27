@@ -10,6 +10,7 @@
 
 import { getResponseData } from "../http-client/response";
 import type { WebBody } from "../http-client/web-types";
+import type { Answer } from "./answer";
 
 /** Bytes read back as an ArrayBuffer. */
 const BYTES_TYPE = "application/vnd.courier.bytes";
@@ -73,27 +74,28 @@ export function isWireBody(response: Response): boolean {
 /**
  * Read a proxy answer's body the way the proxy sent it.
  *
- * @param response - The proxy's answer
+ * @param answer - The proxy's answer
  * @returns The body — bytes, a Blob or a FormData as marked, JSON otherwise
  *
  * @example
  * ```ts
- * const bytes = await readWireBody(response); // ArrayBuffer for a bytes answer
+ * const bytes = await readWireBody(answer); // ArrayBuffer for a bytes answer
  * ```
  */
-export async function readWireBody(response: Response): Promise<unknown> {
+export async function readWireBody(answer: Answer): Promise<unknown> {
+  const { response } = answer;
   switch (mediaTypeOf(response)) {
     case BYTES_TYPE:
-      return response.arrayBuffer();
+      return answer.read("arrayBuffer");
     case BLOB_TYPE: {
-      const blob = await response.blob();
+      const blob = await answer.read("blob");
       return new Blob([blob], { type: blobTypeOf(response), endings: "transparent" });
     }
     case MULTIPART_TYPE:
-      return response.formData();
+      return answer.read("formData");
     default:
       /* A bodiless status reads as null here, as it does in direct mode. */
-      return getResponseData(response, "json");
+      return getResponseData(answer, "json");
   }
 }
 

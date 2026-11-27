@@ -15,6 +15,7 @@
 import { HTTPError } from "../errors";
 import { assertReadable, getResponseData } from "../http-client/response";
 import type { ResponseType } from "../http-client/types";
+import type { Answer } from "../utils/answer";
 import { cancellation } from "../utils/cancellation";
 import { defineOwn } from "../utils/define-own";
 import { coreFetch } from "../utils/fetch";
@@ -44,12 +45,12 @@ function mergeHeaders(
 }
 
 /** The body of an error answer, or a stand-in when it cannot be read. */
-async function readErrorBody(response: Response, type: ResponseType): Promise<unknown> {
+async function readErrorBody(answer: Answer, type: ResponseType): Promise<unknown> {
   try {
-    return await getResponseData(response, type);
+    return await getResponseData(answer, type);
   } catch {
     /* The status is the answer; a body that will not parse only loses the detail. */
-    return { message: `HTTP ${response.status}` };
+    return { message: `HTTP ${answer.response.status}` };
   }
 }
 
@@ -63,7 +64,7 @@ async function request<TResponse>(
   const headers = mergeHeaders(defaults.headers, options?.headers);
   const signal = options?.signal;
 
-  const response = await coreFetch(method, fullUrl, {
+  const answer = await coreFetch(method, fullUrl, {
     json: options?.json,
     body: options?.body,
     searchParams: options?.searchParams,
@@ -72,7 +73,7 @@ async function request<TResponse>(
     ...(headers && { headers }),
   });
   try {
-    return await answerOf<TResponse>(method, response, options?.responseType ?? "json");
+    return await answerOf<TResponse>(method, answer, options?.responseType ?? "json");
   } catch (error) {
     /* A cancellation that lands while the answer is read stops the read with the caller's
        reason, which the reader reports as a body it could not parse: it is the cancellation. */
@@ -84,21 +85,22 @@ async function request<TResponse>(
 /* What the request resolves to, read from its answer, or the HTTPError the answer is. */
 async function answerOf<TResponse>(
   method: string,
-  response: Response,
+  answer: Answer,
   type: ResponseType,
 ): Promise<TResponse> {
+  const { response } = answer;
   assertReadable(response);
   /* Checked before HEAD returns, so a HEAD answered 404 or 401 does not
      resolve as though the resource were there. */
   if (!response.ok) {
-    const data = method === "head" ? null : await readErrorBody(response, type);
+    const data = method === "head" ? null : await readErrorBody(answer, type);
     throw new HTTPError({ status: response.status, headers: response.headers, data });
   }
   if (method === "head") return response.headers as TResponse;
 
   /* The same reader as the endpoint client, so an empty 200 or 201 is `null`
      rather than a SyntaxError that no isHTTPError check recognises. */
-  return (await getResponseData(response, type)) as TResponse;
+  return (await getResponseData(answer, type)) as TResponse;
 }
 
 /**

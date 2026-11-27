@@ -1,4 +1,4 @@
-export const metadata = { title: "Types", description: "Complete reference for all TypeScript types exported by @noverax/courier.", mode: "both", updated: "2026-11-15" }
+export const metadata = { title: "Types", description: "Complete reference for all TypeScript types exported by @noverax/courier.", mode: "both", updated: "2026-11-27" }
 
 ## Overview
 
@@ -276,7 +276,7 @@ Core configuration for `defineApi()`.
 type BaseOptions = MergeOptions & FetchOptions & {
   baseURL?: string
   responseType?: ResponseType
-  responseParser?: (response: Response) => Promise<unknown>
+  responseParser?: ResponseParser
   defaultBody?: Record<string, unknown>
   defaultQueryParams?: Record<string, unknown>
   allowedHeaders?: string[]
@@ -304,6 +304,17 @@ type GroupOptions = MergeOptions & {
 ```ts
 type ResponseType = "json" | "text" | "blob" | "arrayBuffer" | "formData"
 ```
+
+### ResponseParser
+
+```ts
+type ResponseParser = (
+  body: unknown,
+  answer: { readonly status: number; readonly headers: Headers },
+) => unknown
+```
+
+A source's `responseParser`: handed the body as the source's `responseType` reads it — JSON already parsed, `null` for an empty body, the text of an error answer that is no JSON — and the answer's status and headers, it returns what the call resolves to, or a promise of it.
 
 ### SearchParamsSerializer
 

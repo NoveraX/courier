@@ -101,9 +101,9 @@ describe("a form a server sends", () => {
     const form = new FormData();
     form.append("file", new File([new Uint8Array(5000).fill(3)], "a.bin"));
 
-    const response = await coreFetch("POST", `${upstream.url}/start`, { body: form });
+    const answer = await coreFetch("POST", `${upstream.url}/start`, { body: form });
 
-    expect(await response.json()).toEqual({
+    expect(JSON.parse(await answer.read("text"))).toEqual({
       url: "/upload",
       bytes: upstream.received[0]?.body.byteLength,
     });

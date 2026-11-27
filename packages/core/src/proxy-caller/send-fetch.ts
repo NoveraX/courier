@@ -1,5 +1,6 @@
 import { studioCapability } from "../capabilities/registry";
 import { isRequestFailure, type RequestFailure } from "../errors";
+import type { Answer } from "../utils/answer";
 import type { CoreFetchInit } from "../utils/fetch";
 import { coreFetch } from "../utils/fetch";
 import { asProxyFailure, readProxyAnswer } from "./proxy-answer";
@@ -23,18 +24,18 @@ export async function sendFetch(
   const hasTimingHook = studio?.hooks.onProxyClientTiming !== undefined;
   const t0 = hasTimingHook ? performance.now() : 0;
 
-  let response: Response | undefined;
+  let answer: Answer | undefined;
   let tHeaders = 0;
   try {
-    response = await coreFetch(method, url, fetchOptions as CoreFetchInit);
+    answer = await coreFetch(method, url, fetchOptions as CoreFetchInit);
     tHeaders = hasTimingHook ? performance.now() : 0;
-    const data = await readProxyAnswer(response, ctx.raw, ctx.stream);
+    const data = await readProxyAnswer(answer, ctx.raw, ctx.stream);
     await ctx.onSuccess?.(data);
     return data;
   } catch (error) {
     throw await toldFailure(error, signalOf(options), ctx.onError);
   } finally {
-    if (response) studio?.proxyClientTiming(response, t0, tHeaders);
+    if (answer) studio?.proxyClientTiming(answer.response, t0, tHeaders);
   }
 }
 

@@ -68,7 +68,8 @@ export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
   call?: SharingCall | undefined;
   /**
    * The call reads its answer as it arrives, through the answer's `stream`:
-   * it shares no request in flight, and a download it reports is counted on
+   * it shares no request in flight, never goes through XMLHttpRequest, which
+   * hands an answer over only whole, and a download it reports is counted on
    * that stream.
    */
   streamed?: boolean | undefined;
@@ -153,15 +154,16 @@ export async function coreFetch(
   };
   /* XMLHttpRequest reports an upload's progress, which fetch cannot; reads a file a React
      Native form names by where it is, which expo/fetch refuses; and reports a download where no
-     Response of the platform's can be made of the body to count it, as in React Native, unless
-     the call reads the body's stream itself. It stands in for the platform's fetch alone: a
-     source's own sends every call, as it is what the source is reached through. */
+     Response of the platform's can be made of the body to count it, as in React Native. It
+     stands in for the platform's fetch alone, as a source's own sends every call, and never
+     for a call that reads its answer as it comes, which it would hand over only whole. */
   const throughXhr =
     transport === undefined &&
     send === fetch &&
+    streamed !== true &&
     Object.hasOwn(globalThis, "XMLHttpRequest") &&
     ((requestBody != null && (onUploadProgress !== undefined || holdsDeviceFiles(requestBody))) ||
-      (onDownloadProgress !== undefined && streamed !== true && !responseTakesStreams()));
+      (onDownloadProgress !== undefined && !responseTakesStreams()));
   /* Any other download is counted as it is read, by code loaded alongside the request with the
      first call that reports one. */
   const counting =

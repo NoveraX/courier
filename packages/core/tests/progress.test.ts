@@ -5,7 +5,9 @@
  * `onUploadProgress` the body as the network takes it, with or without
  * XMLHttpRequest. An upload over XMLHttpRequest settles when it is
  * cancelled or out of time, while it reads a stream it sends too, and one
- * answered 204 resolves with no body instead of throwing.
+ * answered 204 resolves with no body instead of throwing. A call that reads
+ * its answer as it comes never goes through XMLHttpRequest, which hands an
+ * answer over only once all of it has arrived.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -58,6 +60,33 @@ describe("upload progress without XMLHttpRequest", () => {
       transferredBytes: received,
       totalBytes: received,
     });
+  });
+});
+
+describe("a call that reads its answer as it comes and reports its upload", () => {
+  it("goes with fetch where XMLHttpRequest is at hand, which hands an answer over only whole", async () => {
+    /* A page's and an app's: it would hand the answer over only once all of it had arrived. */
+    vi.stubGlobal(
+      "XMLHttpRequest",
+      class {
+        constructor() {
+          throw new Error("the call went through XMLHttpRequest");
+        }
+      },
+    );
+    vi.stubGlobal("fetch", async (_url: string, init: RequestInit) => {
+      await new Response(init.body).arrayBuffer();
+      return new Response(new Blob(["first part — café, ", "then the rest ✓"]).stream());
+    });
+
+    const body = await (createCaller(api) as unknown as Client).upload.with({
+      stream: true,
+      onUploadProgress: () => undefined,
+    })({ note: "ok" });
+
+    expect(await new Response(body as ReadableStream<Uint8Array>).text()).toBe(
+      "first part — café, then the rest ✓",
+    );
   });
 });
 

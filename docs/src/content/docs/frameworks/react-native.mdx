@@ -172,6 +172,8 @@ Its answer is read as React Native's own `fetch` reads one, from the Blob XMLHtt
 
 An API that sends its calls with a `fetch` of its own sends these through it too, and no upload through it reports its progress. That `fetch` must then read a file on the device itself: React Native's own `fetch` does, `expo/fetch` does not. A token goes with the API's `headers` or `authMiddleware`, which XMLHttpRequest sends as well.
 
+A call that reads its answer as it comes, with `stream: true`, goes with the app's `fetch` instead, since XMLHttpRequest hands an answer over only once all of it has arrived. Its upload then reports no progress, and under `expo/fetch` its form holds its files as bytes, a `Blob`: that `fetch` refuses one naming a file on the device.
+
 ## Download progress
 
 A call that reports its download goes through XMLHttpRequest, which reports the answer as it arrives, against the length the answer declares. React Native's own `fetch` hands an answer over only once all of it has arrived, and the `Response` an app has cannot be made of the stream `expo/fetch` hands over, which is how Courier counts a download elsewhere. The answer is read as any other is:

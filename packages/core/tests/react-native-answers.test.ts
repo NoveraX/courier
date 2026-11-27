@@ -327,6 +327,22 @@ describe("a call that reads its answer as it comes, in an Expo app", () => {
   });
 });
 
+describe("a call that reads its answer as it comes and reports its upload, in an Expo app", () => {
+  it("is handed the answer's stream, sent with expo/fetch rather than XMLHttpRequest", async () => {
+    asReactNative("expo");
+
+    const body = await createCaller(api()).upload.with({
+      stream: true,
+      onUploadProgress: () => undefined,
+    })({ note: "café ✓" });
+
+    expect(JSON.parse(await textOf(body as ReadableStream<Uint8Array>))).toEqual({
+      ...GREETING,
+      received: '{"note":"café ✓"}',
+    });
+  });
+});
+
 describe.each(["react-native", "expo-with-react-native-fetch"] as const)(
   "a call that reads its answer as it comes, in an app whose fetch is %s's",
   (fetch) => {

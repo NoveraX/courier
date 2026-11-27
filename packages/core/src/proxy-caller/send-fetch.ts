@@ -20,7 +20,7 @@ export async function sendFetch(
   const studio = studioCapability();
   const instrumented = studio?.proxyUploads(options) ?? options;
   /* A streamed answer is read as it arrives, by one reader: never shared, never kept. */
-  const fetchOptions = ctx.stream ? { ...instrumented, coalesce: false } : instrumented;
+  const fetchOptions = ctx.stream ? { ...instrumented, streamed: true } : instrumented;
   const hasTimingHook = studio?.hooks.onProxyClientTiming !== undefined;
   const t0 = hasTimingHook ? performance.now() : 0;
 

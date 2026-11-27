@@ -1,33 +1,36 @@
 /**
- * Progress for a call's answer coming in; its body going out is reported
- * by `upload-progress.ts`, which a call loads only when it reports one.
+ * Progress for a call's answer coming in, counted as its body is read:
+ * loaded with the first call that reports one, so a page that never does
+ * never loads it. An answer XMLHttpRequest brings is reported as it
+ * arrives, against the length it declares.
  *
  * `onDownloadProgress`, offered on every call, was once never called at all
  * — a progress bar wired to it stayed at zero with no error.
  */
 
 import type { DownloadProgress } from "../http-client/types";
+import type { BodyCounter } from "./read-body";
 
 /**
- * Report an answer's body as it is read.
+ * The counter of a call's download: for each answer, a stream that reports
+ * its body as it passes through, chunk by chunk. The answer is the
+ * platform's own still: the body is piped through this as it is read.
  *
- * The total is `content-length`, or 0 when it is unknown — including a
- * compressed answer, whose length counts bytes the reader never sees.
+ * The total is the length the answer declares — see `declaredLength` — and
+ * when it has none, the end is reported once it arrives.
  *
- * @param response - The answer
- * @param onProgress - Called with each chunk read
- * @returns An equivalent answer whose body reports its progress
+ * @param onProgress - Called with each chunk that passes
+ * @returns What makes, of an answer's headers, the stream its body is piped through
+ * @example
+ * ```ts
+ * const counted = response.body.pipeThrough(downloadCounter(onProgress)(response.headers));
+ * ```
  */
-export function trackDownload(
-  response: Response,
-  onProgress: (progress: DownloadProgress) => void,
-): Response {
-  if (!response.body) return response;
-  const declared = Number(response.headers.get("content-length") ?? 0);
-  const total = response.headers.has("content-encoding") ? 0 : declared;
-  let received = 0;
-  const counted = response.body.pipeThrough(
-    new TransformStream<Uint8Array, Uint8Array>({
+export function downloadCounter(onProgress: (progress: DownloadProgress) => void): BodyCounter {
+  return (headers) => {
+    const total = declaredLength(headers);
+    let received = 0;
+    return new TransformStream<Uint8Array, Uint8Array>({
       __proto__: null,
       transform(chunk, controller) {
         received += chunk.byteLength;
@@ -44,11 +47,23 @@ export function trackDownload(
         if (total > 0) return;
         onProgress({ percent: 1, transferredBytes: received, totalBytes: received });
       },
-    } as Transformer<Uint8Array, Uint8Array>),
-  );
-  return new Response(counted, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: response.headers,
-  });
+    } as Transformer<Uint8Array, Uint8Array>);
+  };
+}
+
+/**
+ * The length an answer declares of the body its reader sees: its
+ * `content-length`, or 0 when it declares none — or is compressed, when
+ * that length counts bytes the reader never sees.
+ *
+ * @param headers - The answer's headers
+ * @returns The length, or 0
+ * @example
+ * ```ts
+ * declaredLength(new Headers({ "content-length": "2048" })); // → 2048
+ * ```
+ */
+export function declaredLength(headers: Headers): number {
+  if (headers.has("content-encoding")) return 0;
+  return Number(headers.get("content-length")) || 0;
 }

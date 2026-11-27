@@ -3,7 +3,7 @@ import { fetchFailure } from "../http-client/transport-failure";
 import type { DownloadProgress, UploadProgress } from "../http-client/types";
 import type { WebBody } from "../http-client/web-types";
 import { assertAbsoluteUrl } from "./absolute-url";
-import { type Answer, platformAnswer } from "./answer";
+import { type Answer, loadCounter, platformAnswer } from "./answer";
 import { anySignal } from "./any-signal";
 import { attemptExpiry } from "./attempt-expiry";
 import { holdsDeviceFiles } from "./device-files";
@@ -12,13 +12,13 @@ import { flightKey, isRead } from "./flight-key";
 import { sendableHeaders } from "./header-value";
 import { isFormData, normalizeHttpMethod } from "./helpers";
 import { ownFields } from "./own";
-import { trackDownload } from "./progress";
+import { responseTakesStreams } from "./read-body";
 import { answerRead, forgetRenderReads } from "./render-memo";
 import { REQUEST_MEMBERS } from "./request-members";
 import { type RequestQuery, withSearchParams } from "./search-params";
 import { sendStreamed } from "./send-streamed";
 import type { SharingCall } from "./shared-answer";
-import { uploadWithoutProgress } from "./upload-without-progress";
+import { withoutProgress } from "./without-progress";
 
 export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
   /** What the request sends; absent, nothing unless `json` is given. */
@@ -65,6 +65,12 @@ export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
    * two requests identical.
    */
   call?: SharingCall | undefined;
+  /**
+   * The call reads its answer as it arrives, through the answer's `stream`:
+   * it shares no request in flight, and a download it reports is counted on
+   * that stream.
+   */
+  streamed?: boolean | undefined;
 };
 
 /**
@@ -105,6 +111,7 @@ export async function coreFetch(
     servedFor,
     reads,
     call,
+    streamed,
     ...rest
   } = own;
   /* Followed within the request's origin unless the request says how itself. */
@@ -141,50 +148,54 @@ export async function coreFetch(
     ...(typeof ReadableStream !== "undefined" &&
       requestBody instanceof ReadableStream && { duplex: "half" }),
   };
-  /* XMLHttpRequest reports an upload's progress, which fetch cannot, and
-     reads a file a React Native form names by where it is, which expo/fetch refuses. */
+  /* XMLHttpRequest reports an upload's progress, which fetch cannot; reads a file a React
+     Native form names by where it is, which expo/fetch refuses; and reports a download where no
+     Response of the platform's can be made of the body to count it, as in React Native, unless
+     the call reads the body's stream itself. */
+  const throughXhr =
+    transport === undefined &&
+    Object.hasOwn(globalThis, "XMLHttpRequest") &&
+    ((requestBody != null && (onUploadProgress !== undefined || holdsDeviceFiles(requestBody))) ||
+      (onDownloadProgress !== undefined && streamed !== true && !responseTakesStreams()));
+  /* Any other download is counted as it is read, by code loaded alongside the request with the
+     first call that reports one. */
+  const counting =
+    throughXhr || onDownloadProgress === undefined ? undefined : loadCounter(onDownloadProgress);
   const sendOnce = (sendSignal: AbortSignal | undefined): Promise<Response> => {
     const sent = sendSignal === undefined ? init : { ...init, signal: sendSignal, __proto__: null };
     if (transport) return transport(fullUrl, sent);
-    /* Loaded with the first call that reports an upload or sends a device's file:
-       a page that does neither never loads XMLHttpRequest's sending. */
-    if (requestBody != null && (onUploadProgress || holdsDeviceFiles(requestBody))) {
-      return import("./upload-progress").then(
-        ({ sendWithUploadProgress }) =>
-          sendWithUploadProgress(
-            fullUrl,
-            sent as typeof sent & { body: WebBody },
-            onUploadProgress ?? ignoreProgress,
-            { withinOrigin: within, fetch: send },
-          ),
-        (cause: unknown) => {
-          uploadWithoutProgress(requestBody, cause);
-          return sendPlainly(sent);
-        },
-      );
-    }
-    return sendPlainly(sent);
+    if (!throughXhr) return sendPlainly(sent);
+    /* Loaded with the first call that needs it: a page that never does never loads it. */
+    return import("./xhr-request").then(
+      ({ xhrRequest }) => xhrRequest(fullUrl, sent, { onUploadProgress, onDownloadProgress }),
+      (cause: unknown) => {
+        withoutProgress(cause, requestBody);
+        return sendPlainly(sent);
+      },
+    );
   };
   /* Handed over as it is, a form or a Blob — under Node 22 and 24, or to a source's own fetch,
      a stream too — is copied whole by Node's fetch for as long as it is sent; sent as the stream
-     of its bytes, it is read as it goes out. A streamed upload goes with the content type that
-     names its boundary. */
+     of its bytes, it is read as it goes out, and counted when the call reports its upload, as a
+     server has no XMLHttpRequest. A streamed upload goes with the content type that names its
+     boundary. */
   const sendPlainly = (sent: typeof init): Promise<Response> => {
-    const streamed =
+    const asStream =
       requestBody == null
         ? undefined
         : sendStreamed(fullUrl, sent as typeof sent & { body: WebBody }, {
+            onProgress: onUploadProgress,
             withinOrigin: within,
             fetch: send,
           });
-    if (streamed) return streamed;
+    if (asStream) return asStream;
     return within ? fetchWithinOrigin(fullUrl, sent, send) : send(fullUrl, sent);
   };
   const read = isRead(init.method, reads);
   /* A write the render makes may change what its reads answered. */
   if (!read) forgetRenderReads();
   const key =
-    !read || coalesce === false || onDownloadProgress || onUploadProgress
+    !read || coalesce === false || streamed || onDownloadProgress || onUploadProgress
       ? undefined
       : flightKey(init.method, fullUrl, requestHeaders, requestBody, {
           ...rest,
@@ -206,8 +217,6 @@ export async function coreFetch(
   } catch (error) {
     throw failed(error);
   }
-  const counted = onDownloadProgress ? trackDownload(response, onDownloadProgress) : response;
-  return platformAnswer(counted, { signal: finalSignal ?? undefined, failed });
+  const counter = await counting;
+  return platformAnswer(response, { signal: finalSignal ?? undefined, failed, counter });
 }
-
-function ignoreProgress(): void {}

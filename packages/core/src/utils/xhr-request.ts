@@ -1,13 +1,14 @@
 import { isBodilessStatus } from "../http-client/response";
-import type { UploadProgress } from "../http-client/types";
+import type { DownloadProgress, UploadProgress } from "../http-client/types";
 import type { WebBody, WebCredentials } from "../http-client/web-types";
 import { createLogger } from "../logger";
 import { cancellation } from "./cancellation";
 import { isRecord } from "./is-record";
 import { ONCE } from "./own";
 import { platformError } from "./platform-error";
+import { declaredLength } from "./progress";
 
-const log = createLogger("Upload");
+const log = createLogger("XMLHttpRequest");
 
 /** Options XMLHttpRequest cannot honour; a request that sets one is told so in development. */
 const FETCH_ONLY = ["cache", "next", "mode", "redirect", "keepalive", "priority", "integrity"];
@@ -21,34 +22,48 @@ export interface XhrRequestInit {
   [option: string]: unknown;
 }
 
+/** Who hears a request sent through XMLHttpRequest go out, and its answer come in. */
+export interface XhrProgress {
+  /** Hears the body go out */
+  onUploadProgress?: ((progress: UploadProgress) => void) | undefined;
+  /** Hears the answer come in */
+  onDownloadProgress?: ((progress: DownloadProgress) => void) | undefined;
+}
+
 /**
- * Send a request through XMLHttpRequest, for its upload progress events —
- * fetch has none — and, in React Native, for a form naming a file on the
- * device, which XMLHttpRequest reads from where it is.
+ * Send a request through XMLHttpRequest, which reports its body going out —
+ * fetch cannot — and its answer coming in where the platform's `Response`
+ * cannot be made of a stream to count it, as in React Native; and, in React
+ * Native, for a form naming a file on the device, which XMLHttpRequest reads
+ * from where it is.
  *
  * @param url - Where to send it
  * @param init - The request, as it would be given to fetch
- * @param onProgress - Called as the body is sent
+ * @param progress - Who hears the body go out and the answer come in
  * @returns The answer, a Response of the Blob XMLHttpRequest handed over
+ * @example
+ * ```ts
+ * const response = await xhrRequest(url, init, { onUploadProgress: (p) => bar.set(p.percent) });
+ * ```
  */
 export async function xhrRequest(
   url: string,
   init: XhrRequestInit,
-  onProgress: (progress: UploadProgress) => void,
+  progress: XhrProgress = {},
 ): Promise<Response> {
   warnAboutIgnoredOptions(init);
   /* XMLHttpRequest cannot send a stream: handed one, it sent the text
      "[object ReadableStream]" and the call succeeded. The stream is read
      into a Blob, which it sends and reports. */
   const body = isStream(init.body) ? await new Response(init.body).blob() : (init.body ?? null);
-  return send(url, init, body, onProgress);
+  return send(url, init, body, progress);
 }
 
 function send(
   url: string,
   init: XhrRequestInit,
   body: XMLHttpRequestBodyInit | null,
-  onProgress: (progress: UploadProgress) => void,
+  { onUploadProgress, onDownloadProgress }: XhrProgress,
 ): Promise<Response> {
   return new Promise((resolve, reject) => {
     const signal = init.signal;
@@ -67,17 +82,25 @@ function send(
     signal?.addEventListener("abort", onAbort, ONCE);
     const settle = () => signal?.removeEventListener("abort", onAbort);
 
-    xhr.upload.addEventListener("progress", (event) => {
-      if (!event.lengthComputable) return;
-      onProgress({
-        percent: event.total > 0 ? event.loaded / event.total : 0,
-        transferredBytes: event.loaded,
-        totalBytes: event.total,
+    /* Listened to only when asked: a listener on the upload makes a browser preflight a request
+       to another origin. */
+    if (onUploadProgress) {
+      xhr.upload.addEventListener("progress", (event) => {
+        if (!event.lengthComputable) return;
+        onUploadProgress({
+          percent: event.total > 0 ? event.loaded / event.total : 0,
+          transferredBytes: event.loaded,
+          totalBytes: event.total,
+        });
       });
-    });
+    }
+    const downloaded = onDownloadProgress && reportDownload(xhr, onDownloadProgress);
     xhr.addEventListener("load", () => {
       settle();
-      resolve(toResponse(xhr));
+      const answer = bodyOf(xhr);
+      downloaded?.(answer);
+      const { status, statusText } = xhr;
+      resolve(new Response(answer, { status, statusText, headers: headersOf(xhr) }));
     });
     xhr.addEventListener("error", () => {
       settle();
@@ -95,22 +118,53 @@ function send(
 }
 
 /**
- * The answer as a Response of its Blob, which every platform's Response reads
- * as it reads its own fetch's: React Native's — the whatwg-fetch polyfill,
- * whose fetch asks XMLHttpRequest for a Blob too — read a buffer's text as
- * Latin-1 and refused to make a Blob of one. A 204, 205 or 304 has no body
- * at all; the Response constructor refuses even an empty one.
+ * Report the answer as XMLHttpRequest takes it in — React Native's reports
+ * a download once a listener asks — against the length it declares, as a
+ * body read through fetch is counted; once it has loaded, the end is
+ * reported unless an event already did.
  */
-function toResponse(xhr: XMLHttpRequest): Response {
+function reportDownload(
+  xhr: XMLHttpRequest,
+  onProgress: (progress: DownloadProgress) => void,
+): (answer: Blob | null) => void {
+  let total: number | undefined;
+  let whole = false;
+  xhr.addEventListener("progress", (event) => {
+    total ??= declaredLength(headersOf(xhr));
+    whole = total > 0 && event.loaded >= total;
+    onProgress({
+      percent: total > 0 ? event.loaded / total : 0,
+      transferredBytes: event.loaded,
+      totalBytes: total,
+    });
+  });
+  return (answer) => {
+    if (whole) return;
+    const size = answer?.size ?? 0;
+    onProgress({ percent: 1, transferredBytes: size, totalBytes: size });
+  };
+}
+
+/**
+ * The answer's Blob, which every platform's Response reads as it reads its
+ * own fetch's: React Native's — the whatwg-fetch polyfill, whose fetch asks
+ * XMLHttpRequest for a Blob too — read a buffer's text as Latin-1 and
+ * refused to make a Blob of one. A 204, 205 or 304 has no body at all; the
+ * Response constructor refuses even an empty one.
+ */
+function bodyOf(xhr: XMLHttpRequest): Blob | null {
+  /* Asked for a Blob, XMLHttpRequest answers with one once it has loaded. */
+  const response: unknown = xhr.response;
+  return isBodilessStatus(xhr.status) || !(response instanceof Blob) ? null : response;
+}
+
+function headersOf(xhr: XMLHttpRequest): Headers {
   const headers = new Headers();
   for (const line of xhr.getAllResponseHeaders().trim().split("\r\n")) {
     const idx = line.indexOf(":");
     if (idx > 0) headers.append(line.slice(0, idx).trim(), line.slice(idx + 1).trim());
   }
-  /* Asked for a Blob, XMLHttpRequest answers with one once it has loaded. */
-  const response: unknown = xhr.response;
-  const body = isBodilessStatus(xhr.status) || !(response instanceof Blob) ? null : response;
-  return new Response(body, { status: xhr.status, statusText: xhr.statusText, headers });
+  return headers;
 }
 
 function warnAboutIgnoredOptions(init: XhrRequestInit): void {
@@ -121,7 +175,7 @@ function warnAboutIgnoredOptions(init: XhrRequestInit): void {
   if (env?.NODE_ENV === "production") return;
   const ignored = FETCH_ONLY.filter((option) => init[option] !== undefined);
   if (ignored.length > 0) {
-    log.warn(`${ignored.join(", ")} cannot be applied to an upload sent with XMLHttpRequest`);
+    log.warn(`${ignored.join(", ")} cannot be applied to a request sent with XMLHttpRequest`);
   }
 }
 

@@ -4,21 +4,23 @@
  * Expo's, whose answer carries its body as a stream while `Response` stays
  * the polyfill's, which cannot carry one. Whatever the call does — it can be
  * cancelled, its source parses its answer, it shares an identical request in
- * flight, it goes through XMLHttpRequest for its upload's progress — it
- * resolves to what the API sent, its text decoded as UTF-8.
+ * flight, it counts its download, it goes through XMLHttpRequest for its
+ * upload's progress — it resolves to what the API sent, its text decoded as
+ * UTF-8.
  */
 import type { ServerResponse } from "node:http";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
-import type { ResponseParser } from "../src/http-client/types";
+import type { DownloadProgress, ResponseParser } from "../src/http-client/types";
 import { isCancellation } from "../src/utils/abort";
 import { type AppFetch, asReactNative, bytesOf, NativeBlob } from "./helpers/react-native";
 import { type ReceivedRequest, startUpstream, type Upstream } from "./helpers/upstream";
 
 const { endpoint } = courier();
 const GREETING = { text: "Hello, café — naïve ✓ 👋" };
+const FILE = new Uint8Array(96 * 1024).map((_, index) => index % 251);
 const ALL: AppFetch[] = ["react-native", "expo", "expo-with-react-native-fetch"];
 let upstream: Upstream;
 /* Resolved once the slow answer's first part is out, its rest held back until `release`. */
@@ -53,6 +55,10 @@ function answer(
       res.writeHead(200, { "content-type": "application/json", "content-length": body.length });
       res.end(body);
       return;
+    case "/file":
+      res.writeHead(200, { "content-type": "application/pdf", "content-length": FILE.length });
+      res.end(FILE);
+      return;
     case "/upload": {
       const echo = Buffer.from(JSON.stringify({ ...GREETING, received: request.body.toString() }));
       res.writeHead(200, { "content-type": "application/json", "content-length": echo.length });
@@ -76,9 +82,18 @@ function api(options: { responseType?: "blob"; responseParser?: ResponseParser }
     endpoints: {
       greeting: endpoint.get("greeting").response<typeof GREETING>(),
       slowGreeting: endpoint.get("slow-greeting").response<typeof GREETING>(),
+      file: endpoint.get("file").response<unknown>(),
       upload: endpoint.post("upload").variables<unknown>().response<unknown>(),
     },
   });
+}
+
+/* Read by hand: the app's Response is the polyfill's, which cannot read a stream. */
+async function textOf(stream: ReadableStream<Uint8Array>): Promise<string> {
+  const decoder = new TextDecoder();
+  let text = "";
+  for await (const chunk of stream) text += decoder.decode(chunk, { stream: true });
+  return text + decoder.decode();
 }
 
 async function outcome(call: Promise<unknown>): Promise<unknown> {
@@ -142,6 +157,56 @@ describe.each(ALL)("identical reads in flight, in an app whose fetch is %s's", (
     expect(isCancellation(error)).toBe(true);
     expect(await stayed).toEqual({ value: GREETING });
     expect(upstream.received).toHaveLength(1);
+  });
+});
+
+describe.each(ALL)(
+  "a download that reports its progress, in an app whose fetch is %s's",
+  (fetch) => {
+    it("resolves to its body and reports its bytes, up to the whole", async () => {
+      asReactNative(fetch);
+      const events: DownloadProgress[] = [];
+
+      const read = createCaller(api()).greeting.with({
+        onDownloadProgress: (p) => events.push(p),
+      })();
+
+      expect(await outcome(read)).toEqual({ value: GREETING });
+      const size = Buffer.byteLength(JSON.stringify(GREETING));
+      expect(events.at(-1)).toEqual({ percent: 1, transferredBytes: size, totalBytes: size });
+    });
+
+    it("resolves to a Blob of the file's bytes", async () => {
+      asReactNative(fetch);
+      const events: DownloadProgress[] = [];
+
+      const file = await createCaller(api({ responseType: "blob" })).file.with({
+        onDownloadProgress: (p) => events.push(p),
+      })();
+
+      expect(file).toBeInstanceOf(NativeBlob);
+      expect(bytesOf(file)).toEqual(FILE);
+      expect(events.at(-1)).toEqual({
+        percent: 1,
+        transferredBytes: FILE.length,
+        totalBytes: FILE.length,
+      });
+    });
+  },
+);
+
+describe("a call that reads its answer as it comes and reports its download, in an Expo app", () => {
+  it("is handed the body's stream, counted as it is read", async () => {
+    asReactNative("expo");
+    const events: DownloadProgress[] = [];
+
+    const body = await createCaller(api())
+      .with({ stream: true, onDownloadProgress: (p: DownloadProgress) => events.push(p) })
+      .greeting();
+
+    expect(JSON.parse(await textOf(body as ReadableStream<Uint8Array>))).toEqual(GREETING);
+    const size = Buffer.byteLength(JSON.stringify(GREETING));
+    expect(events.at(-1)).toEqual({ percent: 1, transferredBytes: size, totalBytes: size });
   });
 });
 

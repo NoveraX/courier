@@ -1,9 +1,9 @@
 /**
  * What a proxy call resolves to, and what it rejects with.
  *
- * Both proxy transports — fetch, and XHR for an upload with progress — read
- * the proxy's answer here, so a call resolves to the same shape whichever one
- * carried it.
+ * Both proxy transports — fetch, and XMLHttpRequest for a call whose
+ * progress fetch cannot report — read the proxy's answer here, so a call
+ * resolves to the same shape whichever one carried it.
  */
 
 import { CourierError, HTTPError, NetworkError } from "../errors";
@@ -73,9 +73,8 @@ export async function readProxyAnswer(
   /* The unread body, or with `.raw` the response around it — as in direct
      mode, where handing back the whole Response was a third shape. */
   if (stream) {
-    return raw
-      ? { status: response.status, headers: response.headers, data: response.body }
-      : response.body;
+    const body = answer.stream();
+    return raw ? { status: response.status, headers: response.headers, data: body } : body;
   }
   const body = await readWireBody(answer);
   if (!raw) return body;

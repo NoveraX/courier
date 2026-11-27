@@ -1,4 +1,4 @@
-export const metadata = { title: "Proxies & Certificates", description: "Reach APIs through a corporate proxy, trust an internal certificate authority and present a client certificate — for the whole process from the environment it starts with, for one API, one group of its endpoints or one call — a bank's mutual TLS step by step, and how Studio, the MCP server and create-courier take the same settings.", mode: "both", updated: "2026-11-15" }
+export const metadata = { title: "Proxies & Certificates", description: "Reach APIs through a corporate proxy, trust an internal certificate authority and present a client certificate — for the whole process from the environment it starts with, for one API, one group of its endpoints or one call — a bank's mutual TLS step by step, and how Studio, the MCP server and create-courier take the same settings.", mode: "both", updated: "2026-11-27" }
 
 ## Where they are set
 
@@ -122,7 +122,7 @@ A definition that reads a key from disk runs wherever it is imported. In proxy m
 
 `fetch` takes any function called as `fetch` is that answers with a `Response`: the `fetch` of a Cloudflare `mtls_certificates` binding, which presents the certificate the binding holds; that of a `Bun.FetchSession`, which keeps a proxy and an authority of its own; one that signs or records each request. It is typed to take undici's as it is, whose `RequestInit` and `Response` are undici's own types. What a `fetch` answers is checked: anything but a `Response` is refused with `ConfigurationError("SOURCE_TRANSPORT_INVALID")`.
 
-In a browser and in React Native, an upload that reports its progress goes through `XMLHttpRequest`, which can report it, rather than through an API's `fetch`.
+In a browser and in React Native, an upload that reports its progress goes through `XMLHttpRequest`, which can report it, rather than through an API's `fetch`; in React Native, so does a call that reports its download, unless it reads its answer as a stream.
 
 ## One group
 

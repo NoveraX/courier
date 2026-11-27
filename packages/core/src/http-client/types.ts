@@ -93,7 +93,10 @@ export type FetchOptions = Omit<RequestInit, "method" | "body" | "signal"> & {
   prefixUrl?: string | undefined;
   /** Required by `fetch` when `body` is a ReadableStream */
   duplex?: "half" | undefined;
-  /** Called as the answer's body is read */
+  /**
+   * Called as the answer's body comes in: as it is read, or as
+   * XMLHttpRequest takes it in for a call sent through it
+   */
   onDownloadProgress?: ((progress: DownloadProgress) => void) | undefined;
   /** Called as the request's body is sent */
   onUploadProgress?: ((progress: UploadProgress) => void) | undefined;

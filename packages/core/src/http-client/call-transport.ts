@@ -10,6 +10,8 @@ export type RequestOptions = Partial<FetchOptions> & {
   fetch?: PlatformFetch | undefined;
   /** Where the session of the call the request is made for may go, when it takes one */
   sessionTarget?: SessionSendOptions["sessionTarget"] | undefined;
+  /** The call reads its answer as it arrives: it shares no request, and its download is counted on its stream */
+  streamed?: boolean | undefined;
 };
 
 /**

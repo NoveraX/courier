@@ -1,4 +1,4 @@
-export const metadata = { title: "Deduplication & Abort", description: "Identical reads in flight share one request, a newer search cancels the one it replaces, and any call can be aborted with a signal.", mode: "both", updated: "2026-11-15" }
+export const metadata = { title: "Deduplication & Abort", description: "Identical reads in flight share one request, a newer search cancels the one it replaces, and any call can be aborted with a signal.", mode: "both", updated: "2026-11-27" }
 
 ## Overview
 
@@ -30,6 +30,7 @@ What is never shared:
 - **Writes.** Two orders are two orders. A read is an endpoint addressed with `get`, `head` or `query`, or one marked `.reads()` — a search sent as a POST is joined too.
 - **A request whose body is not text** — a file, a form, a stream.
 - **A call that follows its upload or download progress**, since each one reports its own.
+- **A call that reads its answer as a stream**, `stream: true`: one reader reads it as it arrives.
 
 Studio shows each call, and marks one whose answer came from another call's request `shared`: its inspector says how — joined in flight, or read earlier in the render — and opens the call whose request answered it. Two components reading the user at once are two calls and one request. Every figure about the API — latency, pace, failures, statuses and bytes, in the Timeline, Analytics, the Explorer, the Audit, the status bar, a saved session and the editor's hints — counts the request alone, and names the calls beside it where the two differ, as `2 calls · 1 request`; a failed or slow request is told in one toast, however many calls it answered. A HAR or a Postman collection holds the requests; a saved session and its JSON export keep every call, marked.
 

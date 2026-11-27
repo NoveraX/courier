@@ -168,6 +168,20 @@ export async function upload(uri: string, onProgress: (share: number) => void) {
 
 Its answer is read as React Native's own `fetch` reads one, from the Blob XMLHttpRequest hands over: the text as UTF-8, and with `responseType: "blob"` that Blob itself. A form whose files the app holds as bytes — a `Blob` — goes with the app's `fetch`.
 
+## Download progress
+
+A call that reports its download goes through XMLHttpRequest, which reports the answer as it arrives, against the length the answer declares. React Native's own `fetch` hands an answer over only once all of it has arrived, and the `Response` an app has cannot be made of the stream `expo/fetch` hands over, which is how Courier counts a download elsewhere. The answer is read as any other is:
+
+```ts title="src/users-progress.ts"
+import { client } from "./client"
+
+export function listUsers(onProgress: (share: number) => void) {
+  return client.users.with({ onDownloadProgress: (p) => onProgress(p.percent) }).list()
+}
+```
+
+A call that reads its answer as it comes, with `stream: true`, goes with `expo/fetch`, and its stream is counted as it is read.
+
 ## Cancellation and timeouts
 
 A call is cancelled through its signal, and rejects with an `AbortError`:

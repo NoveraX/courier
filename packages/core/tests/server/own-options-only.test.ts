@@ -198,6 +198,7 @@ const EVERY_KEY = [
     sessionTarget: 0,
     signal: 0,
     stream: 0,
+    streamed: 0,
     studioRequestId: 0,
     tags: 0,
     timeout: 0,

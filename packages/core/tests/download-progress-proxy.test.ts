@@ -17,7 +17,7 @@ import type { DownloadProgress } from "../src/http-client/types";
 import { sendWebResponse, toWebRequest } from "../src/node";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/server/sources";
-import { trackDownload } from "../src/utils/progress";
+import { downloadCounter } from "../src/utils/progress";
 import { startUpstream, type Upstream } from "./helpers/upstream";
 
 const { endpoint } = courier();
@@ -94,12 +94,13 @@ describe("download progress through the proxy", () => {
   });
 });
 
-describe("trackDownload for an answer of unknown length", () => {
+describe("a download counted for an answer of unknown length", () => {
   it("ends with an event at 100% of what arrived", async () => {
     const events: DownloadProgress[] = [];
-    const answer = new Response(new Blob([new Uint8Array(5000)]).stream());
+    const body = new Blob([new Uint8Array(5000)]).stream();
 
-    await trackDownload(answer, (p) => events.push(p)).arrayBuffer();
+    const counted = body.pipeThrough(downloadCounter((p) => events.push(p))(new Headers()));
+    await new Response(counted).arrayBuffer();
 
     expect(events.at(-1)).toEqual({ percent: 1, transferredBytes: 5000, totalBytes: 5000 });
   });

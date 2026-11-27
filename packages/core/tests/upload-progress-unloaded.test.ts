@@ -1,9 +1,10 @@
 /**
- * Progress betters an upload and never decides it. Where the code that
- * reports it does not load — a deployment took its chunk away, a policy
- * kept it out — an upload goes as any body does, said once, and no retry
- * runs for the missing code. A React Native form naming a file on the
- * device goes no other way: it is refused once, saying why.
+ * Progress betters an upload and never decides it. Where XMLHttpRequest
+ * would report it and the code that sends through it does not load — a
+ * deployment took its chunk away, a policy kept it out — an upload goes as
+ * any body does, said once, and no retry runs for the missing code. A React
+ * Native form naming a file on the device goes no other way: it is refused
+ * once, saying why.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -13,7 +14,7 @@ import { courier } from "../src/define/courier";
 import { defineMiddleware } from "../src/middleware";
 import { isUnrepeatable } from "../src/utils/unrepeatable";
 
-vi.mock("../src/utils/upload-progress", () => {
+vi.mock("../src/utils/xhr-request", () => {
   throw new Error("Failed to fetch dynamically imported module");
 });
 
@@ -59,6 +60,7 @@ afterEach(() => {
 describe("an upload whose progress reporting did not load", () => {
   it("goes as any body does, said once for two uploads, and is sent once each", async () => {
     const sent = vi.fn(async () => Response.json({ stored: true }));
+    vi.stubGlobal("XMLHttpRequest", class {});
     vi.stubGlobal("fetch", sent);
     const warned = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const form = () => {
@@ -74,7 +76,7 @@ describe("an upload whose progress reporting did not load", () => {
     expect(sent).toHaveBeenCalledTimes(2);
     expect(attempts).toBe(2);
     const said = warned.mock.calls.filter((args) =>
-      args.join(" ").includes("upload progress did not load"),
+      args.join(" ").includes("progress reporting did not load"),
     );
     expect(said).toHaveLength(1);
   });
@@ -82,6 +84,7 @@ describe("an upload whose progress reporting did not load", () => {
   it("refuses a React Native form naming a file on the device, once", async () => {
     const sent = vi.fn();
     vi.stubGlobal("navigator", { product: "ReactNative" });
+    vi.stubGlobal("XMLHttpRequest", class {});
     vi.stubGlobal("FormData", ExpoFormData);
     vi.stubGlobal("fetch", sent);
     const form = new ExpoFormData();

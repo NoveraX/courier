@@ -125,7 +125,9 @@ describe("upload progress over XMLHttpRequest", () => {
     FakeXhr.answer = { status: 200, body: new Blob(['{"ok":true}']) };
     const percents: number[] = [];
 
-    const response = await xhrRequest("/u", init(), (p) => percents.push(p.percent));
+    const response = await xhrRequest("/u", init(), {
+      onUploadProgress: (p) => percents.push(p.percent),
+    });
 
     expect(percents).toEqual([0.5, 1]);
     expect(await response.json()).toEqual({ ok: true });
@@ -136,7 +138,7 @@ describe("upload progress over XMLHttpRequest", () => {
     FakeXhr.hold = true;
     const controller = new AbortController();
 
-    const pending = xhrRequest("/u", { ...init(), signal: controller.signal }, () => undefined);
+    const pending = xhrRequest("/u", { ...init(), signal: controller.signal });
     controller.abort();
 
     await expect(pending).rejects.toMatchObject({ name: "AbortError" });
@@ -148,7 +150,7 @@ describe("upload progress over XMLHttpRequest", () => {
     FakeXhr.answer = { status: 200, body: new Blob(['{"ok":true}']) };
     const body = new Blob(["streamed bytes"]).stream();
 
-    await xhrRequest("/u", { ...init(), body }, () => undefined);
+    await xhrRequest("/u", { ...init(), body });
 
     expect(FakeXhr.sent).toBeInstanceOf(Blob);
     expect(await (FakeXhr.sent as Blob).text()).toBe("streamed bytes");
@@ -159,7 +161,7 @@ describe("upload progress over XMLHttpRequest", () => {
     FakeXhr.hold = false;
     FakeXhr.answer = { status: 204, body: new Blob([]) };
 
-    const response = await xhrRequest("/u", init(), () => undefined);
+    const response = await xhrRequest("/u", init());
 
     expect(response.status).toBe(204);
     expect(response.body).toBeNull();

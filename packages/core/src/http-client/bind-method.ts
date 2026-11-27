@@ -116,9 +116,9 @@ export function bindMethod(
 
     /* A call that names how its answer is read overrides the source's
        reading, its parser included. */
-    const { responseType: readAs, ...options } = ownFields(requested);
+    const { responseType: readAs, ...asked } = ownFields(requested);
     /* A streamed answer is read as it arrives, by one reader: never shared, never kept. */
-    if (stream) options.coalesce = false;
+    const options: RequestOptions = stream ? { ...asked, streamed: true } : asked;
     const { hold } = deps;
 
     try {
@@ -143,7 +143,7 @@ export function bindMethod(
       }
 
       const result = stream
-        ? { status: response.status, headers: response.headers, data: response.body }
+        ? { status: response.status, headers: response.headers, data: answer.stream() }
         : readAs === undefined
           ? await getResponse(answer, deps.responseType, deps.responseParser)
           : await getResponse(answer, readAs);

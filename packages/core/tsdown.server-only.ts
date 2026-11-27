@@ -7,7 +7,7 @@ import type { TsdownPlugin } from "tsdown";
  * hook Node prints an `HTTPError` through, the words a failure is answered
  * with, the sending of an upload as a stream, the time an attempt runs
  * for, the word Studio is sent as an API is defined, the reading of what
- * a server lends the calls of its process, an upload sent without its
+ * a server lends the calls of its process, a request sent without its
  * progress, which a page's form, holding no device's file, never refuses,
  * whether a call is one user's, as every call of a page is, with the
  * marks the server's own calls carry, which a page reads none of, the
@@ -27,7 +27,7 @@ export const SERVER_ONLY_MODULES = [
   "define/announce-source",
   "capabilities/registry",
   "capabilities/missing-capability",
-  "utils/upload-without-progress",
+  "utils/without-progress",
   "utils/one-users-call",
   "utils/server-call-marks",
   "utils/servers-modules",

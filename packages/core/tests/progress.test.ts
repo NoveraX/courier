@@ -79,12 +79,12 @@ describe("download progress", () => {
 
 /** Just enough of XMLHttpRequest to drive the upload path. */
 class FakeXhr {
-  static answer = { status: 200, body: new TextEncoder().encode('{"ok":true}').buffer };
+  static answer = { status: 200, body: new Blob(['{"ok":true}']) };
   static hold = false;
   static sent: unknown;
   status = 0;
   statusText = "";
-  response: ArrayBuffer | null = null;
+  response: Blob | null = null;
   responseType = "";
   withCredentials = false;
   private listeners = new Map<string, () => void>();
@@ -122,7 +122,7 @@ describe("upload progress over XMLHttpRequest", () => {
   it("reports progress and resolves to the answer", async () => {
     vi.stubGlobal("XMLHttpRequest", FakeXhr);
     FakeXhr.hold = false;
-    FakeXhr.answer = { status: 200, body: new TextEncoder().encode('{"ok":true}').buffer };
+    FakeXhr.answer = { status: 200, body: new Blob(['{"ok":true}']) };
     const percents: number[] = [];
 
     const response = await xhrRequest("/u", init(), (p) => percents.push(p.percent));
@@ -145,7 +145,7 @@ describe("upload progress over XMLHttpRequest", () => {
   it("sends a stream's bytes, which XMLHttpRequest cannot take as a stream", async () => {
     vi.stubGlobal("XMLHttpRequest", FakeXhr);
     FakeXhr.hold = false;
-    FakeXhr.answer = { status: 200, body: new TextEncoder().encode('{"ok":true}').buffer };
+    FakeXhr.answer = { status: 200, body: new Blob(['{"ok":true}']) };
     const body = new Blob(["streamed bytes"]).stream();
 
     await xhrRequest("/u", { ...init(), body }, () => undefined);
@@ -157,7 +157,7 @@ describe("upload progress over XMLHttpRequest", () => {
   it("answers a 204 with no body instead of throwing", async () => {
     vi.stubGlobal("XMLHttpRequest", FakeXhr);
     FakeXhr.hold = false;
-    FakeXhr.answer = { status: 204, body: new ArrayBuffer(0) };
+    FakeXhr.answer = { status: 204, body: new Blob([]) };
 
     const response = await xhrRequest("/u", init(), () => undefined);
 

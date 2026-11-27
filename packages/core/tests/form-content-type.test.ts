@@ -139,7 +139,7 @@ class RecordingXhr {
   static bodies: unknown[] = [];
   status = 0;
   statusText = "";
-  response: ArrayBuffer | null = null;
+  response: Blob | null = null;
   responseType = "";
   withCredentials = false;
   upload = { addEventListener: () => undefined };
@@ -158,7 +158,7 @@ class RecordingXhr {
   send(body: unknown) {
     RecordingXhr.bodies.push(body);
     this.status = 200;
-    this.response = new TextEncoder().encode("{}").buffer;
+    this.response = new Blob(["{}"]);
     queueMicrotask(() => this.listeners.get("load")?.());
   }
 }

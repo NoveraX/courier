@@ -29,7 +29,7 @@ export interface XhrRequestInit {
  * @param url - Where to send it
  * @param init - The request, as it would be given to fetch
  * @param onProgress - Called as the body is sent
- * @returns The answer as a Response
+ * @returns The answer, a Response of the Blob XMLHttpRequest handed over
  */
 export async function xhrRequest(
   url: string,
@@ -59,7 +59,7 @@ function send(
 
     const xhr = new XMLHttpRequest();
     xhr.open(init.method.toUpperCase(), url);
-    xhr.responseType = "arraybuffer";
+    xhr.responseType = "blob";
     xhr.withCredentials = init.credentials === "include";
     for (const [key, value] of init.headers) xhr.setRequestHeader(key, value);
 
@@ -94,16 +94,22 @@ function send(
   });
 }
 
-/** A 204, 205 or 304 has no body at all; the Response constructor refuses even an empty one. */
+/**
+ * The answer as a Response of its Blob, which every platform's Response reads
+ * as it reads its own fetch's: React Native's — the whatwg-fetch polyfill,
+ * whose fetch asks XMLHttpRequest for a Blob too — read a buffer's text as
+ * Latin-1 and refused to make a Blob of one. A 204, 205 or 304 has no body
+ * at all; the Response constructor refuses even an empty one.
+ */
 function toResponse(xhr: XMLHttpRequest): Response {
   const headers = new Headers();
   for (const line of xhr.getAllResponseHeaders().trim().split("\r\n")) {
     const idx = line.indexOf(":");
     if (idx > 0) headers.append(line.slice(0, idx).trim(), line.slice(idx + 1).trim());
   }
-  /* Read as `arraybuffer`, the answer is a buffer, or null when there is none. */
+  /* Asked for a Blob, XMLHttpRequest answers with one once it has loaded. */
   const response: unknown = xhr.response;
-  const body = isBodilessStatus(xhr.status) || !(response instanceof ArrayBuffer) ? null : response;
+  const body = isBodilessStatus(xhr.status) || !(response instanceof Blob) ? null : response;
   return new Response(body, { status: xhr.status, statusText: xhr.statusText, headers });
 }
 

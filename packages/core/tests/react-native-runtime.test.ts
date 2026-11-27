@@ -273,7 +273,7 @@ class RecordingXhr {
   send(body: unknown): void {
     RecordingXhr.sent.push(body);
     this.status = 200;
-    this.response = new TextEncoder().encode('{"stored":true}').buffer;
+    this.response = new Blob(['{"stored":true}']);
     queueMicrotask(() => this.listeners.get("load")?.());
   }
 }

@@ -4,7 +4,8 @@
  * Expo's, whose answer carries its body as a stream while `Response` stays
  * the polyfill's, which cannot carry one. Whatever the call does — it can be
  * cancelled, its source parses its answer, it shares an identical request in
- * flight — it resolves to what the API sent.
+ * flight, it goes through XMLHttpRequest for its upload's progress — it
+ * resolves to what the API sent, its text decoded as UTF-8.
  */
 import type { ServerResponse } from "node:http";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -13,7 +14,7 @@ import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
 import type { ResponseParser } from "../src/http-client/types";
 import { isCancellation } from "../src/utils/abort";
-import { type AppFetch, asReactNative } from "./helpers/react-native";
+import { type AppFetch, asReactNative, bytesOf, NativeBlob } from "./helpers/react-native";
 import { type ReceivedRequest, startUpstream, type Upstream } from "./helpers/upstream";
 
 const { endpoint } = courier();
@@ -52,6 +53,12 @@ function answer(
       res.writeHead(200, { "content-type": "application/json", "content-length": body.length });
       res.end(body);
       return;
+    case "/upload": {
+      const echo = Buffer.from(JSON.stringify({ ...GREETING, received: request.body.toString() }));
+      res.writeHead(200, { "content-type": "application/json", "content-length": echo.length });
+      res.end(echo);
+      return;
+    }
     case "/slow-greeting":
       res.writeHead(200, { "content-type": "application/json", "content-length": body.length });
       res.write(body.subarray(0, 8), () => start());
@@ -62,13 +69,14 @@ function answer(
   }
 }
 
-function api(options: { responseParser?: ResponseParser } = {}) {
+function api(options: { responseType?: "blob"; responseParser?: ResponseParser } = {}) {
   return defineApi({
     baseURL: upstream.url,
     ...options,
     endpoints: {
       greeting: endpoint.get("greeting").response<typeof GREETING>(),
       slowGreeting: endpoint.get("slow-greeting").response<typeof GREETING>(),
+      upload: endpoint.post("upload").variables<unknown>().response<unknown>(),
     },
   });
 }
@@ -136,3 +144,29 @@ describe.each(ALL)("identical reads in flight, in an app whose fetch is %s's", (
     expect(upstream.received).toHaveLength(1);
   });
 });
+
+describe.each(["react-native", "expo"] as const)(
+  "an upload that reports its progress, in an app whose fetch is %s's",
+  (fetch) => {
+    it("resolves to the answer's text outside ASCII as the API wrote it", async () => {
+      asReactNative(fetch);
+
+      const sent = createCaller(api()).upload.with({ onUploadProgress: () => undefined })({
+        note: "ok",
+      });
+
+      expect(await outcome(sent)).toEqual({ value: { ...GREETING, received: '{"note":"ok"}' } });
+    });
+
+    it("resolves to a Blob of the answer", async () => {
+      asReactNative(fetch);
+
+      const sent = await createCaller(api({ responseType: "blob" })).upload.with({
+        onUploadProgress: () => undefined,
+      })({ note: "ok" });
+
+      expect(sent).toBeInstanceOf(NativeBlob);
+      expect(JSON.parse(new TextDecoder().decode(bytesOf(sent)))).toMatchObject(GREETING);
+    });
+  },
+);

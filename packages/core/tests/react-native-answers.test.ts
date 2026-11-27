@@ -5,8 +5,8 @@
  * the polyfill's, which cannot carry one. Whatever the call does — it can be
  * cancelled, its source parses its answer, it shares an identical request in
  * flight, it counts its download, it goes through XMLHttpRequest for its
- * upload's progress — it resolves to what the API sent, its text decoded as
- * UTF-8.
+ * upload's progress, a stream's bytes and all — it resolves to what the API
+ * sent, its text decoded as UTF-8.
  */
 import type { ServerResponse } from "node:http";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -235,3 +235,22 @@ describe.each(["react-native", "expo"] as const)(
     });
   },
 );
+describe("an upload of a stream that reports its progress, in an Expo app", () => {
+  it("sends the stream's bytes", async () => {
+    asReactNative("expo");
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode("part one — café, "));
+        controller.enqueue(encoder.encode("part two ✓"));
+        controller.close();
+      },
+    });
+
+    const sent = createCaller(api()).upload.with({ onUploadProgress: () => undefined })(stream);
+
+    expect(await outcome(sent)).toEqual({
+      value: { ...GREETING, received: "part one — café, part two ✓" },
+    });
+  });
+});

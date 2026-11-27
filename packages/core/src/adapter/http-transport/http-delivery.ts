@@ -1,3 +1,5 @@
+import { joinedBytes } from "../../utils/joined-bytes";
+
 /** How an answer carries a connection's frames: held open as they come, or once. */
 export type DeliveryKind = "stream" | "poll";
 
@@ -50,7 +52,7 @@ export function createDelivery(kind: DeliveryKind, onEnd: (left: boolean) => voi
 
   function taken(): Uint8Array | undefined {
     if (pending.length === 0) return undefined;
-    const bytes = pending.length === 1 ? (pending[0] as Uint8Array) : joined(pending);
+    const bytes = pending.length === 1 ? (pending[0] as Uint8Array) : joinedBytes(pending);
     pending = [];
     return bytes;
   }
@@ -89,16 +91,4 @@ export function createDelivery(kind: DeliveryKind, onEnd: (left: boolean) => voi
       onEnd(true);
     },
   };
-}
-
-function joined(chunks: readonly Uint8Array[]): Uint8Array {
-  let size = 0;
-  for (const chunk of chunks) size += chunk.byteLength;
-  const bytes = new Uint8Array(size);
-  let at = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, at);
-    at += chunk.byteLength;
-  }
-  return bytes;
 }

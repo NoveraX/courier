@@ -166,7 +166,7 @@ export async function upload(uri: string, onProgress: (share: number) => void) {
 }
 ```
 
-Its answer is read as React Native's own `fetch` reads one, from the Blob XMLHttpRequest hands over: the text as UTF-8, and with `responseType: "blob"` that Blob itself. A form whose files the app holds as bytes — a `Blob` — goes with the app's `fetch`.
+Its answer is read as React Native's own `fetch` reads one, from the Blob XMLHttpRequest hands over: the text as UTF-8, and with `responseType: "blob"` that Blob itself. A form whose files the app holds as bytes — a `Blob` — goes with the app's `fetch`. A stream an upload with progress sends is read whole first, as `expo/fetch` reads one, since XMLHttpRequest cannot send a stream.
 
 ## Download progress
 

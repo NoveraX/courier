@@ -4,9 +4,11 @@ import type { WebBody, WebCredentials } from "../http-client/web-types";
 import { createLogger } from "../logger";
 import { cancellation } from "./cancellation";
 import { isRecord } from "./is-record";
+import { joinedBytes } from "./joined-bytes";
 import { ONCE } from "./own";
 import { platformError } from "./platform-error";
 import { declaredLength } from "./progress";
+import { responseTakesStreams } from "./response-takes-streams";
 
 const log = createLogger("XMLHttpRequest");
 
@@ -54,9 +56,27 @@ export async function xhrRequest(
   warnAboutIgnoredOptions(init);
   /* XMLHttpRequest cannot send a stream: handed one, it sent the text
      "[object ReadableStream]" and the call succeeded. The stream is read
-     into a Blob, which it sends and reports. */
-  const body = isStream(init.body) ? await new Response(init.body).blob() : (init.body ?? null);
+     whole first, and what it held is sent and reported. */
+  const body = isStream(init.body) ? await readWhole(init.body) : (init.body ?? null);
   return send(url, init, body, progress);
+}
+
+/**
+ * What a stream holds, read to its end: a Blob of the platform's where its
+ * `Response` can be made of a stream, and the bytes where it cannot, as
+ * expo/fetch reads a stream it sends — React Native's `Response` held the
+ * text "[object ReadableStream]", and its Blob takes no bytes.
+ */
+async function readWhole(
+  stream: ReadableStream<Uint8Array>,
+): Promise<Blob | Uint8Array<ArrayBuffer>> {
+  if (responseTakesStreams()) return new Response(stream).blob();
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  for (let read = await reader.read(); !read.done; read = await reader.read()) {
+    chunks.push(read.value);
+  }
+  return joinedBytes(chunks);
 }
 
 function send(

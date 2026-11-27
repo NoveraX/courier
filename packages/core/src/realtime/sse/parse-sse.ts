@@ -19,7 +19,7 @@ const WHOLE_NUMBER = /^\d+$/;
 
 /**
  * Parse a ReadableStream of bytes into the blocks of an event stream, as the
- * HTML standard interprets one.
+ * HTML standard interprets one, or the text of an answer handed over whole.
  *
  * Lines end at a CRLF, a lone LF or a lone CR, in any mix; a blank line ends
  * a block. A block dispatches an event only when it sent `data`, but one that
@@ -28,7 +28,7 @@ const WHOLE_NUMBER = /^\d+$/;
  * its `id` too: the event it began may have lost part of its data. A line or
  * a block longer than `bound` ends the read: no blank line may ever come.
  *
- * @param stream - Response body from fetch
+ * @param source - Response body from fetch, or its text where it was handed over whole
  * @param bound - How many characters a line or a block may run to: an SSE stream's `SSE_MAX_EVENT_LENGTH` unless given
  * @returns The blocks, in order; a heartbeat is a block that says nothing
  * @throws EventTooLarge for a line or a block that runs past its bound
@@ -41,11 +41,11 @@ const WHOLE_NUMBER = /^\d+$/;
  * ```
  */
 export async function* parseSSEFrames(
-  stream: ReadableStream<Uint8Array>,
+  source: ReadableStream<Uint8Array> | string,
   bound: number = CLIENT_LIMITS.SSE_MAX_EVENT_LENGTH,
 ): AsyncGenerator<SSEFrame, void, unknown> {
   let block = createBlock(bound);
-  for await (const line of readSSELines(stream, bound)) {
+  for await (const line of readSSELines(source, bound)) {
     if (line !== "") {
       block.take(line);
       continue;

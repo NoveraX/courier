@@ -130,8 +130,9 @@ export interface WSConnectionConfig {
    * WebSocket. While HTTP carries it, the path is probed for a WebSocket
    * getting through again — within 30 s, then up to every 5 minutes, and on
    * the page's resume signals — and once one does, the connection reconnects
-   * on a WebSocket. It needs a `fetch` whose answers stream: one without
-   * them — React Native's — keeps to WebSocket.
+   * on a WebSocket. With a `fetch` that hands an answer over only once all
+   * of it has arrived, as React Native's own does, polls carry it from the
+   * start, each answer read whole.
    */
   fallback?: false | WSFallbackOptions | undefined;
   /** The `fetch` the HTTP fallback's requests go through — the source's — in place of the platform's */

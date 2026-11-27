@@ -1,4 +1,5 @@
 import { ONCE } from "../../utils/own";
+import { withinSignal } from "../../utils/within-signal";
 import { EventTooLarge } from "../sse/sse-lines";
 import { type AnswerParts, readAnswer } from "./http-answer";
 import { type Posted, postedOf } from "./http-post";
@@ -41,10 +42,11 @@ const SOON_MS = 1000;
 
 /**
  * Ask for one answer of the server's frames — a stream, or a poll — and
- * read it to its end, each part handed on as it comes. A stream whose first
- * bytes do not come in `probeMs` is given up, and said to be held back. An
- * answer that ends with a refusal comes out as that refusal would have,
- * had the request been answered with it.
+ * read it to its end, each part handed on as it comes; one handed over
+ * whole, with no stream, as React Native's own fetch hands one, is read
+ * whole. A stream whose first bytes do not come in `probeMs` is given up,
+ * and said to be held back. An answer that ends with a refusal comes out
+ * as that refusal would have, had the request been answered with it.
  *
  * @param request - What to ask for, and where
  * @param parts - What counts the answer's bytes, and takes its `open` event, its frames and its `close`
@@ -78,11 +80,13 @@ export async function deliverOnce(
     if (held()) return HELD;
     if (posted.kind === "again") return posted;
     if (posted.kind !== "answered") return { kind: "ended", posted };
-    const { body } = posted.response;
+    const { response } = posted;
+    const body: ReadableStream<Uint8Array> | null | undefined = response.body;
     if (body === null) return AGAIN;
+    const answer = body ?? (await withinSignal(attempt.signal, response.text()));
     let refusal: Response | undefined;
     await readAnswer(
-      body,
+      answer,
       {
         ...parts,
         received(bytes) {

@@ -1,8 +1,9 @@
+import { readsAsTheyCome } from "../../utils/answers-whole";
 import { HTTP_TRANSPORT_VERSION, type HTTPOpening, PONG_FRAME } from "../ws/http-protocol";
 import { deliverOnce } from "./http-delivery";
 import { createOutbox } from "./http-outbox";
 import { againIfAbsent, endingOf, httpAddressOf, post, waitBeforeAgain } from "./http-post";
-import type { HTTPSocket, HTTPSocketOptions } from "./http-socket-types";
+import type { HTTPMode, HTTPSocket, HTTPSocketOptions } from "./http-socket-types";
 
 const NOT_ANSWERED = "The server did not answer the connection's opening";
 
@@ -15,8 +16,11 @@ const NOT_ANSWERED = "The server did not answer the connection's opening";
  * the server's frames is taken once, in order, however often an answer
  * lost on the way has it sent again, and every request acknowledges what
  * was taken. A stream whose first bytes do not come in `probeMs` is held
- * back on the way, so polls carry the frames from then on. The heartbeat's
- * ping is answered by the requests themselves: its pong is not sent.
+ * back on the way, so polls carry the frames from then on; with a `fetch`
+ * that hands an answer over only once all of it has arrived, as React
+ * Native's own does, polls carry them from the start, each answer read
+ * whole. The heartbeat's ping is answered by the requests themselves: its
+ * pong is not sent.
  *
  * The request that opens the connection is made once: one whose answer
  * brings no `open` event closes the socket with 1006, before it holds any
@@ -44,11 +48,13 @@ const NOT_ANSWERED = "The server did not answer the connection's opening";
  * ```
  */
 export function createHTTPSocket(url: string, options: HTTPSocketOptions): HTTPSocket {
-  const terms = { url: httpAddressOf(url), fetch: options.fetch, init: options.init };
+  /* Every request of the socket goes with the fetch its first one is read for. */
+  const send = options.fetch ?? fetch;
+  const terms = { url: httpAddressOf(url), fetch: send, init: options.init };
   const life = new AbortController();
   const sending = new AbortController();
   let readyState = 0;
-  let mode = options.mode;
+  let mode: HTTPMode = readsAsTheyCome(send) ? options.mode : "poll";
   /* The frames the connection opens with, sent again by an opening made again, until its token comes. */
   let opening: string[] | undefined = [];
   let requested = false;

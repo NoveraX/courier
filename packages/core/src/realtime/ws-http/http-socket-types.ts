@@ -14,7 +14,7 @@ export interface HTTPSocketOptions {
   readonly init?: RequestInit | undefined;
   /** Headers of the request that opens the connection: the handshake's, where a script may set them */
   readonly headers?: Readonly<Record<string, string>> | undefined;
-  /** How the server's frames come first */
+  /** How the server's frames come first: polls, whatever it says, where the `fetch` cannot hand over a stream */
   readonly mode: HTTPMode;
   /** How long a stream's first bytes may take before polls carry the frames instead */
   readonly probeMs: number;

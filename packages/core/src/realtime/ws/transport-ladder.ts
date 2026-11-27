@@ -123,6 +123,8 @@ function ladderSocket(
       probeMs: afterMs,
       cause,
     });
+    /* Polls, where its fetch cannot hand over a stream. */
+    transport = socket.mode;
     current = socket;
     reached = () => socket.reached;
     socket.onopen = () => {

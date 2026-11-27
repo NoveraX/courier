@@ -1,6 +1,7 @@
 import { ConfigurationError } from "../errors/configuration-error";
 import { isBodilessStatus } from "../http-client/response";
 import type { PlatformFetch } from "../http-client/source-transport";
+import { answersWhole } from "./answers-whole";
 
 /**
  * Refuse a call that reads its answer as it comes before it is sent with a
@@ -18,7 +19,7 @@ import type { PlatformFetch } from "../http-client/source-transport";
  * ```
  */
 export function assertStreamingFetch(send: PlatformFetch): void {
-  if ((send as { polyfill?: unknown }).polyfill === true) throw unstreamed();
+  if (answersWhole(send)) throw unstreamed();
 }
 
 /**

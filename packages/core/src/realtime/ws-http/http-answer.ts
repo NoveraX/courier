@@ -11,6 +11,9 @@ import { HTTP_EVENTS, type HTTPOpening } from "../ws/http-protocol";
  */
 export const HTTP_MAX_EVENT_LENGTH = 104_857_600;
 
+/* What counts the bytes of an answer handed over whole, as its text. */
+const ENCODER = new TextEncoder();
+
 /** What the socket does with each part of an answer, as it comes. */
 export interface AnswerParts {
   /** Bytes of the answer came: whatever holds answers back, if anything does, does not hold this one */
@@ -36,13 +39,14 @@ export interface AnswerParts {
  *
  * The body is read through a pipe the attempt's abort cuts, so an answer
  * given up ends at once, whatever `fetch` made it; the pipe counts its
- * bytes as they come, as the server counts what it keeps. However the read
- * ends — with the answer, with the connection's close, or at an event it
- * cannot take — what is left of the answer is let go of, rather than held
- * open on the way and at the server. A frame may run to
+ * bytes as they come, as the server counts what it keeps. An answer handed
+ * over whole is its text, all of its bytes counted at once. However the
+ * read ends — with the answer, with the connection's close, or at an event
+ * it cannot take — what is left of the answer is let go of, rather than
+ * held open on the way and at the server. A frame may run to
  * `HTTP_MAX_EVENT_LENGTH`, as long as a socket's message.
  *
- * @param body - The answer's body
+ * @param answer - The answer's body, or its text where it was handed over whole
  * @param parts - What takes each of its parts
  * @param signal - The attempt's
  * @throws {TypeError} For an `open`, a `close` or a `refused` event that says no such thing: no server of this transport sent it
@@ -53,10 +57,14 @@ export interface AnswerParts {
  * ```
  */
 export async function readAnswer(
-  body: ReadableStream<Uint8Array>,
+  answer: ReadableStream<Uint8Array> | string,
   parts: AnswerParts,
   signal: AbortSignal,
 ): Promise<void> {
+  if (typeof answer === "string") {
+    if (answer !== "") parts.received(ENCODER.encode(answer).byteLength);
+    return readEvents(answer, parts);
+  }
   const pipe = new TransformStream<Uint8Array, Uint8Array>({
     transform(chunk, controller) {
       if (chunk.byteLength === 0) return;
@@ -64,34 +72,42 @@ export async function readAnswer(
       controller.enqueue(chunk);
     },
   });
-  body.pipeTo(pipe.writable, { signal }).catch(() => undefined);
+  answer.pipeTo(pipe.writable, { signal }).catch(() => undefined);
   try {
-    for await (const block of parseSSEFrames(pipe.readable, HTTP_MAX_EVENT_LENGTH)) {
-      const { event } = block;
-      if (event === undefined) continue;
-      switch (event.event) {
-        case undefined:
-          parts.frame(event.data, event.id === undefined ? undefined : Number(event.id));
-          break;
-        case HTTP_EVENTS.open:
-          parts.opened(openingOf(event.data));
-          break;
-        case HTTP_EVENTS.close: {
-          const { code, reason } = closingOf(event.data);
-          parts.closed(code, reason);
-          return;
-        }
-        case HTTP_EVENTS.refused:
-          parts.refused(refusalOf(event.data));
-          return;
-        default:
-          /* `relayed`, or an event of a later version of the transport this client needs nothing of. */
-          break;
-      }
-    }
+    await readEvents(pipe.readable, parts);
   } finally {
     /* The pipe's last write waits for a read that will not come, so the attempt's abort alone would not let the body go. */
     pipe.readable.cancel().catch(() => undefined);
+  }
+}
+
+/* Each event of the answer handed on, until it ends, the connection closes, or a refusal stands for it. */
+async function readEvents(
+  answer: ReadableStream<Uint8Array> | string,
+  parts: AnswerParts,
+): Promise<void> {
+  for await (const block of parseSSEFrames(answer, HTTP_MAX_EVENT_LENGTH)) {
+    const { event } = block;
+    if (event === undefined) continue;
+    switch (event.event) {
+      case undefined:
+        parts.frame(event.data, event.id === undefined ? undefined : Number(event.id));
+        break;
+      case HTTP_EVENTS.open:
+        parts.opened(openingOf(event.data));
+        break;
+      case HTTP_EVENTS.close: {
+        const { code, reason } = closingOf(event.data);
+        parts.closed(code, reason);
+        return;
+      }
+      case HTTP_EVENTS.refused:
+        parts.refused(refusalOf(event.data));
+        return;
+      default:
+        /* `relayed`, or an event of a later version of the transport this client needs nothing of. */
+        break;
+    }
   }
 }
 

@@ -1,7 +1,7 @@
 export const metadata = {
   title: "HTTP Fallback",
   description: "Carry realtime connections over HTTP where no WebSocket gets through: what the entry in front of the replicas must let through, what it costs, and how to turn it on and off.",
-  updated: "2026-11-27",
+  updated: "2026-11-28",
 }
 
 A corporate proxy, an antivirus that inspects TLS, a WAF or a CDN with WebSockets turned off lets no WebSocket through, while plain HTTP through the same entry gets through. There a Courier connection goes on over HTTP requests to the socket's own path: on a stream, where answers come as they are sent, or on polls, where something on the way holds them back. [When no WebSocket gets through](/docs/advanced/realtime-connections#when-no-websocket-gets-through) says how the client climbs down to them and back up; this page says what a deployment needs for it.
@@ -37,7 +37,7 @@ Where the requests are answered:
 The load balancer, ingress or CDN between the pages and the replicas needs:
 
 - **`POST` to the socket's path**, on its host: `wss://api.example.com/ws` takes `POST https://api.example.com/ws`. Nothing in the URL names or admits a connection: its token travels in the bodies of its requests, never in a URL or a header a log keeps.
-- **Answers as they come.** A stream sends each frame as it is written. An entry that holds an answer until it ends holds the stream, and the client goes on polls, each answered whole: that works, at 6.0 to 6.3 times a WebSocket's processor time a message on the server. Turn buffering off for the path — `proxy_buffering off` on nginx; the server's answers also say `X-Accel-Buffering: no`, which nginx honours.
+- **Answers as they come.** A stream sends each frame as it is written. An entry that holds an answer until it ends holds the stream, and the client goes on polls, each answered whole: that works, at 6.0 to 6.3 times a WebSocket's processor time a message on the server. A React Native app whose `fetch` is React Native's own, which hands an answer over only once all of it has arrived, goes on polls from the start, whatever the entry does. Turn buffering off for the path — `proxy_buffering off` on nginx; the server's answers also say `X-Accel-Buffering: no`, which nginx honours.
 - **Timeouts above the pings.** The server pings every connection every 25 s, on its stream as on a socket, so an idle timeout above that never cuts a live one; an answer may last `streamMs`. A stream cut sooner loses nothing: the client asks for the next where it ended.
 - **Bodies of `max(1 MiB, 2 × maxMessageSize)`**, the most a request carries: nginx's default `client_max_body_size` of `1m` is that at the handler's defaults.
 - **No compression of event streams, or a flush after each chunk.** The server does not compress them and says `Cache-Control: no-store, no-transform`. An entry that gzips them anyway without a flush holds every frame, and the connection goes on polls.

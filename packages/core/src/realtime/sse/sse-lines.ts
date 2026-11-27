@@ -33,8 +33,10 @@ export class EventTooLarge extends Error {
  * ended in the middle of one. A line that comes in many pieces is held in
  * them, each read once, and joined when it ends, so it costs its length, not
  * its length again for every piece; one that runs past `bound` ends the read.
+ * An answer handed over whole, as React Native's own fetch hands one, is
+ * read as its text, one piece.
  *
- * @param stream - The response body
+ * @param source - The response body, or its text where it was handed over whole
  * @param bound - How many characters a line may run to: an SSE stream's `SSE_MAX_EVENT_LENGTH` unless given
  * @returns Each complete line, without its ending
  * @throws EventTooLarge for a line that runs past its bound
@@ -46,44 +48,56 @@ export class EventTooLarge extends Error {
  * ```
  */
 export async function* readSSELines(
-  stream: ReadableStream<Uint8Array>,
+  source: ReadableStream<Uint8Array> | string,
   bound: number = CLIENT_LIMITS.SSE_MAX_EVENT_LENGTH,
 ): AsyncGenerator<string, void, unknown> {
-  const reader = stream.getReader();
+  const linesOf = lineSplitter(bound);
+  if (typeof source === "string") {
+    yield* linesOf(source);
+    return;
+  }
+  const reader = source.getReader();
   const decoder = new TextDecoder();
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) return;
+      yield* linesOf(decoder.decode(value, { stream: true }));
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+/* What takes a stream's text one piece at a time, and gives each line a piece ends, in order. */
+function lineSplitter(bound: number): (piece: string) => Generator<string, void, unknown> {
   /* The pieces of the line no line end has ended yet, and the characters they run to. */
   const held: string[] = [];
   let heldLength = 0;
   /* Whether the last piece ended with a CR: an LF that begins the next ends no line. */
   let afterCR = false;
 
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) return;
-      let text = decoder.decode(value, { stream: true });
-      if (text === "") continue;
-      if (afterCR && text.charCodeAt(0) === LF) text = text.slice(1);
-      afterCR = text.charCodeAt(text.length - 1) === CR;
-      const lines = text.split(LINE_END);
-      const rest = lines.pop() ?? "";
-      for (let at = 0; at < lines.length; at++) {
-        let line = lines[at] as string;
-        if (at === 0 && held.length > 0) {
-          if (heldLength + line.length > bound) throw new EventTooLarge(bound);
-          held.push(line);
-          line = held.join("");
-          held.length = 0;
-          heldLength = 0;
-        } else if (line.length > bound) throw new EventTooLarge(bound);
-        yield line;
-      }
-      if (rest === "") continue;
-      held.push(rest);
-      heldLength += rest.length;
-      if (heldLength > bound) throw new EventTooLarge(bound);
+  return function* linesOf(piece) {
+    let text = piece;
+    if (text === "") return;
+    if (afterCR && text.charCodeAt(0) === LF) text = text.slice(1);
+    afterCR = text.charCodeAt(text.length - 1) === CR;
+    const lines = text.split(LINE_END);
+    const rest = lines.pop() ?? "";
+    for (let at = 0; at < lines.length; at++) {
+      let line = lines[at] as string;
+      if (at === 0 && held.length > 0) {
+        if (heldLength + line.length > bound) throw new EventTooLarge(bound);
+        held.push(line);
+        line = held.join("");
+        held.length = 0;
+        heldLength = 0;
+      } else if (line.length > bound) throw new EventTooLarge(bound);
+      yield line;
     }
-  } finally {
-    reader.releaseLock();
-  }
+    if (rest === "") return;
+    held.push(rest);
+    heldLength += rest.length;
+    if (heldLength > bound) throw new EventTooLarge(bound);
+  };
 }

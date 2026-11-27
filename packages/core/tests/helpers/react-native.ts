@@ -8,12 +8,13 @@
  * the Blob that one hands back. Expo SDK 58 makes the app's `fetch`
  * expo/fetch, whose answer carries its body as a stream, and leaves
  * `Response`, `Headers` and `Request` the polyfill's; Metro gives the app web
- * streams. With `EXPO_PUBLIC_USE_RN_FETCH` an Expo app keeps React Native's
- * own fetch, and the streams.
+ * streams, and Expo a `URL` and a `URLSearchParams` of the standard's in
+ * place of React Native's. With `EXPO_PUBLIC_USE_RN_FETCH` an Expo app
+ * keeps React Native's own fetch, and the streams and the URL.
  *
- * React Native's Blob, FileReader, XMLHttpRequest and WebSocket are
- * modelled on their sources in `Libraries/Blob`, `Libraries/Network` and
- * `Libraries/WebSocket`, and expo/fetch's answer on
+ * React Native's Blob, FileReader, URL, URLSearchParams, XMLHttpRequest
+ * and WebSocket are modelled on their sources in `Libraries/Blob`,
+ * `Libraries/Network` and `Libraries/WebSocket`, and expo/fetch's answer on
  * `expo/src/winter/fetch/FetchResponse.ts`; what their native side does —
  * the network, the blob store, OkHttp's and SocketRocket's sockets — Node
  * and the `ws` package do here.
@@ -32,6 +33,7 @@ const native = {
   TransformStream: globalThis.TransformStream,
   WritableStream: globalThis.WritableStream,
   FormData: globalThis.FormData,
+  URL: globalThis.URL,
 };
 
 /** An answer as the native side's network has it. */
@@ -519,7 +521,7 @@ function handshakeOf(
   headers: Readonly<Record<string, string>>,
 ): Record<string, string> {
   if (Object.keys(headers).some((name) => name.toLowerCase() === "origin")) return { ...headers };
-  const { protocol, host } = new URL(url);
+  const { protocol, host } = new native.URL(url);
   const scheme =
     protocol === "wss:" ? "https" : protocol === "ws:" ? "http" : protocol.slice(0, -1);
   return { ...headers, origin: `${scheme}://${host}` };
@@ -732,6 +734,210 @@ export function forgetSockets(): void {
   NativeWebSocket.refused.length = 0;
 }
 
+/* The addresses React Native's URL takes a base for: an http, https or ftp one, or one from `//`. */
+const BASE_ADDRESS =
+  /^(?:(?:(?:https?|ftp):)?\/\/)(?:(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z0-9¡-￿][a-z0-9¡-￿_-]{0,62})?[a-z0-9¡-￿]\.)*(?:[a-z¡-￿]{2,}\.?))(?::\d{2,5})?(?:[/?#]\S*)?$/;
+
+/**
+ * React Native's URL, without Expo: it reads an address with patterns of
+ * an http or https one, refuses none, joins a relative one to its base as
+ * text, and has no setter but its query's — `protocol`, `host` and the
+ * rest have none, so setting one throws.
+ */
+export class NativeURL {
+  _url: string;
+  _searchParamsInstance: NativeURLSearchParams | null = null;
+
+  constructor(url: string, base?: string | NativeURL) {
+    if (!base || BASE_ADDRESS.test(url)) {
+      this._url = url;
+      if (this._url.includes("#")) {
+        const split = this._url.split("#");
+        const website = (split[0] as string).split("://")[1] as string;
+        if (!website.includes("/")) this._url = split.join("/#");
+      }
+      if (!this._url.endsWith("/") && !(this._url.includes("?") || this._url.includes("#"))) {
+        const afterProtocol = this._url.split("://")[1];
+        if (afterProtocol && !afterProtocol.includes("/")) this._url += "/";
+      }
+      return;
+    }
+    let baseUrl = base.toString();
+    if (typeof base === "string" && !BASE_ADDRESS.test(baseUrl)) {
+      throw new TypeError(`Invalid base URL: ${baseUrl}`);
+    }
+    if (baseUrl.endsWith("/")) baseUrl = baseUrl.slice(0, -1);
+    let path = url.startsWith("/") ? url : `/${url}`;
+    if (baseUrl.endsWith(path)) path = "";
+    this._url = `${baseUrl}${path}`;
+  }
+
+  get hash(): string {
+    const hash = this._url.match(/#([^/]*)/);
+    return hash ? `#${hash[1]}` : "";
+  }
+
+  get host(): string {
+    const host = this._url.match(/^https?:\/\/(?:[^@]+@)?([^:/?#]+)/);
+    const port = this._url.match(/:(\d+)(?=[/?#]|$)/);
+    return host ? `${host[1]}${port ? `:${port[1]}` : ""}` : "";
+  }
+
+  get hostname(): string {
+    return this._url.match(/^https?:\/\/(?:[^@]+@)?([^:/?#]+)/)?.[1] ?? "";
+  }
+
+  get href(): string {
+    return this.toString();
+  }
+
+  get origin(): string {
+    return this._url.match(/^(https?:\/\/[^/]+)/)?.[1] ?? "";
+  }
+
+  get password(): string {
+    return this._url.match(/https?:\/\/.*:(.*)@/)?.[1] ?? "";
+  }
+
+  get pathname(): string {
+    const path = this._url.match(/https?:\/\/[^/]+(\/[^?#]*)?/);
+    return path ? path[1] || "/" : "/";
+  }
+
+  get port(): string {
+    return this._url.match(/:(\d+)(?=[/?#]|$)/)?.[1] ?? "";
+  }
+
+  get protocol(): string {
+    const protocol = this._url.match(/^([a-zA-Z][a-zA-Z\d+\-.]*):/);
+    return protocol ? `${protocol[1]}:` : "";
+  }
+
+  get search(): string {
+    const search = this._url.match(/\?([^#]*)/);
+    return search ? `?${search[1]}` : "";
+  }
+
+  set search(value: string) {
+    const search = value.startsWith("?") ? value.slice(1) : value;
+    const before = (this._url.split("?")[0] as string).split("#")[0] as string;
+    const hash = this.hash;
+    this._url = search ? `${before}?${search}${hash}` : `${before}${hash}`;
+    this._searchParamsInstance = null;
+  }
+
+  get searchParams(): NativeURLSearchParams {
+    this._searchParamsInstance ??= new NativeURLSearchParams(this.search);
+    return this._searchParamsInstance;
+  }
+
+  get username(): string {
+    return this._url.match(/^https?:\/\/([^:@]+)(?::[^@]*)?@/)?.[1] ?? "";
+  }
+
+  toJSON(): string {
+    return this.toString();
+  }
+
+  toString(): string {
+    if (this._searchParamsInstance === null) return this._url;
+    const before = (this._url.split("?")[0] as string).split("#")[0] as string;
+    const query = this._searchParamsInstance.toString();
+    return query ? `${before}?${query}${this.hash}` : `${before}${this.hash}`;
+  }
+}
+
+/**
+ * React Native's URLSearchParams, without Expo: its values kept by name,
+ * in the order each name came first, each encoded as `encodeURIComponent`
+ * does, a space as `+`.
+ */
+export class NativeURLSearchParams {
+  _searchParams = new Map<string, string[]>();
+
+  constructor(params?: Record<string, string> | string | Array<[string, string]> | null) {
+    if (params === null) return;
+    if (typeof params === "string") {
+      for (const pair of params.replace(/^\?/, "").split("&")) {
+        if (!pair) continue;
+        const [key, value] = pair
+          .split("=")
+          .map((part) => decodeURIComponent(part.replace(/\+/g, " ")));
+        this.append(key as string, value as string);
+      }
+    } else if (Array.isArray(params)) {
+      for (const [key, value] of params) this.append(key, value);
+    } else if (typeof params === "object") {
+      for (const [key, value] of Object.entries(params)) this.append(key, value);
+    }
+  }
+
+  get size(): number {
+    return this._searchParams.size;
+  }
+
+  append(key: string, value: string): void {
+    const values = this._searchParams.get(key);
+    if (values === undefined) this._searchParams.set(key, [value]);
+    else values.push(value);
+  }
+
+  delete(name: string): void {
+    this._searchParams.delete(name);
+  }
+
+  get(name: string): string | null {
+    return this._searchParams.get(name)?.[0] ?? null;
+  }
+
+  getAll(name: string): string[] {
+    return this._searchParams.get(name) ?? [];
+  }
+
+  has(name: string): boolean {
+    return this._searchParams.has(name);
+  }
+
+  set(name: string, value: string): void {
+    this._searchParams.set(name, [value]);
+  }
+
+  keys(): IterableIterator<string> {
+    return this._searchParams.keys();
+  }
+
+  *values(): IterableIterator<string> {
+    for (const values of this._searchParams.values()) yield* values;
+  }
+
+  *entries(): IterableIterator<[string, string]> {
+    for (const [key, values] of this._searchParams) {
+      for (const value of values) yield [key, value];
+    }
+  }
+
+  forEach(callback: (value: string, key: string, params: this) => void): void {
+    for (const [key, value] of this.entries()) callback(value, key, this);
+  }
+
+  sort(): void {
+    this._searchParams = new Map(
+      [...this._searchParams.entries()].sort(([a], [b]) => a.localeCompare(b)),
+    );
+  }
+
+  [Symbol.iterator](): IterableIterator<[string, string]> {
+    return [...this.entries()][Symbol.iterator]();
+  }
+
+  toString(): string {
+    const encoded = (text: string): string => encodeURIComponent(text).replace(/%20/g, "+");
+    return [...this._searchParams.entries()]
+      .map(([key, values]) => values.map((value) => `${encoded(key)}=${encoded(value)}`).join("&"))
+      .join("&");
+  }
+}
+
 /** React Native's AbortController: `abort()` keeps no reason. */
 class ReasonlessAbortController extends AbortController {
   constructor() {
@@ -762,10 +968,14 @@ export function asReactNative(fetch: AppFetch): void {
   vi.stubGlobal("Response", polyfill.Response);
   vi.stubGlobal("Headers", polyfill.Headers);
   vi.stubGlobal("Request", polyfill.Request);
-  const streams = fetch !== "react-native";
-  vi.stubGlobal("ReadableStream", streams ? native.ReadableStream : undefined);
-  vi.stubGlobal("TransformStream", streams ? native.TransformStream : undefined);
-  vi.stubGlobal("WritableStream", streams ? native.WritableStream : undefined);
+  const expo = fetch !== "react-native";
+  vi.stubGlobal("ReadableStream", expo ? native.ReadableStream : undefined);
+  vi.stubGlobal("TransformStream", expo ? native.TransformStream : undefined);
+  vi.stubGlobal("WritableStream", expo ? native.WritableStream : undefined);
+  if (!expo) {
+    vi.stubGlobal("URL", NativeURL);
+    vi.stubGlobal("URLSearchParams", NativeURLSearchParams);
+  }
   vi.stubGlobal("fetch", fetch === "expo" ? expoFetch : polyfill.fetch);
 }
 

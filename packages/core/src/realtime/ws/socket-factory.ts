@@ -1,5 +1,4 @@
 import { ConfigurationError } from "../../errors/configuration-error";
-import type { PlatformFetch } from "../../http-client/source-transport";
 import { ownFields } from "../../utils/own";
 import { CLIENT_LIMITS } from "../client-limits";
 import { platformSocketFactory } from "./platform-socket";
@@ -15,8 +14,8 @@ const FALLBACK_AFTER_MS = 3000;
  * the platform's `WebSocket` — the source's class — and, unless `fallback`
  * is `false`, the ladder that carries the connection over HTTP where no
  * WebSocket gets through. A factory of the application's own climbs no
- * ladder unless `fallback` asks, and a platform whose `fetch` cannot read
- * an answer as it comes climbs none.
+ * ladder unless `fallback` asks, and a platform with no `fetch` climbs
+ * none.
  *
  * @param config - The connection's options
  * @returns The factory
@@ -41,7 +40,7 @@ export function socketFactoryOf(config: WSConnectionConfig): WSSocketFactory {
       `[courier] fallback.after is ${after}: a whole number of ms from 1, under the ${CLIENT_LIMITS.WS_CONNECT_TIMEOUT_MS} ms a socket has to open.`,
     );
   }
-  if (!answersStream(config.fetch)) return webSocket;
+  if (config.fetch === undefined && typeof globalThis.fetch !== "function") return webSocket;
   return ladderFactory({
     webSocket,
     afterMs: after,
@@ -51,10 +50,4 @@ export function socketFactoryOf(config: WSConnectionConfig): WSSocketFactory {
     resume: config.reconnectOnResume !== false,
     load: () => import("./http-rung"),
   });
-}
-
-/* A `fetch` whose answers a socket over HTTP reads as they come, through a pipe. */
-function answersStream(given: PlatformFetch | undefined): boolean {
-  const fetches = given !== undefined || typeof globalThis.fetch === "function";
-  return fetches && typeof ReadableStream === "function" && typeof TransformStream === "function";
 }

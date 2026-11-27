@@ -4,8 +4,8 @@
  * `onDownloadProgress` reports the answer's body as it is read, and
  * `onUploadProgress` the body as the network takes it, with or without
  * XMLHttpRequest. An upload over XMLHttpRequest settles when it is
- * cancelled, and one answered 204 resolves with no body instead of
- * throwing.
+ * cancelled or out of time, while it reads a stream it sends too, and one
+ * answered 204 resolves with no body instead of throwing.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -13,6 +13,7 @@ import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
 import type { UploadProgress } from "../src/http-client/types";
 import { xhrRequest } from "../src/utils/xhr-request";
+import { endlessBody, within } from "./helpers/endless-body";
 
 const { endpoint } = courier();
 const api = defineApi({
@@ -154,6 +155,36 @@ describe("upload progress over XMLHttpRequest", () => {
 
     expect(FakeXhr.sent).toBeInstanceOf(Blob);
     expect(await (FakeXhr.sent as Blob).text()).toBe("streamed bytes");
+  });
+
+  it("stops reading a stream it would send once cancelled, and cancels the stream", async () => {
+    vi.stubGlobal("XMLHttpRequest", FakeXhr);
+    FakeXhr.sent = undefined;
+    const body = endlessBody("a part");
+    const controller = new AbortController();
+
+    const pending = xhrRequest("/u", { ...init(), body: body.stream, signal: controller.signal });
+    await within(body.read, 1_000);
+    controller.abort();
+
+    await expect(within(pending, 1_000)).rejects.toMatchObject({ name: "AbortError" });
+    await expect(within(body.cancelled, 1_000)).resolves.toMatchObject({ name: "AbortError" });
+    expect(FakeXhr.sent).toBeUndefined();
+  });
+
+  it("stops reading a stream it would send once its time is out", async () => {
+    vi.stubGlobal("XMLHttpRequest", FakeXhr);
+    FakeXhr.sent = undefined;
+    const body = endlessBody("a part");
+
+    const sent = (createCaller(api) as unknown as Client).upload.with({
+      timeout: 50,
+      onUploadProgress: () => undefined,
+    })(body.stream);
+
+    await expect(within(sent, 1_000)).rejects.toMatchObject({ name: "TimeoutError" });
+    await within(body.cancelled, 1_000);
+    expect(FakeXhr.sent).toBeUndefined();
   });
 
   it("answers a 204 with no body instead of throwing", async () => {

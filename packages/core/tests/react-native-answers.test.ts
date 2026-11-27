@@ -6,7 +6,8 @@
  * cancelled, its source parses its answer, it shares an identical request in
  * flight, it counts its download, it goes through XMLHttpRequest for its
  * upload's progress, a stream's bytes and all — it resolves to what the API
- * sent, its text decoded as UTF-8.
+ * sent, its text decoded as UTF-8; cancelled while a stream it uploads is
+ * read, it stops reading it.
  */
 import type { ServerResponse } from "node:http";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -16,6 +17,7 @@ import { courier, defineApi } from "../src/define/index";
 import type { SourceFetch } from "../src/http-client/source-transport";
 import type { DownloadProgress, ResponseParser } from "../src/http-client/types";
 import { isCancellation } from "../src/utils/abort";
+import { endlessBody, within } from "./helpers/endless-body";
 import { type AppFetch, asReactNative, bytesOf, NativeBlob } from "./helpers/react-native";
 import { type ReceivedRequest, startUpstream, type Upstream } from "./helpers/upstream";
 
@@ -273,5 +275,25 @@ describe("an upload of a stream that reports its progress, in an Expo app", () =
     expect(await outcome(sent)).toEqual({
       value: { ...GREETING, received: "part one — café, part two ✓" },
     });
+  });
+});
+
+describe("an upload of a stream that reports its progress, cancelled while it is read, in an Expo app", () => {
+  it("rejects as cancelled, its stream cancelled and nothing sent", async () => {
+    asReactNative("expo");
+    const body = endlessBody("part one — café");
+    const controller = new AbortController();
+
+    const sent = createCaller(api()).upload.with({
+      onUploadProgress: () => undefined,
+      signal: controller.signal,
+    })(body.stream);
+    await within(body.read, 1_000);
+    controller.abort();
+    const settled = await within(outcome(sent), 1_000);
+
+    expect(isCancellation((settled as { error?: unknown }).error)).toBe(true);
+    await within(body.cancelled, 1_000);
+    expect(upstream.received).toEqual([]);
   });
 });

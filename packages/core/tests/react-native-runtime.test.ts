@@ -18,6 +18,7 @@ import type { MiddlewareContext, WrapHandler } from "../src/middleware/types";
 import { subscribeSSE } from "../src/realtime/sse";
 import { createWSConnection } from "../src/realtime/ws/ws-connection";
 import { isCancellation } from "../src/utils/abort";
+import { polyfill } from "./helpers/react-native";
 
 const { endpoint } = courier();
 const restores: Array<() => void> = [];
@@ -294,6 +295,33 @@ describe("an upload in React Native", () => {
     expect(stored).toEqual({ stored: true });
     expect(RecordingXhr.sent).toEqual([form]);
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("sends a form naming a file on the device through the API's own fetch, when it has one", async () => {
+    RecordingXhr.sent = [];
+    const own = vi.fn(
+      async (_url: string, _init: object) =>
+        new polyfill.Response('{"stored":true}', {
+          headers: { "content-type": "application/json" },
+        }),
+    );
+    vi.stubGlobal("FormData", ExpoFormData);
+    vi.stubGlobal("XMLHttpRequest", RecordingXhr);
+    vi.stubGlobal("Response", polyfill.Response);
+    const form = new ExpoFormData();
+    form.append("photo", { uri: "file:///photo.jpg", name: "photo.jpg", type: "image/jpeg" });
+    const files = defineApi({
+      baseURL: "https://api.example",
+      fetch: own,
+      endpoints: { upload: endpoint.post("files").variables<FormData>().response<unknown>() },
+    });
+
+    const stored = await createCaller(files).upload(form as unknown as FormData);
+
+    expect(stored).toEqual({ stored: true });
+    expect(own).toHaveBeenCalledOnce();
+    expect(own.mock.calls[0]?.[1]).toMatchObject({ body: form });
+    expect(RecordingXhr.sent).toEqual([]);
   });
 
   it("sends a form of bytes with the app's fetch", async () => {

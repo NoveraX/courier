@@ -168,6 +168,8 @@ export async function upload(uri: string, onProgress: (share: number) => void) {
 
 Its answer is read as React Native's own `fetch` reads one, from the Blob XMLHttpRequest hands over: the text as UTF-8, and with `responseType: "blob"` that Blob itself. A form whose files the app holds as bytes — a `Blob` — goes with the app's `fetch`. A stream an upload sends is read whole first, as `expo/fetch` reads one: neither React Native's `fetch` nor XMLHttpRequest can send a stream. A call cancelled, or out of time, while its stream is read stops reading it.
 
+An API that sends its calls with a `fetch` of its own sends these through it too, and no upload through it reports its progress. That `fetch` must then read a file on the device itself: React Native's own `fetch` does, `expo/fetch` does not. A token goes with the API's `headers` or `authMiddleware`, which XMLHttpRequest sends as well.
+
 ## Download progress
 
 A call that reports its download goes through XMLHttpRequest, which reports the answer as it arrives, against the length the answer declares. React Native's own `fetch` hands an answer over only once all of it has arrived, and the `Response` an app has cannot be made of the stream `expo/fetch` hands over, which is how Courier counts a download elsewhere. The answer is read as any other is:
@@ -181,6 +183,8 @@ export function listUsers(onProgress: (share: number) => void) {
 ```
 
 A call that reads its answer as it comes, with `stream: true`, goes with `expo/fetch`, and its stream is counted as it is read.
+
+An API with a `fetch` of its own sends a call that reports its download through that `fetch`, as every call of the API: the download is counted only as the call reads a stream that `fetch` hands over.
 
 ## Cancellation and timeouts
 

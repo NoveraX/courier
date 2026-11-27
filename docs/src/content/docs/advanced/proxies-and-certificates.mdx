@@ -122,7 +122,7 @@ A definition that reads a key from disk runs wherever it is imported. In proxy m
 
 `fetch` takes any function called as `fetch` is that answers with a `Response`: the `fetch` of a Cloudflare `mtls_certificates` binding, which presents the certificate the binding holds; that of a `Bun.FetchSession`, which keeps a proxy and an authority of its own; one that signs or records each request. It is typed to take undici's as it is, whose `RequestInit` and `Response` are undici's own types. What a `fetch` answers is checked to be a `Response` by what Courier reads of it — its status, its headers and its text, as React Native's has no `body` — and anything else is refused with `ConfigurationError("SOURCE_TRANSPORT_INVALID")`.
 
-In a browser and in React Native, an upload that reports its progress goes through `XMLHttpRequest`, which can report it, rather than through an API's `fetch`; in React Native, so does a call that reports its download, unless it reads its answer as a stream.
+An API's `fetch` sends every call of the API. A call that reports its progress never goes around it through `XMLHttpRequest`, as it does around the platform's `fetch`: the request would go without the certificate, the signature or the record the `fetch` gives it. What the `fetch` cannot report goes unreported. On a server an upload is counted as it is streamed to it, and anywhere a download is counted as it is read where its answer is a stream; in a browser and in React Native no upload through it reports its progress, and in React Native no download it hands over whole. A header every call carries, a token, goes with the API's `headers` or [`authMiddleware`](/docs/middleware/built-in#authmiddleware), which every way of sending carries.
 
 ## One group
 

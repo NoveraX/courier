@@ -39,7 +39,7 @@ export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
    * to the proxy of the server it runs in, without leaving the process.
    */
   transport?: ((url: string, init: RequestInit) => Promise<Response>) | undefined;
-  /** Sends the request in place of the platform's `fetch`: the source's own. */
+  /** Sends the request in place of the platform's `fetch` and of XMLHttpRequest: the source's own. */
   fetch?: PlatformFetch | undefined;
   /**
    * Join an identical read already in flight, or answer it with the one the
@@ -151,9 +151,11 @@ export async function coreFetch(
   /* XMLHttpRequest reports an upload's progress, which fetch cannot; reads a file a React
      Native form names by where it is, which expo/fetch refuses; and reports a download where no
      Response of the platform's can be made of the body to count it, as in React Native, unless
-     the call reads the body's stream itself. */
+     the call reads the body's stream itself. It stands in for the platform's fetch alone: a
+     source's own sends every call, as it is what the source is reached through. */
   const throughXhr =
     transport === undefined &&
+    send === fetch &&
     Object.hasOwn(globalThis, "XMLHttpRequest") &&
     ((requestBody != null && (onUploadProgress !== undefined || holdsDeviceFiles(requestBody))) ||
       (onDownloadProgress !== undefined && streamed !== true && !responseTakesStreams()));

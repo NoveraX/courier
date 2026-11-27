@@ -95,10 +95,15 @@ export type FetchOptions = Omit<RequestInit, "method" | "body" | "signal"> & {
   duplex?: "half" | undefined;
   /**
    * Called as the answer's body comes in: as it is read, or as
-   * XMLHttpRequest takes it in for a call sent through it
+   * XMLHttpRequest takes it in for a call sent through it, which a call of an
+   * API with a `fetch` of its own never is
    */
   onDownloadProgress?: ((progress: DownloadProgress) => void) | undefined;
-  /** Called as the request's body is sent */
+  /**
+   * Called as the request's body is sent: as XMLHttpRequest sends it in a
+   * page or an app, and as fetch takes it on a server — through an API's own
+   * `fetch`, on a server alone
+   */
   onUploadProgress?: ((progress: UploadProgress) => void) | undefined;
   /**
    * How this call's successful answer is read — text, a blob, bytes, a form —

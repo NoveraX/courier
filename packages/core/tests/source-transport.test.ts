@@ -1,7 +1,8 @@
 /**
  * What a source says about its transport reaches every request it makes.
  * Its own `fetch` sends its calls — plain ones, uploads that report their
- * progress, each hop of a redirect followed by hand — and opens its
+ * progress, where XMLHttpRequest could report it too, each hop of a
+ * redirect followed by hand — and opens its
  * streams; its `WebSocket` class opens its channels' sockets. What its
  * options give a request — a `dispatcher`, `credentials` — reaches both,
  * while Courier's own options never reach `fetch`, and its channels still
@@ -37,6 +38,7 @@ let server: Server | undefined;
 let handler: WSHandler | undefined;
 
 afterEach(async () => {
+  vi.unstubAllGlobals();
   clearWSConnectionPool();
   _resetSourcesForTests();
   await handler?.destroy();
@@ -95,6 +97,28 @@ describe("a source's fetch", () => {
     expect(sent.map(({ url }) => url)).toEqual(["https://files.example/upload"]);
     expect(sent[0]?.init.body).toBeInstanceOf(ReadableStream);
     expect(progress).toHaveBeenLastCalledWith({ percent: 1, totalBytes: 12, transferredBytes: 12 });
+  });
+
+  it("sends an upload that reports its progress where XMLHttpRequest, which could, is at hand", async () => {
+    const { sent, send } = recording(() => new Response("stored"));
+    /* A page's and an app's: sending through it would go around the source's fetch. */
+    vi.stubGlobal(
+      "XMLHttpRequest",
+      class {
+        constructor() {
+          throw new Error("the request went around the source's fetch");
+        }
+      },
+    );
+
+    const answer = await coreFetch("POST", "https://files.example/upload", {
+      body: new Blob(["twelve bytes"]),
+      onUploadProgress: () => undefined,
+      fetch: send,
+    });
+
+    expect(await answer.read("text")).toBe("stored");
+    expect(sent.map(({ url }) => url)).toEqual(["https://files.example/upload"]);
   });
 
   it("sends each hop of a redirect it follows on the request's origin", async () => {

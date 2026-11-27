@@ -93,6 +93,13 @@ function api(
   });
 }
 
+/* An app's own fetch, one that signs each request and sends it with the app's. */
+const signed: SourceFetch = (url, init) => {
+  const headers = new Headers((init as RequestInit).headers);
+  headers.set("x-signature", "signed");
+  return globalThis.fetch(url, { ...init, headers });
+};
+
 const TWO_PARTS = "part one — café, part two ✓";
 
 /* A body the app builds as it goes, in two parts. */
@@ -148,12 +155,6 @@ describe.each(ALL)("a source's parser, in an app whose fetch is %s's", (fetch) =
 describe.each(ALL)("a read through the app's own fetch, in an app whose fetch is %s's", (fetch) => {
   it("resolves to the body the API sent, the request as that fetch sent it", async () => {
     asReactNative(fetch);
-    /* One that signs each request, over the app's fetch. */
-    const signed: SourceFetch = (url, init) => {
-      const headers = new Headers((init as RequestInit).headers);
-      headers.set("x-signature", "signed");
-      return globalThis.fetch(url, { ...init, headers });
-    };
 
     const read = createCaller(api({ fetch: signed })).greeting();
 
@@ -161,6 +162,35 @@ describe.each(ALL)("a read through the app's own fetch, in an app whose fetch is
     expect(upstream.received.at(-1)?.headers["x-signature"]).toBe("signed");
   });
 });
+
+describe.each(ALL)(
+  "a call that reports its progress, through the app's own fetch, in an app whose fetch is %s's",
+  (fetch) => {
+    it("sends its download through that fetch", async () => {
+      asReactNative(fetch);
+
+      const read = createCaller(api({ fetch: signed })).greeting.with({
+        onDownloadProgress: () => undefined,
+      })();
+
+      expect(await outcome(read)).toEqual({ value: GREETING });
+      expect(upstream.received.at(-1)?.headers["x-signature"]).toBe("signed");
+    });
+
+    it("sends its upload through that fetch", async () => {
+      asReactNative(fetch);
+
+      const sent = createCaller(api({ fetch: signed })).upload.with({
+        onUploadProgress: () => undefined,
+      })({ note: "café ✓" });
+
+      expect(await outcome(sent)).toEqual({
+        value: { ...GREETING, received: '{"note":"café ✓"}' },
+      });
+      expect(upstream.received.at(-1)?.headers["x-signature"]).toBe("signed");
+    });
+  },
+);
 
 describe.each(ALL)("identical reads in flight, in an app whose fetch is %s's", (fetch) => {
   it("share one request, each answered with the body", async () => {

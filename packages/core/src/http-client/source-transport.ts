@@ -4,7 +4,9 @@ import { ConfigurationError } from "../errors/configuration-error";
  * What sends a source's requests and opens its streams in place of the
  * platform's `fetch`: called as `fetch` is, with the URL and a `RequestInit`
  * that carries everything the source's options give it, and answering with
- * a `Response`. Both are typed as no more than objects, so that a `fetch`
+ * a `Response`. It sends every one of them: a call that reports its progress
+ * never goes around it through XMLHttpRequest, and through it reports what
+ * fetch can. Both are typed as no more than objects, so that a `fetch`
  * whose types name a `RequestInit` and a `Response` of its own — undici's —
  * fits as it is.
  *

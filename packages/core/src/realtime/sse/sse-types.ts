@@ -61,6 +61,11 @@ export interface SubscribeSSEOptions {
    * renewed meanwhile; the same again ends it with an `AuthError`.
    */
   beforeConnect?: (() => SSEConnectInit | Promise<SSEConnectInit>) | undefined;
-  /** Sends each connection's request in place of the platform's `fetch`: the source's own. */
+  /**
+   * Sends each connection's request in place of the platform's `fetch`: the
+   * source's own. It, or the platform's, is taken as the stream is subscribed
+   * to; one that hands an answer over only once all of it has arrived, as
+   * React Native's own does, is refused then.
+   */
   fetch?: PlatformFetch | undefined;
 }

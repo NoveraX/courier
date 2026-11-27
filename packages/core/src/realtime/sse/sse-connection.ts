@@ -25,8 +25,8 @@ export interface SSEConnectionConfig {
   onResponse?: ((response: Response) => void) | undefined;
   /** What each connection is opened with besides `headers`, asked for before it opens */
   beforeConnect?: SubscribeSSEOptions["beforeConnect"];
-  /** What sends each connection's request, in place of the platform's `fetch` */
-  fetch?: SubscribeSSEOptions["fetch"];
+  /** What sends each connection's request: the source's `fetch`, else the platform's */
+  fetch: NonNullable<SubscribeSSEOptions["fetch"]>;
 }
 
 /** Credentials the server refused with 401, and whether the one attempt with others was made. */

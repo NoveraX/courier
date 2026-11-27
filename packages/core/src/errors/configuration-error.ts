@@ -330,11 +330,12 @@ export type ConfigurationErrorCode =
    */
   | "RESPONSE_OPAQUE"
   /**
-   * A call that reads its answer as it comes, with `stream: true`, went with
-   * a fetch that hands an answer over only once all of it has arrived, as
-   * React Native's own does, the whatwg-fetch polyfill: refused before it is
-   * sent where its fetch is that one, and once answered where its fetch is
-   * one of the app's own that sends with that one.
+   * A call that reads its answer as it comes, with `stream: true`, or a
+   * stream of server-sent events, went with a fetch that hands an answer over
+   * only once all of it has arrived, as React Native's own does, the
+   * whatwg-fetch polyfill: refused before anything is sent where its fetch is
+   * that one, and once answered where its fetch is one of the app's own that
+   * sends with that one — a stream, whatever the answer says.
    */
   | "RESPONSE_STREAM_UNAVAILABLE"
   /**

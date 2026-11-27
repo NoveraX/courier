@@ -65,8 +65,9 @@ export type SubscriptionEvent = keyof SubscriptionEvents<unknown>;
  *
  * Read it with listeners — `on("data")` — or with `for await`, which yields
  * each event and ends as the subscription ends: it rejects with the
- * `RealtimeError` the server failed or refused it with, and leaving the loop
- * early closes the subscription. What comes before anything reads it is
+ * `RealtimeError` the server failed or refused it with, or the
+ * `ConfigurationError` that kept it from being read at all, and leaving the
+ * loop early closes the subscription. What comes before anything reads it is
  * kept for the first reader, the oldest dropped past a thousand events.
  *
  * A dropped connection is reconnected without ending the subscription.

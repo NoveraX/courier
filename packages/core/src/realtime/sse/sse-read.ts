@@ -1,8 +1,9 @@
+import type { ConfigurationError } from "../../errors/configuration-error";
 import { createLogger } from "../../logger";
 import { isFieldRecord } from "../../utils/body-kind";
 import { ONCE, ownFields } from "../../utils/own";
 import type { StreamFailure } from "../describe-failure";
-import { ConnectionError, fromErrorCode, RealtimeError } from "../errors";
+import { ConnectionError, fromErrorCode, type RealtimeError } from "../errors";
 import { WS_CODE } from "../ws/ws-codes";
 import { SSE_CONTROL_EVENTS } from "./control-events";
 import { parseSSEFrames, type RawSSEEvent, type SSEFrame } from "./parse-sse";
@@ -13,8 +14,8 @@ import { openStream } from "./sse-open";
 const log = createLogger("SSE");
 const INTERNAL_ERROR = 5000;
 
-/** How one connection ended: the server said so, or it just stopped. */
-export type ConnectionEnd = "complete" | "dropped" | RealtimeError;
+/** How one connection ended: the server said so, it just stopped, or no stream could be read from it. */
+export type ConnectionEnd = "complete" | "dropped" | RealtimeError | ConfigurationError;
 
 /** How far one connection got: whether it delivered anything, or was given up on as silent. */
 export interface ConnectionProgress {
@@ -34,7 +35,7 @@ export interface ConnectionProgress {
  *
  * @returns How it ended — a failure, too, when the server answered with
  *   something other than an event stream, or sent a line or an event past
- *   what the client reads
+ *   what the client reads, or its fetch handed the answer over whole
  * @throws SSEResponseError when the server refuses the request
  * @throws ConnectionError when it did not open in time
  */
@@ -58,7 +59,7 @@ export async function readConnection<TData>(
 
   try {
     const body = await openStream(ctx, connection);
-    if (body instanceof RealtimeError) return body;
+    if (body instanceof Error) return body;
 
     /* Accepted: a later 401 is a refusal of its own, with its own attempt. */
     ctx.refused = undefined;

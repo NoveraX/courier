@@ -7,6 +7,7 @@ import type { SubscriptionDriver, SubscriptionSink } from "../subscription-drive
 import { SubscriptionHandle } from "../subscription-handle";
 import type { Subscription } from "../subscription-types";
 import { reconnectNow, runConnectionLoop, type SSEConnectionCtx } from "./sse-connection";
+import { streamingFetch } from "./sse-fetch";
 import { resumeStream } from "./sse-resume";
 import type { SubscribeSSEOptions } from "./sse-types";
 
@@ -14,12 +15,15 @@ import type { SubscribeSSEOptions } from "./sse-types";
  * Subscribe to a Server-Sent Events stream via fetch.
  * Uses fetch (not EventSource) for custom header support (Authorization).
  * Automatically reconnects with exponential backoff and Last-Event-ID resume.
+ * Each connection goes with the fetch the stream was subscribed with.
  *
  * @param url - SSE endpoint URL
  * @param options - Connection and parsing options
  * @returns The subscription — read with `on("data")` or `for await`
  * @throws {ConfigurationError} `URL_NOT_ABSOLUTE` for a path where no page resolves it
  * @throws {ConfigurationError} `INVALID_BACKOFF` for a backoff no wait can be drawn from
+ * @throws {ConfigurationError} `RESPONSE_STREAM_UNAVAILABLE` for a fetch that hands an answer
+ *   over only once all of it has arrived, as React Native's own does
  *
  * @example
  * const sub = subscribeSSE<Notification>("/api/sse/notifications");
@@ -35,8 +39,9 @@ export function subscribeSSE<TData = unknown>(
   const options = ownFields(given);
   assertAbsoluteUrl(url);
   const backoff = resolveBackoff(options.backoff);
+  const send = streamingFetch(options.fetch);
   const subscription = new SubscriptionHandle<TData>(
-    sseDriver<TData>(url, options, backoff),
+    sseDriver<TData>(url, options, backoff, send),
     options.maxBufferSize,
   );
   const { signal } = options;
@@ -53,6 +58,7 @@ function sseDriver<TData>(
   url: string,
   options: SubscribeSSEOptions,
   backoff: Backoff,
+  send: NonNullable<SubscribeSSEOptions["fetch"]>,
 ): SubscriptionDriver<TData> {
   let ctx: SSEConnectionCtx<TData> | undefined;
   let lastEventId = options.lastEventId;
@@ -70,7 +76,7 @@ function sseDriver<TData>(
         parse: options.parse ?? JSON.parse,
         onResponse: options.onResponse,
         beforeConnect: options.beforeConnect,
-        fetch: options.fetch,
+        fetch: send,
       },
       lastEventId: ctx?.lastEventId ?? lastEventId,
       serverRetryMs: undefined,

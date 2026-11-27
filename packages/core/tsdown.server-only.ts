@@ -14,8 +14,10 @@ import type { TsdownPlugin } from "tsdown";
  * hooks Studio's runtime sets, which a page keeps in its own bundle,
  * what a call fails with when a part it needs did not load, which on a
  * page is a part the server did not deliver, whether a form holds a file
- * on the device, which a page's never does, and whether the fetch a call
- * goes with hands its answer over as it comes, as a page's always does.
+ * on the device, which a page's never does, whether the fetch a call
+ * goes with hands its answer over as it comes, as a page's always does,
+ * and the fetch a stream of server-sent events goes with, which on a page
+ * is never one that cannot hand its answer over so.
  * The package's `imports` field sends a bundler that builds for the
  * browser to `lib/browser/`, and everything else — Node, Edge, React
  * Native — to the modules themselves.
@@ -41,6 +43,7 @@ export const SERVER_ONLY_MODULES = [
   "utils/failed-load",
   "utils/device-files",
   "utils/streamed-answer",
+  "realtime/sse/sse-fetch",
 ] as const;
 
 const SOURCE = resolve(import.meta.dirname, "src");

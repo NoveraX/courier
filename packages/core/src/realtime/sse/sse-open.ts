@@ -1,3 +1,4 @@
+import type { ConfigurationError } from "../../errors/configuration-error";
 import { createLogger } from "../../logger";
 import { layerHeaders } from "../../utils/layer-headers";
 import { ownFields } from "../../utils/own";
@@ -7,6 +8,7 @@ import { CLIENT_LIMITS } from "../client-limits";
 import { fingerprintOf } from "../credentials-fingerprint";
 import { ConnectionError, type RealtimeError } from "../errors";
 import type { SSEConnectionCtx } from "./sse-connection";
+import { unstreamedAnswer } from "./sse-fetch";
 import { eventStreamOf, refusal, SSEResponseError } from "./sse-response";
 import type { SSEConnectInit } from "./sse-types";
 
@@ -22,15 +24,16 @@ const log = createLogger("SSE");
  * @param ctx - The subscription's connection loop
  * @param connection - The connection's own abort, which ends the attempt
  * @returns The event stream the server accepted the connection with, or
- *   the error the stream ends with: credentials refused already, or an
- *   answer that is no event stream
+ *   the error the stream ends with: credentials refused already, an answer
+ *   that is no event stream, or one its fetch handed over whole, from
+ *   which no stream can be read
  * @throws SSEResponseError when the server refuses the request
  * @throws ConnectionError when it did not answer in time
  */
 export async function openStream<TData>(
   ctx: SSEConnectionCtx<TData>,
   connection: AbortController,
-): Promise<ReadableStream<Uint8Array> | RealtimeError> {
+): Promise<ReadableStream<Uint8Array> | RealtimeError | ConfigurationError> {
   const { signal } = connection;
   let late = false;
   const deadline = setTimeout(() => {
@@ -43,7 +46,7 @@ export async function openStream<TData>(
     const opened = ownFields(await withinSignal(signal, ctx.config.beforeConnect?.()));
     const refused = sameAsRefused(ctx, opened);
     if (refused) return refused;
-    const send = ctx.config.fetch ?? fetch;
+    const send = ctx.config.fetch;
     /* What the request is, said of its own, as an HTTP call's is: the platform reads a field
        its init does not have from the init's prototype. */
     const request = send(ctx.url, {
@@ -58,6 +61,8 @@ export async function openStream<TData>(
     const response = await withinSignal(signal, request, (answer) => {
       answer.body?.cancel().catch(() => undefined);
     });
+    const unread = unstreamedAnswer(response);
+    if (unread) return unread;
     if (!response.ok) throw await refusal(response, signal);
     const body = eventStreamOf(response);
     if (body instanceof ConnectionError) {

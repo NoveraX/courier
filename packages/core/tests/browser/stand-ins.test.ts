@@ -62,6 +62,8 @@ describe("the stand-ins of the modules only a server runs", () => {
       "browser/utils/is-react-native": "src/browser/utils/is-react-native.ts",
       "utils/failed-load": "src/utils/failed-load.ts",
       "browser/utils/failed-load": "src/browser/utils/failed-load.ts",
+      "utils/device-files": "src/utils/device-files.ts",
+      "browser/utils/device-files": "src/browser/utils/device-files.ts",
     });
   });
 });

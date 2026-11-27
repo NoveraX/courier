@@ -11,9 +11,10 @@ import type { TsdownPlugin } from "tsdown";
  * progress, which a page's form, holding no device's file, never refuses,
  * whether a call is one user's, as every call of a page is, with the
  * marks the server's own calls carry, which a page reads none of, the
- * hooks Studio's runtime sets, which a page keeps in its own bundle, and
+ * hooks Studio's runtime sets, which a page keeps in its own bundle,
  * what a call fails with when a part it needs did not load, which on a
- * page is a part the server did not deliver.
+ * page is a part the server did not deliver, and whether a form holds a
+ * file on the device, which a page's never does.
  * The package's `imports` field sends a bundler that builds for the
  * browser to `lib/browser/`, and everything else — Node, Edge, React
  * Native — to the modules themselves.
@@ -37,6 +38,7 @@ export const SERVER_ONLY_MODULES = [
   "utils/page-location",
   "utils/is-react-native",
   "utils/failed-load",
+  "utils/device-files",
 ] as const;
 
 const SOURCE = resolve(import.meta.dirname, "src");

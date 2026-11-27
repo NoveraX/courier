@@ -4,9 +4,12 @@ import type { WebBody } from "../http-client/web-types";
 import { anySignal } from "./any-signal";
 import { countedStream } from "./counted-stream";
 import { copiesOf, type FetchCopies } from "./fetch-copies";
+import { fetchWithinOrigin } from "./fetch-within-origin";
+import { responseTakesStreams } from "./response-takes-streams";
 import { sendAsStream } from "./send-as-stream";
 import { isStreamedUpload } from "./streamed-upload";
 import { sendingOf } from "./upload-sending";
+import { isStream, wholeBody } from "./whole-body";
 
 /** How a body sent as a stream is sent. */
 export interface StreamedSend {
@@ -28,8 +31,9 @@ export interface StreamedSend {
  * Node 22 and 24 a stream, and a source's own fetch on Node is taken to
  * (`copiesOf`) — and so is a `StreamedUpload`, which goes with its own
  * content type, and stops the request when it is refused while the upstream
- * takes none of it. Code a page never runs: a bundler that builds for the
- * browser takes a stand-in that sends nothing.
+ * takes none of it. React Native sends no stream at all: there a stream is
+ * read whole and sent as its bytes. Code a page never runs: a bundler that
+ * builds for the browser takes a stand-in that sends nothing.
  *
  * @param url - Where to send it
  * @param init - The request as fetch would take it; its body is set
@@ -48,6 +52,13 @@ export function sendStreamed(
   { onProgress, withinOrigin, fetch }: StreamedSend,
 ): Promise<Response> | undefined {
   const options = { withinOrigin, fetch };
+  /* React Native sends no stream: its fetch, the whatwg-fetch polyfill, hands one to
+     XMLHttpRequest, which cannot send it, and expo/fetch reads one whole; neither reports an
+     upload as it goes. Nothing below is for it, and without Expo it has no streams to test a
+     body against. */
+  if (!responseTakesStreams()) {
+    return isStream(init.body) ? sentWhole(url, init, init.body, options) : undefined;
+  }
   const sent = stoppedWithUpload(init);
   if (onProgress) {
     return sendAsStream(
@@ -69,6 +80,17 @@ function stoppedWithUpload<TInit extends RequestInit>(init: TInit): TInit {
   const refused = sendingOf(init.body)?.refused;
   if (refused === undefined) return init;
   return { ...init, signal: init.signal ? anySignal([init.signal, refused]) : refused };
+}
+
+/* A stream read whole, sent as its bytes: no longer a stream, so the request claims no duplex. */
+async function sentWhole(
+  url: string,
+  { duplex: _duplex, ...init }: RequestInit & { duplex?: string },
+  stream: ReadableStream<Uint8Array>,
+  { withinOrigin, fetch: send = globalThis.fetch }: Omit<StreamedSend, "onProgress">,
+): Promise<Response> {
+  const whole = { __proto__: null, ...init, body: await wholeBody(stream, init.signal) };
+  return withinOrigin ? fetchWithinOrigin(url, whole, send) : send(url, whole);
 }
 
 /* Whether the fetch that sends it would hold the whole body while it sends it. */

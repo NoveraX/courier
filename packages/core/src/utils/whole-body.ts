@@ -36,6 +36,22 @@ export async function wholeBody(
   return whole;
 }
 
+/**
+ * Whether a request's body is a stream, which what cannot send one reads
+ * whole. React Native has no streams without Expo, and `instanceof` an
+ * undefined global throws.
+ *
+ * @param body - The body
+ * @returns Whether it is a `ReadableStream`
+ * @example
+ * ```ts
+ * const body = isStream(init.body) ? await wholeBody(init.body, init.signal) : init.body;
+ * ```
+ */
+export function isStream(body: unknown): body is ReadableStream {
+  return typeof ReadableStream !== "undefined" && body instanceof ReadableStream;
+}
+
 /* Read by the platform, through a pipe the signal stops. */
 function blobOf(stream: ReadableStream<Uint8Array>, signal?: AbortSignal | null): Promise<Blob> {
   const piped = signal

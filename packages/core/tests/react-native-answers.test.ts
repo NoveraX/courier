@@ -4,10 +4,10 @@
  * Expo's, whose answer carries its body as a stream while `Response` stays
  * the polyfill's, which cannot carry one. Whatever the call does — it can be
  * cancelled, its source parses its answer, it shares an identical request in
- * flight, it counts its download, it goes through XMLHttpRequest for its
- * upload's progress, a stream's bytes and all — it resolves to what the API
- * sent, its text decoded as UTF-8; cancelled while a stream it uploads is
- * read, it stops reading it.
+ * flight, it counts its download, it sends a body, a stream's bytes and all,
+ * through the app's fetch or through XMLHttpRequest for its upload's
+ * progress — it resolves to what the API sent, its text decoded as UTF-8;
+ * cancelled while a stream it uploads is read, it stops reading it.
  */
 import type { ServerResponse } from "node:http";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -89,6 +89,20 @@ function api(
       slowGreeting: endpoint.get("slow-greeting").response<typeof GREETING>(),
       file: endpoint.get("file").response<unknown>(),
       upload: endpoint.post("upload").variables<unknown>().response<unknown>(),
+    },
+  });
+}
+
+const TWO_PARTS = "part one — café, part two ✓";
+
+/* A body the app builds as it goes, in two parts. */
+function twoParts(): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(encoder.encode("part one — café, "));
+      controller.enqueue(encoder.encode("part two ✓"));
+      controller.close();
     },
   });
 }
@@ -261,22 +275,35 @@ describe.each(["react-native", "expo"] as const)(
 describe("an upload of a stream that reports its progress, in an Expo app", () => {
   it("sends the stream's bytes", async () => {
     asReactNative("expo");
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream<Uint8Array>({
-      start(controller) {
-        controller.enqueue(encoder.encode("part one — café, "));
-        controller.enqueue(encoder.encode("part two ✓"));
-        controller.close();
-      },
-    });
 
-    const sent = createCaller(api()).upload.with({ onUploadProgress: () => undefined })(stream);
+    const sent = createCaller(api()).upload.with({ onUploadProgress: () => undefined })(twoParts());
 
-    expect(await outcome(sent)).toEqual({
-      value: { ...GREETING, received: "part one — café, part two ✓" },
-    });
+    expect(await outcome(sent)).toEqual({ value: { ...GREETING, received: TWO_PARTS } });
   });
 });
+
+describe.each(ALL)("an upload, in an app whose fetch is %s's", (fetch) => {
+  it("resolves to the answer to what it sent", async () => {
+    asReactNative(fetch);
+
+    const sent = createCaller(api()).upload({ note: "café ✓" });
+
+    expect(await outcome(sent)).toEqual({ value: { ...GREETING, received: '{"note":"café ✓"}' } });
+  });
+});
+
+describe.each(["expo", "expo-with-react-native-fetch"] as const)(
+  "an upload of a stream, in an app whose fetch is %s's",
+  (fetch) => {
+    it("sends the stream's bytes", async () => {
+      asReactNative(fetch);
+
+      const sent = createCaller(api()).upload(twoParts());
+
+      expect(await outcome(sent)).toEqual({ value: { ...GREETING, received: TWO_PARTS } });
+    });
+  },
+);
 
 describe("an upload of a stream that reports its progress, cancelled while it is read, in an Expo app", () => {
   it("rejects as cancelled, its stream cancelled and nothing sent", async () => {

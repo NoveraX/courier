@@ -7,7 +7,7 @@ import { isRecord } from "./is-record";
 import { ONCE } from "./own";
 import { platformError } from "./platform-error";
 import { declaredLength } from "./progress";
-import { wholeBody } from "./whole-body";
+import { isStream, wholeBody } from "./whole-body";
 
 const log = createLogger("XMLHttpRequest");
 
@@ -179,9 +179,4 @@ function warnAboutIgnoredOptions(init: XhrRequestInit): void {
   if (ignored.length > 0) {
     log.warn(`${ignored.join(", ")} cannot be applied to a request sent with XMLHttpRequest`);
   }
-}
-
-/* React Native has no streams, and `instanceof` an undefined global throws. */
-function isStream(body: WebBody | null | undefined): body is ReadableStream {
-  return typeof ReadableStream !== "undefined" && body instanceof ReadableStream;
 }

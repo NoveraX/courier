@@ -360,7 +360,7 @@ await caller.files
 // onDownloadProgress still works: XHR reports the answer as it arrives.
 ```
 
-A `ReadableStream` body is read into memory before it is sent through `XMLHttpRequest`, which cannot send a stream — in a browser, and in a React Native app as `expo/fetch` reads one — and its progress then covers the bytes that were read. A call cancelled, or out of time, while its stream is read stops reading it and cancels it with the reason, and sends nothing. Without `onUploadProgress` it is streamed as it is, with `duplex: "half"` — which browsers allow only over HTTP/2 or later.
+A `ReadableStream` body is read into memory before it is sent through `XMLHttpRequest`, which cannot send a stream — in a browser, and in a React Native app as `expo/fetch` reads one — and its progress then covers the bytes that were read. In a React Native app a stream is read whole without `onUploadProgress` too, as no `fetch` there sends one as it reads it. A call cancelled, or out of time, while its stream is read stops reading it and cancels it with the reason, and sends nothing. Without `onUploadProgress` it is streamed as it is, with `duplex: "half"` — which browsers allow only over HTTP/2 or later.
 
 The code that reports an upload's progress loads with the first upload that asks for it, and where it does not load — a deployment took its chunk away, say — the upload is sent without progress and Courier warns once; only a React Native form holding a file on the device, which nothing else can send, fails instead, with `MODULE_NOT_LOADED`, and no retry sends it again.
 

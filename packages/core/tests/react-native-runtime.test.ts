@@ -1,9 +1,10 @@
 /**
- * A client in a React Native app. Its AbortController keeps no reason; its
- * fetch reports a cancellation and a timeout alike — as an abort, or, from
- * expo/fetch, as a plain error saying the fetch failed; and without Expo it
- * has no AbortSignal.any or AbortSignal.timeout, no crypto, no
- * structuredClone, no DOMException and no page to resolve a path against.
+ * A client in a React Native app. Its AbortController keeps no reason, as
+ * React Native's did up to 0.86; its fetch reports a cancellation and a
+ * timeout alike — as an abort, or, from expo/fetch, as a plain error saying
+ * the fetch failed; and without Expo it has no crypto, no structuredClone,
+ * no DOMException and no page to resolve a path against, nor, up to 0.86,
+ * AbortSignal.any or AbortSignal.timeout.
  * Each test takes away what React Native lacks, and the call still says
  * what happened to it.
  */
@@ -18,7 +19,7 @@ import type { MiddlewareContext, WrapHandler } from "../src/middleware/types";
 import { subscribeSSE } from "../src/realtime/sse";
 import { createWSConnection } from "../src/realtime/ws/ws-connection";
 import { isCancellation } from "../src/utils/abort";
-import { polyfill } from "./helpers/react-native";
+import { polyfill, ReasonlessAbortController } from "./helpers/react-native";
 
 const { endpoint } = courier();
 const restores: Array<() => void> = [];
@@ -44,14 +45,6 @@ function without(target: object, key: string): void {
   restores.push(() => {
     if (own) Object.defineProperty(target, key, own);
   });
-}
-
-/** An AbortController as React Native's: `abort()` drops the reason it is given. */
-class ReasonlessAbortController extends AbortController {
-  constructor() {
-    super();
-    Object.defineProperty(this.signal, "reason", { get: () => undefined });
-  }
 }
 
 /** A fetch that answers after a pause, and rejects as `rejectWith` says once its signal aborts. */

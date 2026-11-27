@@ -3,7 +3,7 @@ import { platformError } from "./platform-error";
 /**
  * A signal that aborts once the time runs out, with a `TimeoutError`:
  * `AbortSignal.timeout` where the runtime has it, a timer where it has not —
- * React Native without Expo.
+ * React Native up to 0.86, without Expo.
  *
  * @param ms - How long to wait, in milliseconds
  * @returns The signal

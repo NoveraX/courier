@@ -938,8 +938,12 @@ export class NativeURLSearchParams {
   }
 }
 
-/** React Native's AbortController: `abort()` keeps no reason. */
-class ReasonlessAbortController extends AbortController {
+/**
+ * React Native's AbortController up to 0.86, Expo SDK 57's too: `abort()`
+ * keeps no reason. 0.88's keeps it; an app is run with this one, the
+ * stricter of the two.
+ */
+export class ReasonlessAbortController extends AbortController {
   constructor() {
     super();
     Object.defineProperty(this.signal, "reason", { get: () => undefined });

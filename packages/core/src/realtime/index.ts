@@ -40,6 +40,7 @@ export { createMemoryPubSub } from "./memory-pubsub";
 export { createMemoryStream } from "./memory-stream";
 export type { MemoryTopicLogOptions } from "./memory-topic-log";
 export type { PresenceConfig } from "./presence-types";
+export { type AppResumeSignal, resumeRealtime } from "./resume-signals";
 export type { SubscribeSSEOptions } from "./sse";
 export { subscribeSSE } from "./sse";
 export type {

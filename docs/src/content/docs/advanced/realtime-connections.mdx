@@ -21,7 +21,7 @@ export const client = createProxyCaller(routes.api, {
 - `backoff` — the wait before each reconnect: `initialMs` (1 s), `maxMs` (30 s), `factor` (2), `jitter` (on). See [Staying connected](#staying-connected).
 - `fallback` — where no WebSocket gets through, the same connection over HTTP requests to the socket's own path; `false` keeps it on WebSocket. `after` (3 s) is how long a WebSocket the server has not answered on is waited for, and an HTTP stream that brings no bytes; `remember` (on) keeps the rung a connection fell to for the tab's session. See [When no WebSocket gets through](#when-no-websocket-gets-through).
 - `messageQueue` — what the socket keeps to send while it cannot: messages sent while it reconnects, and those sent on a channel the server has not confirmed yet. `maxCount` (100) and `maxBytes` (1 MB) hold for all its channels together. `overflow` says what a message that finds no room does: with `"reject"`, the default, it is dropped with a warning and its `send` answers `false`; with `"drop-oldest"`, it is kept, and the oldest message waiting goes instead — its channel hears a `4429` error.
-- `reconnectOnResume` — whether the page's signals act on the socket, `true` unless set to `false`. See [Staying connected](#staying-connected).
+- `reconnectOnResume` — whether the page's signals, and those an app passes on with `resumeRealtime`, act on the socket, `true` unless set to `false`. See [Staying connected](#staying-connected).
 - `protocols` — WebSocket sub-protocols for the handshake.
 
 How often the server pings the socket and the largest message it takes are the server's to say: it names both when it admits the socket, and the client goes by them — see [Staying connected](#staying-connected) and [Message size](/docs/advanced/realtime#message-size).
@@ -35,20 +35,21 @@ A socket is `connected` once the server has admitted it — `onConnect` accepted
 A connection that drops reconnects on its own, and its channels subscribe again:
 
 - **After a wait.** Each wait is drawn at random between 0 and `initialMs × factor^n`, `n` the attempts that failed in a row before it, and is never longer than `maxMs`, so clients that lost a server together do not come back to it together. A connection that stays open for 10 s counts as having worked: its next drop starts the waits over. A server that asks for a wait — one shutting down, one at capacity — is not called back sooner. With `jitter: false` every wait is the exponential one.
-- **At once, when the page says so.** The network comes back (`online`, then a wait of up to a second at random), the page is shown again, it comes back from the back/forward cache, or its window gets focus. A wait the server asked for is kept all the same: the connection comes back up to a second at random after it, and its failed attempts stay counted, as the server's answer has not changed. A connection open at that moment is checked instead: it sends a ping, and a socket that does not answer within 5 s is taken for gone. `reconnectOnResume: false` turns this off. Node and React Native give no such signals: call `reconnect()` there, as from React Native's `AppState` when the app comes back to the foreground.
+- **At once, when the page says so.** The network comes back (`online`, then a wait of up to a second at random), the page is shown again, it comes back from the back/forward cache, or its window gets focus. A wait the server asked for is kept all the same: the connection comes back up to a second at random after it, and its failed attempts stay counted, as the server's answer has not changed. A connection open at that moment is checked instead: it sends a ping, and a socket that does not answer within 5 s is taken for gone. `reconnectOnResume: false` turns this off. React Native gives no such signals, nor does Node: an app passes its own on with `resumeRealtime` from `@noverax/courier/realtime` — `"visible"` once it is back in the foreground, `"online"` once its network is back — and every connection acts on them as on a page's, a socket that is well staying open.
 - **A socket that falls silent** — no frame for the server's ping interval and pong timeout together, as the server named them when it admitted the socket: 35 s for a Courier server's defaults — is taken for gone though it still reads as open: a network that dropped without a word sends no close.
 
-In a React Native app, the app coming back to the foreground is the signal to pass on:
+In a React Native app, the app coming back to the foreground is the signal to pass on, once for all its channels and streams:
 
 ```ts title="app/realtime.ts"
+import { resumeRealtime } from "@noverax/courier/realtime"
 import { AppState } from "react-native"
 
-const room = client.chat.room({ room: "general", nick: "ada" })
-
 AppState.addEventListener("change", (state) => {
-  if (state === "active") room.reconnect()
+  if (state === "active") resumeRealtime("visible")
 })
 ```
+
+The network coming back is the other, as `@react-native-community/netinfo` reports it: `resumeRealtime("online")`. `reconnect()` stays for a connection the app wants made again whatever its state: it drops a socket that is well too.
 
 A socket that takes longer than 15 s to open, or a server that takes longer than 15 s to admit it, counts as a failed attempt. A Courier server says why it closes a socket in a frame right before the close, and the client goes by that frame's code and wait: a balancer may lose the close itself, but not the frame before it. Some closes are not reconnected, as reconnecting would meet the same answer:
 

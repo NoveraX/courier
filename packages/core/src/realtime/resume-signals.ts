@@ -7,6 +7,12 @@ import { CLIENT_LIMITS } from "./client-limits";
  */
 export type ResumeSignal = "online" | "visible" | "pageshow" | "focus";
 
+/**
+ * What an app that gives none of a page's signals says of itself: it is
+ * shown again, back in the foreground, or its network came back.
+ */
+export type AppResumeSignal = Extract<ResumeSignal, "visible" | "online">;
+
 /** Hears each resume signal the page gives. */
 export type ResumeListener = (signal: ResumeSignal) => void;
 
@@ -22,7 +28,8 @@ let quiet: ReturnType<typeof setTimeout> | undefined;
 
 /**
  * Hear the page's resume signals: `online`; the page made visible again;
- * `pageshow` of a page restored from the back/forward cache; window focus.
+ * `pageshow` of a page restored from the back/forward cache; window focus;
+ * and those an app passes on with {@link resumeRealtime}.
  *
  * One set of listeners serves every connection on the page: they are added
  * to the page with the first listener and removed with the last, so
@@ -30,7 +37,8 @@ let quiet: ReturnType<typeof setTimeout> | undefined;
  * behind. Signals that come together — bringing a tab back fires
  * `visibilitychange`, `focus`, and at times `pageshow` — are told once:
  * after one is told, the others of the next `RESUME_DEBOUNCE_MS` are not.
- * Where there is no page — Node, React Native — nothing is ever heard.
+ * Where there is no page — Node, React Native — only what the app passes on
+ * is heard.
  *
  * @param listener - Hears each signal
  * @returns Stops hearing them
@@ -40,10 +48,8 @@ let quiet: ReturnType<typeof setTimeout> | undefined;
  * ```
  */
 export function onResume(listener: ResumeListener): () => void {
-  const page = pageTargets();
-  if (page === undefined) return () => undefined;
   listeners.add(listener);
-  if (listeners.size === 1) detach = listen(page);
+  if (listeners.size === 1) detach = listenToPage();
   return () => {
     if (!listeners.delete(listener) || listeners.size > 0) return;
     detach?.();
@@ -51,6 +57,27 @@ export function onResume(listener: ResumeListener): () => void {
     clearTimeout(quiet);
     quiet = undefined;
   };
+}
+
+/**
+ * Pass on what an app that gives none of a page's signals says of itself,
+ * so its connections act on it as a page's do: one waiting to reconnect
+ * does so at once, after a little wait at random when the network came
+ * back, though not before a wait its server asked for, and one open is
+ * checked — a socket with a ping, a stream heard from for too long ago
+ * opened again. One whose `reconnectOnResume` is `false` is left as it is.
+ * Told together with a page's, or again within a second, it is told once.
+ *
+ * @param signal - `"visible"`: the app is back in the foreground; `"online"`: its network is back
+ * @example
+ * ```ts
+ * AppState.addEventListener("change", (state) => {
+ *   if (state === "active") resumeRealtime("visible");
+ * });
+ * ```
+ */
+export function resumeRealtime(signal: AppResumeSignal): void {
+  tell(signal);
 }
 
 function tell(signal: ResumeSignal): void {
@@ -89,12 +116,12 @@ function listen(page: { window?: EventSource; document?: EventSource }): () => v
   };
 }
 
-/* The page's window and document, where there is a page to listen to. */
-function pageTargets(): { window?: EventSource; document?: EventSource } | undefined {
+/* The page's window and document listened to, where there is a page; what stops it. */
+function listenToPage(): (() => void) | undefined {
   const window = eventSourceAt("window");
   const document = eventSourceAt("document");
   if (window === undefined && document === undefined) return undefined;
-  return { ...(window && { window }), ...(document && { document }) };
+  return listen({ ...(window && { window }), ...(document && { document }) });
 }
 
 function eventSourceAt(name: "window" | "document"): EventSource | undefined {

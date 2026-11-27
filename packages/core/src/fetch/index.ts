@@ -75,8 +75,8 @@ async function request<TResponse>(
   try {
     return await answerOf<TResponse>(method, answer, options?.responseType ?? "json");
   } catch (error) {
-    /* A cancellation that lands while the answer is read stops the read with the caller's
-       reason, which the reader reports as a body it could not parse: it is the cancellation. */
+    /* A read that failed was classified as it failed; a call whose signal has fired fails
+       with its cancellation, whatever it met once the caller left, an error answer too. */
     if (signal?.aborted) throw cancellation(signal);
     throw error;
   }

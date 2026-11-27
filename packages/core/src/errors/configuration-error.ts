@@ -330,6 +330,14 @@ export type ConfigurationErrorCode =
    */
   | "RESPONSE_OPAQUE"
   /**
+   * A call that reads its answer as it comes, with `stream: true`, went with
+   * a fetch that hands an answer over only once all of it has arrived, as
+   * React Native's own does, the whatwg-fetch polyfill: refused before it is
+   * sent where its fetch is that one, and once answered where its fetch is
+   * one of the app's own that sends with that one.
+   */
+  | "RESPONSE_STREAM_UNAVAILABLE"
+  /**
    * A retry policy cannot work as written: an option it does not have, a
    * limit past what it takes, a wait that is not a number of milliseconds,
    * or a `retryOn` that names what no failure is — the 0 that once stood

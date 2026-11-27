@@ -1,5 +1,6 @@
 import type { DownloadProgress } from "../http-client/types";
 import { type BodyCounter, type BodyForm, type BodyForms, readBody } from "./read-body";
+import { assertStreamedAnswer } from "./streamed-answer";
 import { withoutProgress } from "./without-progress";
 
 /**
@@ -22,8 +23,9 @@ export interface Answer {
   /**
    * The body as it arrives, for a call that reads it itself, in place of
    * `read`: counted as it is read when the call reports its download.
-   * `null` for an answer that has none, and for one the platform's fetch
-   * hands over whole, as React Native's does.
+   * `null` for an answer that has none. Throws a `ConfigurationError`
+   * `RESPONSE_STREAM_UNAVAILABLE` for one handed over whole, by a fetch
+   * that sends with React Native's own.
    */
   stream(): ReadableStream<Uint8Array> | null;
 }
@@ -59,7 +61,8 @@ export function platformAnswer(response: Response, reading: AnswerReading = {}):
         throw failed ? failed(error) : error;
       }),
     stream: () => {
-      /* The polyfill has no `body` at all; a status that has no body, a null one. */
+      assertStreamedAnswer(response);
+      /* The polyfill's answer has no `body` at all; a status that has no body, a null one. */
       const body: ReadableStream<Uint8Array> | null | undefined = response.body;
       if (body == null) return null;
       return counter ? body.pipeThrough(counter(response.headers)) : body;

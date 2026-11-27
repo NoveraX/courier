@@ -33,7 +33,7 @@ type WithOptions = Omit<CallOptions, "rawData">
 - `signal` — aborts the call when it fires
 - `timeout` — milliseconds each request the call sends may take, from the moment it is sent, so each attempt of a retried call has its own; a call's own wins over the source's
 - `headers` — added to the call's headers, name by name, whatever their case; `.with()` at the client, a group and an endpoint merges them all
-- `stream` — answers with the response's body as a stream, unread, instead of the parsed data
+- `stream` — answers with the response's body as a stream, unread, instead of the parsed data, where the `fetch` hands one over as it comes: React Native's own does not, and a call that asks for one there is refused with a `ConfigurationError` `RESPONSE_STREAM_UNAVAILABLE`
 - `forwardVariables` — whether the HTTP methods an endpoint calls send the call's variables by themselves, as the body of a write or the query of a read; `false` leaves them to the endpoint's own `.via()` code. Defaults to `true`
 - `method` — the verb the call goes to the proxy with: GET for a read that may be cached — one that declares `.cache()` and whose variables are not sensitive — and POST for every other call by default; `"POST"` keeps a read's variables out of the address
 - `responseType` — how a successful answer is read, when not as the source reads every answer

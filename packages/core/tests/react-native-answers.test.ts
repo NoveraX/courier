@@ -7,15 +7,20 @@
  * flight, it counts its download, it sends a body, a stream's bytes and all,
  * through the app's fetch or through XMLHttpRequest for its upload's
  * progress — it resolves to what the API sent, its text decoded as UTF-8;
- * cancelled while a stream it uploads is read, it stops reading it.
+ * cancelled while a stream it uploads is read, it stops reading it. A call
+ * that reads its answer as it comes is handed it so by Expo's fetch, and is
+ * refused where React Native's fetch, which hands an answer over only once
+ * all of it has arrived, would send it.
  */
 import type { ServerResponse } from "node:http";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import type { SourceFetch } from "../src/http-client/source-transport";
 import type { DownloadProgress, ResponseParser } from "../src/http-client/types";
+import { createProxyCaller } from "../src/proxy-caller";
 import { isCancellation } from "../src/utils/abort";
 import { endlessBody, within } from "./helpers/endless-body";
 import { type AppFetch, asReactNative, bytesOf, NativeBlob } from "./helpers/react-native";
@@ -53,7 +58,8 @@ function answer(
   held: Promise<void>,
 ): void {
   const body = Buffer.from(JSON.stringify(GREETING));
-  switch (request.url) {
+  /* A read through the proxy carries its call in the query. */
+  switch (request.url.split("?")[0]) {
     case "/greeting":
       res.writeHead(200, { "content-type": "application/json", "content-length": body.length });
       res.end(body);
@@ -68,6 +74,11 @@ function answer(
       res.end(echo);
       return;
     }
+    case "/proxy":
+      /* What the app's server answers through its proxy: the API's answer, as it arrives. */
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(body);
+      return;
     case "/slow-greeting":
       res.writeHead(200, { "content-type": "application/json", "content-length": body.length });
       res.write(body.subarray(0, 8), () => start());
@@ -92,6 +103,28 @@ function api(
     },
   });
 }
+
+/* The app's calls through its server's proxy. */
+function proxied() {
+  const source = defineApi({
+    expose: true,
+    name: "shop",
+    baseURL: upstream.url,
+    endpoints: { greeting: endpoint.get("greeting").response<typeof GREETING>() },
+  });
+  return createProxyCaller(routesOf(source, "shop"), {
+    proxyPath: { http: `${upstream.url}/proxy` },
+  });
+}
+
+/* What a call that cannot read its answer as it comes is refused with. */
+const UNSTREAMED = {
+  error: expect.objectContaining({
+    name: "ConfigurationError",
+    code: "RESPONSE_STREAM_UNAVAILABLE",
+    message: expect.stringContaining("as it comes"),
+  }),
+};
 
 /* An app's own fetch, one that signs each request and sends it with the app's. */
 const signed: SourceFetch = (url, init) => {
@@ -275,6 +308,58 @@ describe("a call that reads its answer as it comes and reports its download, in 
     expect(events.at(-1)).toEqual({ percent: 1, transferredBytes: size, totalBytes: size });
   });
 });
+
+describe("a call that reads its answer as it comes, in an Expo app", () => {
+  it("is handed the body as it arrives, its first part before the rest is sent", async () => {
+    asReactNative("expo");
+
+    const body = (await createCaller(api())
+      .with({ stream: true })
+      .slowGreeting()) as ReadableStream<Uint8Array>;
+    const reader = body.getReader();
+    const first = await within(reader.read(), 1_000);
+    release();
+    reader.releaseLock();
+
+    const sent = JSON.stringify(GREETING);
+    expect(new TextDecoder().decode(first.value)).toBe(sent.slice(0, 8));
+    expect(await textOf(body)).toBe(sent.slice(8));
+  });
+});
+
+describe.each(["react-native", "expo-with-react-native-fetch"] as const)(
+  "a call that reads its answer as it comes, in an app whose fetch is %s's",
+  (fetch) => {
+    it("is refused before it is sent, as that fetch hands an answer over only once all of it has arrived", async () => {
+      asReactNative(fetch);
+
+      const read = createCaller(api()).with({ stream: true }).greeting();
+
+      expect(await outcome(read)).toEqual(UNSTREAMED);
+      expect(upstream.received).toEqual([]);
+    });
+
+    it("is refused before it is sent through the app's server's proxy", async () => {
+      asReactNative(fetch);
+
+      const read = proxied().greeting.with({ stream: true })();
+
+      expect(await outcome(read)).toEqual(UNSTREAMED);
+      expect(upstream.received).toEqual([]);
+    });
+
+    it("is refused once answered, through the app's own fetch, which sends with that one", async () => {
+      asReactNative(fetch);
+
+      const read = createCaller(api({ fetch: signed }))
+        .with({ stream: true })
+        .greeting();
+
+      expect(await outcome(read)).toEqual(UNSTREAMED);
+      expect(upstream.received).toHaveLength(1);
+    });
+  },
+);
 
 describe.each(["react-native", "expo"] as const)(
   "an upload that reports its progress, in an app whose fetch is %s's",

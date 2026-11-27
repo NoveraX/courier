@@ -1,4 +1,4 @@
-export const metadata = { title: "Streaming", description: "Receive responses as ReadableStreams for SSE, large downloads, and progressive rendering.", mode: "both", updated: "2026-10-05" }
+export const metadata = { title: "Streaming", description: "Receive responses as ReadableStreams for SSE, large downloads, and progressive rendering.", mode: "both", updated: "2026-11-28" }
 
 ## Overview
 
@@ -55,6 +55,8 @@ export default async function ExportPage({ params }: { params: { id: string } })
 In proxy mode the stream is not buffered: data flows from your backend through the proxy to the browser as it arrives, with the content type, and with the cookies the backend set where the endpoint names `set-cookie`. It is served from your application's origin, so it also carries `Content-Security-Policy: default-src 'none'; sandbox` and `X-Content-Type-Options: nosniff`: a streamed URL opened as a page cannot run a script the backend sent as your application. A caller reading the stream with `fetch` is unaffected.
 
 A response schema describes the value a caller reads, not the bytes, so it is not applied to a streamed call. That makes it a question of who asks. A server-side caller may stream any endpoint. A browser may not stream one that declares a response schema: the schema is what keeps the fields it strips away from the page, and a stream would hand over the backend's body before the schema has seen it. The proxy answers such a call with `400`. Leave the schema off an endpoint the browser is meant to stream, as the `ReadableStream` endpoints above do — `.response<ReadableStream>()` names a type and declares no schema.
+
+A streamed call takes a `fetch` that hands an answer over as it comes, as a browser's, Node's, a worker's and `expo/fetch` do. React Native's own `fetch`, the whatwg-fetch polyfill, hands one over only once all of it has arrived, so there a streamed call is refused before it is sent, with a `ConfigurationError` `RESPONSE_STREAM_UNAVAILABLE`, rather than left waiting for an answer that may never end. See [React Native & Expo](/docs/frameworks/react-native#streams-and-channels).
 
 ## Consuming streams in client components
 

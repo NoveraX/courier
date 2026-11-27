@@ -18,6 +18,7 @@ import { responseTakesStreams } from "./response-takes-streams";
 import { type RequestQuery, withSearchParams } from "./search-params";
 import { sendStreamed } from "./send-streamed";
 import type { SharingCall } from "./shared-answer";
+import { assertStreamingFetch } from "./streamed-answer";
 import { withoutProgress } from "./without-progress";
 
 export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
@@ -132,6 +133,8 @@ export async function coreFetch(
   if (isFormData(requestBody)) requestHeaders.delete("content-type");
 
   assertAbsoluteUrl(fullUrl);
+  /* Refused before it is sent where its answer cannot be read as it comes. */
+  if (streamed) assertStreamingFetch(transport ?? send);
   const expiry = timeout ? attemptExpiry(timeout, requestBody) : undefined;
   const finalSignal = signal && expiry ? anySignal([signal, expiry]) : (expiry ?? signal);
 

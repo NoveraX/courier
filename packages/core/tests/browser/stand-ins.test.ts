@@ -64,6 +64,8 @@ describe("the stand-ins of the modules only a server runs", () => {
       "browser/utils/failed-load": "src/browser/utils/failed-load.ts",
       "utils/device-files": "src/utils/device-files.ts",
       "browser/utils/device-files": "src/browser/utils/device-files.ts",
+      "utils/streamed-answer": "src/utils/streamed-answer.ts",
+      "browser/utils/streamed-answer": "src/browser/utils/streamed-answer.ts",
     });
   });
 });

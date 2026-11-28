@@ -120,12 +120,19 @@ async function drained(chunks: AsyncIterable<Uint8Array>): Promise<void> {
   }
 }
 
-/* One request, and its answer as it came. */
+/* One request, and its answer as it came. Cancelled, the request is dropped with its socket, as
+   OkHttp drops a cancelled call: an answer still awaited fails, and one coming in stops. Node's
+   own `signal` would drop it too, but on Node 22 a request it cancels once its whole answer is in
+   fails with an AbortError no one hears. */
 function sentOnce(url: string, init: NativeRequest): Promise<Omit<NativeAnswer, "redirected">> {
   return new Promise((resolve, reject) => {
+    if (init.signal.aborted) {
+      reject(new DOMException("The request was cancelled", "AbortError"));
+      return;
+    }
     const outgoing = request(
       url,
-      { method: init.method, headers: Object.fromEntries(init.headers), signal: init.signal },
+      { method: init.method, headers: Object.fromEntries(init.headers) },
       (incoming) => {
         const raw = incoming.rawHeaders;
         const headers: Array<[string, string]> = [];
@@ -141,6 +148,12 @@ function sentOnce(url: string, init: NativeRequest): Promise<Omit<NativeAnswer, 
         });
       },
     );
+    const cancel = (): void => {
+      outgoing.destroy();
+      reject(new DOMException("The request was cancelled", "AbortError"));
+    };
+    init.signal.addEventListener("abort", cancel, { once: true });
+    outgoing.on("close", () => init.signal.removeEventListener("abort", cancel));
     outgoing.on("error", reject);
     outgoing.end(init.body.byteLength > 0 ? init.body : undefined);
   });

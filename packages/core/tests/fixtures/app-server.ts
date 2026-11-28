@@ -14,6 +14,7 @@
  */
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
+import { inspect } from "node:util";
 import { WebSocketServer } from "ws";
 
 import { createWSHandler } from "../../src/adapter/handle-ws";
@@ -98,14 +99,14 @@ if (process.argv.includes("--refuse-upgrades")) {
   });
 }
 
-/* A command that fails ends the process, its error on stderr, whatever Node is told to do with a
-   rejection no one handles: the parent refuses what it asked with that end. */
+/* A command that fails ends the process, whatever Node is told to do with a rejection no one
+   handles, once its error is written whole: a pipe takes stderr as it can, and an exit at once
+   would keep only what it took. The parent refuses what it asked with that end. */
 process.on("message", (command: AppServerCommand) => {
   void answer(command).then(
     (reply) => tell({ id: command.id, answer: reply }),
     (error: unknown) => {
-      console.error(error);
-      process.exit(1);
+      process.stderr.write(`${inspect(error)}\n`, () => process.exit(1));
     },
   );
 });

@@ -1,23 +1,15 @@
 /**
  * @vitest-environment node
  *
- * `/rsbuild` under Rsbuild's dev server names a page's scripts by their
- * content, as a build does. TanStack Start's pages preload their scripts
- * as modules, and an engine may run a preloaded module again from its
- * memory, whatever the response says — WebKit does, on a reload too — so
- * under a name that never changes, a page loaded after an edit ran the
- * routes from before it. Requires a build of the core and of
+ * `/rsbuild` under Rsbuild's dev server leaves a page's scripts the names
+ * the dev server gives them. Since its releases of 19 November 2026,
+ * TanStack Start's dev server renders every page with the scripts of the
+ * first build it made: under names by content, a script an edit renamed was
+ * gone from the dev server two builds later, and the page it rendered ran
+ * none of its code. Requires a build of the core and of
  * `@noverax/courier-build` first.
  */
-import {
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  realpathSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -72,10 +64,7 @@ async function freePort(): Promise<number> {
 }
 
 /* An app of the files given, the repository's packages its own, served by Rsbuild's dev server with the plugin. */
-async function serve(
-  output: Record<string, unknown> = {},
-  dev: Record<string, unknown> = {},
-): Promise<string> {
+async function serve(): Promise<string> {
   root = realpathSync(mkdtempSync(join(tmpdir(), "courier-tanstack-rsbuild-")));
   symlinkSync(REPO_NODE_MODULES, join(root, "node_modules"), "dir");
   for (const [path, content] of Object.entries(FILES)) {
@@ -90,8 +79,6 @@ async function serve(
       logLevel: "silent",
       plugins: [courierRoutes()],
       source: { entry: { index: "./src/index.mjs" } },
-      output,
-      dev,
       server: { host: "127.0.0.1", port, strictPort: true, printUrls: false },
     },
   });
@@ -108,60 +95,39 @@ async function script(base: string): Promise<{ address: string; code: string }> 
   return { address, code: await (await fetch(`${base}${address}`)).text() };
 }
 
-/* The page's script once the dev server has built an edit in: under another address than before,
-   and holding what the edit wrote. */
-async function rebuilt(
+/* What the dev server answers at an address once it serves what an edit wrote there, or what it
+   last answered after 20 seconds. */
+async function serving(
   base: string,
-  before: string,
+  address: string,
   mark: string,
-): Promise<{ address: string; code: string }> {
+): Promise<{ status: number; code: string }> {
   const deadline = Date.now() + 20_000;
   for (;;) {
-    const now = await script(base);
-    if ((now.address !== before && now.code.includes(mark)) || Date.now() > deadline) return now;
+    const response = await fetch(`${base}${address}`);
+    const now = { status: response.status, code: await response.text() };
+    if (now.code.includes(mark) || Date.now() > deadline) return now;
     await new Promise((done) => setTimeout(done, 200));
   }
 }
 
 describe("courierRoutes from /rsbuild, under Rsbuild's dev server", () => {
-  it("names a page's script by its content, so an edit of the routes gives it a new address", async () => {
+  /* A page rendered with the scripts of the first build, as TanStack Start's dev server renders it. */
+  it("serves each edit at the address the first build gave the page's script", async () => {
     const base = await serve();
     const first = await script(base);
 
     writeFileSync(join(root ?? "", "src/catalog.mjs"), catalog('endpoint.get("audit").expose()'));
-    const second = await rebuilt(base, first.address, "audit");
+    const opened = await serving(base, first.address, "audit");
+    writeFileSync(join(root ?? "", "src/label.mjs"), `export const label = "second";\n`);
+    const relabelled = await serving(base, first.address, '"second"');
 
-    expect(first.address).toMatch(/^\/static\/js\/index\.[0-9a-f]{10}\.js$/);
     expect(first.code).not.toContain("audit");
-    expect(second.address).not.toBe(first.address);
-    expect(second.code).toContain("audit");
+    expect(opened.status).toBe(200);
+    expect(opened.code).toContain("audit");
+    expect(relabelled.status).toBe(200);
+    expect(relabelled.code).toContain("audit");
+    expect(relabelled.code).toContain('"second"');
+    expect((await script(base)).address).toBe(first.address);
   }, 60_000);
-
-  /* As Rsbuild forgets them in memory: the scripts of the last two builds stay, for a page a build behind. */
-  it("leaves on disk, where the dev server writes there, the scripts of no more than two builds", async () => {
-    const base = await serve({}, { writeToDisk: true });
-    const scripts = join(root ?? "", "dist/static/js");
-    let address = (await script(base)).address;
-
-    for (let edit = 1; edit <= 50; edit++) {
-      writeFileSync(join(root ?? "", "src/label.mjs"), `export const label = "edit ${edit}";\n`);
-      const now = await rebuilt(base, address, `edit ${edit}`);
-      expect(now.code).toContain(`edit ${edit}`);
-      address = now.address;
-    }
-
-    const written = readdirSync(scripts).filter((name) => /^index\..*\.js$/.test(name));
-    expect(written).toContain(address.slice("/static/js/".length));
-    expect(written.length).toBeLessThanOrEqual(2);
-  }, 240_000);
-
-  it.each([[{ filename: { js: "[name].js" } }], [{ filenameHash: false }]])(
-    "keeps the names an app gives its scripts itself: %o",
-    async (output) => {
-      const base = await serve(output);
-
-      expect((await script(base)).address).toBe("/static/js/index.js");
-    },
-    60_000,
-  );
 });

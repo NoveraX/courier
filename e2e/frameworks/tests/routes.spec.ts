@@ -5,8 +5,10 @@
  * client built from them calls through the application's proxy. The config
  * opens `profile` to a page and keeps `audit` the server's, which the proxy
  * refuses as it does a name it does not know. Under the application's dev
- * server, an edit that opens `audit` reaches the page and the server that
- * renders it without a restart.
+ * server, an edit that opens `audit` reaches the server that renders the page
+ * without a restart, and then the page: a page loaded before the dev server
+ * had built the edit would, in WebKit, run the scripts it preloaded then each
+ * time the same tab loaded it again.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -112,13 +114,13 @@ test("an edit that opens an endpoint reaches the page without a restart, under t
   );
 
   try {
-    await showing(page, "client-routes", /audit/);
     if (routesPage?.rendered === true) {
       await settled(async () => {
         const html = await (await request.get(`${APP}${path}`, { timeout: ATTEMPT_MS })).text();
         expect(html).toMatch(/id="server-routes"[^>]*>[^<]*audit/);
       });
     }
+    await showing(page, "client-routes", /audit/);
   } finally {
     writeFileSync(catalog, written);
   }

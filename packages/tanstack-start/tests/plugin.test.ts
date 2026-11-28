@@ -18,8 +18,8 @@ describe("the TanStack Start package's routes plugins", () => {
     expect(fromPlugin().name).toBe("courier-routes");
   });
 
-  it("are, for Rsbuild, the plugin that builds them there, by its name", () => {
-    expect(fromRsbuild().name).toBe(rsbuildRoutes().name);
+  it("are, for Rsbuild, the plugin that builds the routes from the config", () => {
+    expect(fromRsbuild).toBe(rsbuildRoutes);
     expect(fromRsbuild().name).toBe("courier-routes");
   });
 });

@@ -1,6 +1,7 @@
 import { ConfigurationError } from "../errors/configuration-error";
 import { cloneData } from "../utils/clone-data";
 import { defineOwn } from "../utils/define-own";
+import { isPlainRecord } from "../utils/is-plain-record";
 
 /* Data a call's variables may hold: what JSON writes as it is. */
 function isData(value: unknown): boolean {
@@ -8,9 +9,7 @@ function isData(value: unknown): boolean {
   if (typeof value === "string" || typeof value === "boolean") return true;
   if (typeof value === "number") return Number.isFinite(value);
   if (Array.isArray(value)) return value.every(isData);
-  if (typeof value !== "object") return false;
-  const prototype: unknown = Object.getPrototypeOf(value);
-  if (prototype !== Object.prototype && prototype !== null) return false;
+  if (!isPlainRecord(value)) return false;
   const values: unknown[] = Object.values(value);
   return values.every(isData);
 }
@@ -76,9 +75,7 @@ export function withVariableDefaults(
 ): unknown {
   if (defaults === undefined) return variables;
   if (variables === undefined || variables === null) return cloneData(defaults);
-  if (typeof variables !== "object" || Array.isArray(variables)) return variables;
-  const prototype: unknown = Object.getPrototypeOf(variables);
-  if (prototype !== Object.prototype && prototype !== null) return variables;
+  if (!isPlainRecord(variables)) return variables;
   const merged: Record<string, unknown> = { ...variables };
   /* Read and defined as the call's own: a variable named `constructor` it left out takes its default. */
   for (const [name, value] of Object.entries(defaults)) {

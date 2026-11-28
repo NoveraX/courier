@@ -3,8 +3,9 @@ import { cookieNameProblem } from "../../session/cookie-names";
 import { csrfSourceProblem } from "../../session/csrf-source";
 import { assertSecureTransport } from "../../session/transport";
 import { assertAllowedOrigins } from "../../utils/assert-allowed-origins";
+import { isPlainRecord } from "../../utils/is-plain-record";
 import { isRecord } from "../../utils/is-record";
-import { describe, isPlainObject } from "../plain-data";
+import { describe } from "../plain-data";
 import { headerNameProblem } from "./header-names";
 
 const CSRF_KEYS: ReadonlySet<string> = new Set(["cookie", "header", "from"]);
@@ -51,7 +52,7 @@ export function assertSessionOptions(
 function sessionProblem(session: unknown): string | undefined {
   if (!isRecord(session))
     return "is an object: { cookies, bearer, csrf, relay, allowedOrigins, allowHttp }";
-  if (!isPlainObject(session)) {
+  if (!isPlainRecord(session)) {
     return `is plain data, { cookies, bearer, csrf, relay, allowedOrigins, allowHttp }, not ${describe(session)}`;
   }
   const unknown = Object.keys(session).find((key) => !SESSION_KEYS.has(key));
@@ -85,7 +86,7 @@ function csrfProblem(csrf: unknown): string | undefined {
   if (csrf === undefined) return undefined;
   if (!isRecord(csrf))
     return 'csrf is { cookie, header, from? }, such as { cookie: "csrftoken", header: "x-csrftoken" }';
-  if (!isPlainObject(csrf))
+  if (!isPlainRecord(csrf))
     return `csrf is plain data, { cookie, header, from? }, not ${describe(csrf)}`;
   const extra = Object.keys(csrf).find((key) => !CSRF_KEYS.has(key));
   if (extra !== undefined) return `csrf has no option "${extra}"`;

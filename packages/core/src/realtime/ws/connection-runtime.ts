@@ -1,4 +1,5 @@
 import type { ScopedLogger } from "../../logger";
+import { isPromiseLike } from "../../utils/is-promise-like";
 import { authFrame } from "./auth-frame";
 import { transition } from "./connection-machine";
 import type {
@@ -154,7 +155,7 @@ export function createConnectionRuntime(options: RuntimeOptions): ConnectionRunt
     };
     try {
       const found = config.credentials?.();
-      if (found instanceof Promise) found.then(answer, refuse);
+      if (isPromiseLike(found)) found.then(answer, refuse);
       else answer(found);
     } catch (error) {
       refuse(error);

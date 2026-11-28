@@ -1,6 +1,6 @@
 import type { IncomingMessage } from "node:http";
 
-import { isReadableStream } from "@noverax/courier/internal";
+import { isPlainRecord, isReadableStream } from "@noverax/courier/internal";
 
 /** Where h3 1.x leaves the bytes its `readRawBody` read, for any later reader. */
 const H3_RAW_BODY = Symbol.for("h3RawBody");
@@ -44,7 +44,7 @@ function asBody(value: unknown): BodyInit | Uint8Array | null | undefined {
   if (value === undefined || value === null) return null;
   if (value instanceof Uint8Array) return value;
   if (isBodyInit(value)) return value;
-  if (isPlainObject(value)) return JSON.stringify(value);
+  if (isPlainRecord(value)) return JSON.stringify(value);
   return undefined;
 }
 
@@ -57,10 +57,4 @@ function isBodyInit(value: unknown): value is BodyInit {
     value instanceof URLSearchParams ||
     isReadableStream(value)
   );
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== "object" || value === null) return false;
-  const prototype: unknown = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
 }

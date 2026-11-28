@@ -1,22 +1,5 @@
-/**
- * Whether a value is an object of plain data, as a server's options are:
- * one an object literal makes, or one with no prototype — a `Proxy` over
- * either among them. An instance of a class, or a `Map`, holds what no
- * check of its fields reads, and what no copy of them holds.
- *
- * @param value - The value
- * @returns Whether it is such an object
- * @example
- * ```ts
- * isPlainObject({ headers: ["x-tenant"] }); // true
- * isPlainObject(new Map()); // false
- * ```
- */
-export function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== "object" || value === null) return false;
-  const prototype: unknown = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
-}
+import { isPlainRecord } from "../utils/is-plain-record";
+import { isPromiseLike } from "../utils/is-promise-like";
 
 /* What a copy holds in place of a value that is no data: what the value was, for the check that
    refuses it to name. */
@@ -62,7 +45,7 @@ function copied(value: unknown, within: readonly object[]): unknown {
     for (let index = 0; index < length; index++) items.push(copied(value[index], inside));
     return Object.freeze(items);
   }
-  if (!isPlainObject(value)) return new NotData(describe(value));
+  if (!isPlainRecord(value)) return new NotData(describe(value));
   const fields = Object.keys(value).map((key) => [key, copied(value[key], inside)]);
   return Object.freeze(Object.fromEntries(fields));
 }
@@ -83,7 +66,7 @@ function copied(value: unknown, within: readonly object[]): unknown {
  */
 export function dataView(copy: unknown): unknown {
   if (Array.isArray(copy)) return Object.freeze(copy.map(dataView));
-  if (!isPlainObject(copy)) return copy;
+  if (!isPlainRecord(copy)) return copy;
   /* With no prototype, a key `__proto__` is a field like any other. */
   const fields: Record<string, unknown> = { __proto__: null };
   for (const [key, value] of Object.entries(copy)) fields[key] = dataView(value);
@@ -107,7 +90,7 @@ export function describe(value: unknown): string {
   if (value instanceof NotData) return value.what;
   if (value === null || value === undefined) return String(value);
   if (Array.isArray(value)) return "an array";
-  if (value instanceof Promise) return "a Promise — await it first";
+  if (isPromiseLike(value)) return "a Promise — await it first";
   if (typeof value !== "object") return `a ${typeof value}`;
   const name: unknown = value.constructor?.name;
   return typeof name === "string" && name !== "" ? `an instance of ${name}` : "an object";

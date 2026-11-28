@@ -1,3 +1,5 @@
+import { isPlainRecord } from "./is-plain-record";
+
 /** Each object copied so far, by the original: data that refers to itself is copied so. */
 type Copies = Map<object, unknown>;
 
@@ -26,7 +28,7 @@ function copyOf(value: unknown, copies: Copies): unknown {
   if (Array.isArray(value)) return copyArray(value, copies);
   if (value instanceof Map) return copyMap(value, copies);
   if (value instanceof Set) return copySet(value, copies);
-  return isPlainObject(value) ? copyObject(value, copies) : value;
+  return isPlainRecord(value) ? copyObject(value, copies) : value;
 }
 
 function copyArray(source: readonly unknown[], copies: Copies): unknown[] {
@@ -64,9 +66,4 @@ function copyObject(source: Record<string, unknown>, copies: Copies): Record<str
     });
   }
   return copy;
-}
-
-function isPlainObject(value: object): value is Record<string, unknown> {
-  const prototype: unknown = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
 }

@@ -1,6 +1,7 @@
 import { ConfigurationError } from "../../errors/configuration-error";
+import { isPlainRecord } from "../../utils/is-plain-record";
 import { isRecord } from "../../utils/is-record";
-import { describe, isPlainObject } from "../plain-data";
+import { describe } from "../plain-data";
 import { forwardOptionFor, headerNameProblem } from "./header-names";
 
 const FLAGS = ["trace", "userAgent", "locale"] as const;
@@ -38,7 +39,7 @@ function forwardProblem(forward: unknown): string | undefined {
   if (!isRecord(forward)) {
     return "is an object: { requestId, trace, clientAddress, userAgent, locale, headers }";
   }
-  if (!isPlainObject(forward)) {
+  if (!isPlainRecord(forward)) {
     return `is plain data, { requestId, trace, clientAddress, userAgent, locale, headers }, not ${describe(forward)}`;
   }
   const unknown = Object.keys(forward).find((key) => !FORWARD_KEYS.has(key));

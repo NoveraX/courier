@@ -237,3 +237,7 @@ npx expo start
 ```
 
 The first starts Studio with its mock, the second the app. See [Mock Servers](/docs/studio/mock-servers) for what a mock answers and how.
+
+## Tests under jest-expo
+
+Courier runs in the app's Jest tests as it does in the app. Let Jest transform `@noverax`, run it with `--experimental-vm-modules` for the parts Courier loads on first use, and answer in each test the requests it makes: under jest-expo, `fetch` is `expo/fetch` with its native module stubbed. See [Tests under Jest](/docs/testing/jest).

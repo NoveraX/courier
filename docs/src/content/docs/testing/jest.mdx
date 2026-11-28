@@ -1,0 +1,61 @@
+export const metadata = { title: "Tests under Jest", description: "Run Courier in Jest: let it transform Courier's modules and load the parts Courier loads on first use, and answer requests under jest-expo, whose fetch goes nowhere.", mode: "both", updated: "2026-11-28" }
+
+Jest runs each test file in a context of its own, Node's globals copied in, and reads modules as CommonJS through its transforms. Courier runs there as it does in the app. It reads an answer's body with the body's own reader, and tells a stream, an error, a record and a promise by what it is, so what Node makes there — the bodies of its `fetch`, its errors, what `Response.json()` reads — is read as what the test makes is. Three things are the test setup's.
+
+## Transform Courier's modules
+
+Courier's packages are ES modules, and Jest transforms nothing under `node_modules` unless told. Let it transform `@noverax`'s:
+
+```js
+// jest.config.js
+module.exports = {
+  transformIgnorePatterns: ["/node_modules/(?!@noverax/)"],
+};
+```
+
+Tests that take a project's routes run the transformer of `@noverax/courier-build/jest` on them too — see [the engine's README](https://github.com/NoveraX/courier/tree/master/packages/build#jest).
+
+## Load what Courier loads on first use
+
+Courier loads some of its parts with `import()` when a call first needs them: an endpoint's retry policy, streams and channels, a session's pieces, what counts a download. Jest's runtime runs an `import()` it has not transformed only when Node runs Jest with `--experimental-vm-modules`. Without it, a call to an endpoint with a retry policy fails with `A dynamic import callback was invoked without --experimental-vm-modules`, and what needs another such part fails or goes without it:
+
+```json
+{
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+  }
+}
+```
+
+`NODE_OPTIONS=--experimental-vm-modules jest` does the same where the shell sets a variable so. Node warns once that VM modules are experimental. A module a test requires and one Courier imports on first use are the same module: Courier is loaded once.
+
+## Under jest-expo
+
+jest-expo puts in each test what a React Native app has: web-streams-polyfill's classes as the global ones of web streams, and `expo/fetch` as `fetch`, its native module stubbed, so a request goes nowhere. Answer it in the test, as an app's tests mock `fetch`:
+
+```ts
+jest.spyOn(globalThis, "fetch").mockResolvedValue(
+  new Response(JSON.stringify([{ id: 1 }]), { headers: { "content-type": "application/json" } }),
+);
+
+await expect(api.users.list()).resolves.toEqual([{ id: 1 }]);
+```
+
+Or give the code under test [a test client](/docs/testing/test-client), which answers from its mocks with no request at all. jest-expo's preset has patterns of its own for `transformIgnorePatterns`; `@noverax` goes beside the packages they name:
+
+```js
+// jest.config.js
+const { transformIgnorePatterns } = require("jest-expo/jest-preset");
+
+module.exports = {
+  preset: "jest-expo",
+  transformIgnorePatterns: transformIgnorePatterns.map((pattern) =>
+    pattern.replace("/node_modules/(?!(", "/node_modules/(?!(@noverax|"),
+  ),
+};
+```
+
+## Next Steps
+
+- [Test Client](/docs/testing/test-client) — an in-memory client with mocks and a history of its calls
+- [React Native & Expo](/docs/frameworks/react-native) — Courier in the app the tests are of

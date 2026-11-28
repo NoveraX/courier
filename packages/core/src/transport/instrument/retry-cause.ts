@@ -1,6 +1,7 @@
 import { platformCause } from "../../http-client/transport-failure";
 import type { ConnectionRetry } from "../../realtime/retry-of";
 import type { FailureCause } from "../../studio/failure-cause";
+import { isError } from "../../utils/is-error";
 import { isRecord } from "../../utils/is-record";
 
 /**
@@ -33,7 +34,7 @@ export function retryCause(retry: ConnectionRetry): FailureCause {
 
 /* A refusal the client retries carries the status; an error event, the platform's error or text where it gave any. */
 function errorCause(error: unknown): FailureCause | undefined {
-  if (error instanceof Error) {
+  if (isError(error)) {
     const status: unknown = Reflect.get(error, "statusCode");
     if (typeof status === "number") {
       const reason: unknown = Reflect.get(error, "reason");
@@ -42,7 +43,7 @@ function errorCause(error: unknown): FailureCause | undefined {
     return saysAnything(error) ? platformCause(error) : undefined;
   }
   if (!isRecord(error)) return undefined;
-  if (error.error instanceof Error && saysAnything(error.error)) return platformCause(error.error);
+  if (isError(error.error) && saysAnything(error.error)) return platformCause(error.error);
   return typeof error.message === "string" && error.message !== ""
     ? { message: error.message }
     : undefined;
@@ -50,7 +51,7 @@ function errorCause(error: unknown): FailureCause | undefined {
 
 /* Node's own WebSocket fails with an ErrorEvent whose TypeError says nothing at all. */
 function saysAnything(error: Error): boolean {
-  const cause = error.cause instanceof Error ? error.cause : error;
+  const cause = isError(error.cause) ? error.cause : error;
   return cause.message !== "" || ("code" in cause && typeof cause.code === "string");
 }
 

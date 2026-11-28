@@ -1,3 +1,4 @@
+import { isError } from "@noverax/courier/internal-client";
 import type { SSEEvent, Subscription } from "@noverax/courier/realtime";
 
 /**
@@ -32,5 +33,5 @@ export async function consumeStream<TData>(
  * toError("boom").message; // "boom"
  */
 export function toError(error: unknown): Error {
-  return error instanceof Error ? error : new Error(String(error));
+  return isError(error) ? error : new Error(String(error));
 }

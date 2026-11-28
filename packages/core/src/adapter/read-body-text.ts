@@ -1,3 +1,4 @@
+import { isErrorNamed } from "../utils/is-error";
 import { BodyError } from "./body-error";
 import { type BodyLimits, requestBodyStream } from "./read-body";
 
@@ -37,7 +38,7 @@ export async function readBodyText(request: Request, limits: BodyLimits): Promis
     pieces.push(decoder.decode());
   } catch (error) {
     if (error instanceof BodyError) return { ok: false, error };
-    if (!(error instanceof TypeError)) throw error;
+    if (!isErrorNamed(error, "TypeError")) throw error;
     /* The decoder refused the bytes; the rest of the body is taken off the connection. */
     await reader.cancel();
     return { ok: false, error: notUTF8Body() };

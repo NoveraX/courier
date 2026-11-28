@@ -2,6 +2,7 @@ import { createLogger } from "../../logger";
 import { RealtimeError } from "../../realtime/errors";
 import type { SubscriptionDriver } from "../../realtime/subscription-driver";
 import type { StreamEvent } from "../../realtime/subscription-types";
+import { isError } from "../../utils/is-error";
 
 const log = createLogger("Stream");
 const INTERNAL_ERROR = 5000;
@@ -50,5 +51,5 @@ export function eventsDriver(
 }
 
 function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  return isError(error) ? error.message : String(error);
 }

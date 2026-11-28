@@ -1,3 +1,4 @@
+import { isError } from "@noverax/courier/internal";
 import { retryDelay } from "./retry-delay";
 
 /** A job run one run at a time. */
@@ -58,7 +59,7 @@ export function createSerialRuns(
           failures = 0;
         },
         (error: unknown) => {
-          report(error instanceof Error ? error : new Error(String(error)));
+          report(isError(error) ? error : new Error(String(error)));
           tryAgainLater();
         },
       )

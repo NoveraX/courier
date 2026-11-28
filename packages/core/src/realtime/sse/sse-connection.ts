@@ -1,4 +1,5 @@
 import { createLogger } from "../../logger";
+import { isError } from "../../utils/is-error";
 import { type Backoff, backoffDelay, hintedDelay } from "../backoff";
 import { CLIENT_LIMITS } from "../client-limits";
 import { ConnectionError, fromErrorCode, type RealtimeError } from "../errors";
@@ -190,6 +191,6 @@ function refusalFailure(error: unknown): RealtimeError | undefined {
 
 function gaveUp(failures: number, lastError: unknown): ConnectionError {
   const status = lastError instanceof SSEResponseError ? lastError.statusCode : undefined;
-  const cause = lastError instanceof Error ? `: ${lastError.message}` : "";
+  const cause = isError(lastError) ? `: ${lastError.message}` : "";
   return new ConnectionError(`SSE connection failed ${failures} times in a row${cause}`, status);
 }

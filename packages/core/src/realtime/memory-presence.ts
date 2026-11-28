@@ -1,3 +1,4 @@
+import { isError } from "../utils/is-error";
 import type { PresenceAdapter, PresenceDiff, PresenceEntry } from "./adapters";
 import { sweepStaleEntries } from "./presence-sweep";
 import type { PresenceConfig } from "./presence-types";
@@ -51,7 +52,7 @@ export function createMemoryPresence(config?: PresenceConfig): PresenceAdapter {
       try {
         handler(diff);
       } catch (err) {
-        emitError(err instanceof Error ? err : new Error(String(err)));
+        emitError(isError(err) ? err : new Error(String(err)));
       }
     }
   }

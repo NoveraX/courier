@@ -26,3 +26,4 @@ export { createProxyHTTPExecutor } from "../transport/proxy/http";
 export { proxyStreamingFactories } from "../transport/proxy-streaming";
 export type { HTTPExecutor } from "../transport/types";
 export { anySignal } from "../utils/any-signal";
+export { isError } from "../utils/is-error";

@@ -1,4 +1,5 @@
 import type { ScopedLogger } from "../../logger";
+import { isError } from "../../utils/is-error";
 import { ConnectionError } from "../errors";
 import type { MachineEvent, WSTransport } from "./connection-machine-types";
 import type { LadderSocket } from "./transport-ladder-types";
@@ -47,7 +48,7 @@ export function connectionSocket(options: SocketOptions): ConnectionSocket {
     try {
       opened = factory(config.url, config.protocols, handshake);
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
+      const reason = isError(error) ? error.message : String(error);
       dispatch({
         type: "socket-failed",
         error: new ConnectionError(`The socket could not be made: ${reason}`),

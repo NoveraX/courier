@@ -1,3 +1,4 @@
+import { isErrorNamed } from "../is-error";
 import { REDACT_BOUNDS } from "./bounds";
 import { redactedText } from "./redacted-text";
 import { attempt, FAILED, UNREADABLE } from "./unreadable";
@@ -34,7 +35,9 @@ export function redactedError(error: Error, read: ReadPart): Error {
   const hasCause = attempt(() => "cause" in error) === true;
   const given = hasCause ? attempt(() => error.cause) : undefined;
   const cause = given === FAILED ? UNREADABLE : hasCause ? read(given) : undefined;
-  const gathered = attempt(() => (isAggregate(error) ? error.errors : undefined));
+  const gathered = attempt(() =>
+    isErrorNamed(error, "AggregateError") ? error.errors : undefined,
+  );
   const errors = Array.isArray(gathered) ? readEach(gathered, read) : undefined;
   const names = attempt(() => Object.keys(error));
   const fields = (names === FAILED ? [] : names)
@@ -136,9 +139,4 @@ function stackWithoutSecrets(stack: string, headers: readonly string[]): string 
   /* Cut text loses the line break it starts with: it is put back. */
   const past = end < stack.length ? `\n${redactedText(stack.slice(end + 1))}` : "";
   return `${redactedText(header)}${stack.slice(header.length, end)}${past}`;
-}
-
-/* Not every runtime has AggregateError; one that has none throws none. */
-function isAggregate(error: Error): error is AggregateError {
-  return typeof AggregateError === "function" && error instanceof AggregateError;
 }

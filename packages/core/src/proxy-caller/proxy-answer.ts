@@ -11,6 +11,7 @@ import { isBodilessStatus } from "../http-client/response";
 import { isCancellation } from "../utils/abort";
 import type { Answer } from "../utils/answer";
 import { cancellation } from "../utils/cancellation";
+import { isError } from "../utils/is-error";
 import { isWireBody, readWireBody } from "../utils/wire-body";
 import { validationFailure } from "./validation-failure";
 
@@ -102,7 +103,7 @@ export async function readProxyAnswer(
 export function asProxyFailure(error: unknown, signal?: AbortSignal | null): unknown {
   if (error instanceof CourierError) return error;
   if (signal?.aborted || isCancellation(error)) return cancellation(signal, error);
-  if (!(error instanceof Error)) return error;
+  if (!isError(error)) return error;
   return new NetworkError({ cause: error });
 }
 

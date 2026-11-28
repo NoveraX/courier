@@ -6,6 +6,7 @@ import { checkResponse } from "../../realtime/check-response";
 import { isChannelSchema } from "../../realtime/is-channel-schema";
 import type { SSEEvent } from "../../realtime/types";
 import { resolveEndpoint } from "../../utils/execute-resolve";
+import { isError } from "../../utils/is-error";
 import { REQUEST_MEMBERS } from "../../utils/request-members";
 import { type SchemaMetadata, validateSchema } from "../../validation";
 
@@ -167,6 +168,6 @@ export function streamResolveError(
 
 /** Wrap a downstream error (factory/onJoin/onMessage) preserving the cause chain. */
 export function wrapStreamError(executorName: string, prefix: string, cause: unknown): Error {
-  const message = cause instanceof Error ? cause.message : String(cause);
+  const message = isError(cause) ? cause.message : String(cause);
   return new Error(`${executorName}: ${prefix} — ${message}`, { cause });
 }

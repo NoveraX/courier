@@ -9,6 +9,7 @@ import { answerCallerLeft, callerLeft } from "./caller-left";
 import { cancellation } from "./cancellation";
 import { buildResponse, type InternalResponse } from "./execute-response";
 import type { FailureReport } from "./execute-studio";
+import { isError } from "./is-error";
 
 const log = createLogger("Proxy");
 
@@ -50,7 +51,7 @@ function unansweredUpstream(error: NetworkError | TimeoutError): {
 
 /* What the platform said of the connection, or the error's own words where it said nothing. */
 function noAnswerReason(error: NetworkError): string {
-  return error.cause instanceof Error ? platformCause(error.cause).message : error.message;
+  return isError(error.cause) ? platformCause(error.cause).message : error.message;
 }
 
 /**
@@ -63,7 +64,7 @@ function serverFailure(
   error: unknown,
   context: Context | undefined,
 ): { status: number; headers: Headers; data: unknown } {
-  const message = error instanceof Error ? error.message : "[SERVER ERROR]";
+  const message = isError(error) ? error.message : "[SERVER ERROR]";
   const result = { status: 500, headers: new Headers() };
 
   /* A server that asked for a Response may hand it to a browser: the words stay, credentials go. */

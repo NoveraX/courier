@@ -2,6 +2,7 @@ import {
   addressedOrigin,
   cookieHeaderAfter,
   forwardedChain,
+  isError,
   type SetCookie,
 } from "@noverax/courier/internal";
 import {
@@ -10,7 +11,6 @@ import {
   type RelayedCookie,
   type RequestContextProvider,
 } from "@noverax/courier/server";
-
 import { type NextCookie, nextCookieOf } from "./next-cookie";
 
 const log = createLogger("Next");
@@ -130,8 +130,7 @@ async function headersOf(next: NextHeaders): Promise<Headers | undefined> {
     /* A build step, a script: no request is being served. Anything else —
        a static render turning dynamic, a prerender postponed — is Next.js
        steering the render, and goes on to it. */
-    if (error instanceof Error && error.message.includes("outside a request scope"))
-      return undefined;
+    if (isError(error) && error.message.includes("outside a request scope")) return undefined;
     throw error;
   }
 }
@@ -196,7 +195,7 @@ function setCookieIn(store: NextCookieStore, relayed: RelayedCookie): true | str
     store.set(cookie);
     return true;
   } catch (error) {
-    if (error instanceof Error && error.message.startsWith("Cookies can only be modified")) {
+    if (isError(error) && error.message.startsWith("Cookies can only be modified")) {
       return "Next.js lets a Server Action or a Route Handler set cookies, not a page while it renders";
     }
     throw error;

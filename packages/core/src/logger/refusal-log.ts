@@ -1,3 +1,4 @@
+import { isError, isErrorNamed } from "../utils/is-error";
 import { createLogger } from "./index";
 
 /** What tells one refusal apart: plain values, an absent one left out. */
@@ -151,7 +152,7 @@ function lineOf(head: string, cause: unknown, fields: RefusalFields | undefined)
    an object thrown in its place does not spill its fields into the log. */
 function reasonOf(cause: unknown): string {
   let said: string;
-  if (cause instanceof Error) {
+  if (isError(cause)) {
     const message = messageOf(cause);
     said = message === "" ? cause.name : `${cause.name}: ${message}`;
   } else if (typeof cause === "string") {
@@ -168,12 +169,10 @@ function reasonOf(cause: unknown): string {
    connect throws when every address of a host refused, says theirs, each once. */
 function messageOf(error: Error): string {
   const message = String(error.message);
-  if (message !== "" || !(error instanceof AggregateError) || !Array.isArray(error.errors)) {
+  if (message !== "" || !isErrorNamed(error, "AggregateError") || !Array.isArray(error.errors)) {
     return message;
   }
-  const gathered = error.errors.map((inner) =>
-    inner instanceof Error ? String(inner.message) : "",
-  );
+  const gathered = error.errors.map((inner) => (isError(inner) ? String(inner.message) : ""));
   return [...new Set(gathered.filter((said) => said !== ""))].join("; ");
 }
 

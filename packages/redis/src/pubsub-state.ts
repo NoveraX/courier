@@ -1,3 +1,4 @@
+import { isError } from "@noverax/courier/internal";
 import type { AdapterState } from "@noverax/courier/realtime";
 import type { Redis } from "ioredis";
 
@@ -51,7 +52,7 @@ export function trackPubSubState(
       try {
         listener(state);
       } catch (error) {
-        report(error instanceof Error ? error : new Error(String(error)));
+        report(isError(error) ? error : new Error(String(error)));
       }
     }
   }

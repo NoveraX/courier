@@ -8,6 +8,7 @@
  */
 
 import { ConfigurationError, type ConfigurationErrorCode } from "../errors";
+import { isError } from "../utils/is-error";
 import { wordsUpTo } from "../utils/words-up-to";
 import {
   RUNTIME_SETTING_LIMITS,
@@ -151,7 +152,7 @@ function isStringList(value: unknown): value is readonly string[] {
 /* What was thrown, in a line: an error by its name and the first line of its message, anything
    else as text. */
 function described(error: unknown): string {
-  const text = error instanceof Error ? `${error.name}: ${error.message}` : thrownText(error);
+  const text = isError(error) ? `${error.name}: ${error.message}` : thrownText(error);
   return quoted(text.split("\n", 1)[0] ?? "");
 }
 

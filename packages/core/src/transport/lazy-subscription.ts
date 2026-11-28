@@ -5,6 +5,7 @@ import { ConnectionError, RealtimeError } from "../realtime/realtime-error";
 import { retryOf, shareRetry } from "../realtime/retry-of";
 import type { Subscription, SubscriptionEvent, WSChannel } from "../realtime/subscription-types";
 import type { ConnectionStatus } from "../realtime/types";
+import { isError } from "../utils/is-error";
 
 const log = createLogger("Stream");
 const EVENTS: readonly string[] = ["data", "error", "status", "open", "close"];
@@ -98,7 +99,7 @@ function lazyOf<TClient>(
   };
   const fail = (error: unknown): void => {
     if (closed) return;
-    failure = error instanceof Error ? error : new ConnectionError(String(error));
+    failure = isError(error) ? error : new ConnectionError(String(error));
     end(failure instanceof RealtimeError ? failure : new ConnectionError(failure.message));
   };
   const loaded = loading.then(

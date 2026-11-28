@@ -15,6 +15,7 @@ import { chunkTimer, clientLeft } from "./adapter/read-chunk";
 import { LIMITS } from "./limits";
 import { nodeHeadersOf } from "./node-headers";
 import { bodyAlreadyRead, isBodySpent } from "./node-request";
+import { isErrorNamed } from "./utils/is-error";
 
 /* A whole body is decoded at a time, which leaves the decoder as it was: one serves every request. */
 const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: false });
@@ -138,7 +139,7 @@ function utf8Of(chunks: readonly Buffer[], size: number): string | undefined {
   try {
     return decoder.decode(bytes);
   } catch (error) {
-    if (error instanceof TypeError) return undefined;
+    if (isErrorNamed(error, "TypeError")) return undefined;
     throw error;
   }
 }

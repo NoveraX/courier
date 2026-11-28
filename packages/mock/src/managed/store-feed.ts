@@ -1,5 +1,5 @@
 import { performance } from "node:perf_hooks";
-
+import { isError } from "@noverax/courier/internal";
 import type { MockStore } from "../store";
 import {
   type CollectionReport,
@@ -87,7 +87,7 @@ export function createStoreFeed(store: MockStore): StoreFeed {
 
   /* A record that is no JSON fails every report until it changes: Studio is told once. */
   function warn(error: unknown): void {
-    const message = `The store's changes could not be sent to Studio: ${error instanceof Error ? error.message : String(error)}`;
+    const message = `The store's changes could not be sent to Studio: ${isError(error) ? error.message : String(error)}`;
     if (message !== failure) sendError(message, false);
     failure = message;
   }

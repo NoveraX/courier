@@ -1,7 +1,11 @@
-import { cookieHeaderAfter, parseSetCookie, type SetCookie } from "@noverax/courier/internal";
+import {
+  cookieHeaderAfter,
+  isError,
+  parseSetCookie,
+  type SetCookie,
+} from "@noverax/courier/internal";
 import { webIncomingRequest, withIncomingRequest } from "@noverax/courier/node";
 import type { IncomingRequest, RelayedCookie } from "@noverax/courier/server";
-
 import { astroClientAddress } from "./client-address";
 
 /** A cookie's options, as Astro's `cookies.set()` takes them. */
@@ -100,10 +104,7 @@ function setCookieIn(context: AstroRequestContext, { cookie }: RelayedCookie): t
     context.cookies.set(cookie.name, cookie.value, optionsOf(cookie));
     return true;
   } catch (error) {
-    if (
-      error instanceof Error &&
-      /already been sent|ResponseSent/i.test(`${error.name} ${error.message}`)
-    )
+    if (isError(error) && /already been sent|ResponseSent/i.test(`${error.name} ${error.message}`))
       return "the response had already been sent";
     throw error;
   }

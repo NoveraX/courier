@@ -8,6 +8,7 @@
  */
 
 import { HTTPError } from "@noverax/courier";
+import { isError } from "@noverax/courier/internal";
 import type { Context as HonoContext } from "hono";
 import { isRecord } from "../is-record";
 import type { ResolvedHandler } from "../types";
@@ -77,7 +78,7 @@ export function handlerFailure(err: unknown): HandlerFailure {
   if (isMockHttpError(err)) {
     return { status: err.status, body: { error: err.message }, message: err.message };
   }
-  const message = err instanceof Error ? err.message : String(err);
+  const message = isError(err) ? err.message : String(err);
   return { status: 500, body: { error: message }, message };
 }
 

@@ -1,5 +1,6 @@
 import { LIMITS } from "../limits";
 import { createLogger } from "../logger";
+import { isError } from "../utils/is-error";
 import { CLIENT_LIMITS } from "./client-limits";
 import { ConnectionError, RealtimeError } from "./errors";
 import { createWSConnection } from "./ws/ws-connection";
@@ -136,7 +137,7 @@ export async function leaseWhenFound(
   } catch (error) {
     log.warn("A socket could not be opened", error);
     if (error instanceof RealtimeError) return error;
-    const reason = error instanceof Error ? error.message : String(error);
+    const reason = isError(error) ? error.message : String(error);
     return new ConnectionError(`The socket could not be opened: ${reason}`);
   } finally {
     clearTimeout(deadline);

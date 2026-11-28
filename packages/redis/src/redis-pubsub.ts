@@ -1,7 +1,6 @@
-import { createRefusalLog } from "@noverax/courier/internal";
+import { createRefusalLog, isError } from "@noverax/courier/internal";
 import type { AdapterState, PubSubAdapter, PubSubEnvelope } from "@noverax/courier/realtime";
 import { createLogger } from "@noverax/courier/server";
-
 import { CONNECT_TIMEOUT_MS, DISCONNECT_TIMEOUT_MS } from "./adapter-deadlines";
 import { createOutboundQueue, outboundLimits } from "./outbound-queue";
 import { trackPubSubState } from "./pubsub-state";
@@ -103,7 +102,7 @@ export function createRedisPubSub(config: RedisPubSubConfig): PubSubAdapter {
       try {
         handler(envelope.payload, envelope.logged);
       } catch (error) {
-        report(error instanceof Error ? error : new Error(String(error)));
+        report(isError(error) ? error : new Error(String(error)));
       }
     }
   };

@@ -50,6 +50,7 @@ import { ConfigurationError } from "./errors";
 import type { ResolveOrigin } from "./proxy-caller";
 import { isDevelopment } from "./utils/development";
 import { environmentVariable } from "./utils/environment";
+import { isError } from "./utils/is-error";
 
 const APP_ORIGIN_KEY = Symbol.for("courier.app-origin");
 const g = globalThis as Record<symbol, unknown>;
@@ -166,7 +167,7 @@ export function getAppOriginParsed(): ResolveOrigin {
     if (err instanceof ConfigurationError) throw err;
     throw new ConfigurationError(
       "APP_ORIGIN_NOT_CONFIGURED",
-      `[courier] appOrigin="${raw}" is not a valid URL: ${err instanceof Error ? err.message : String(err)}`,
+      `[courier] appOrigin="${raw}" is not a valid URL: ${isError(err) ? err.message : String(err)}`,
     );
   }
 }

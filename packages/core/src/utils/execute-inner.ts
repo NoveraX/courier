@@ -9,6 +9,7 @@ import type { SchemaMetadata } from "../validation";
 import type { TimingState } from "./execute-studio";
 import { validateResponse } from "./execute-validation";
 import { isHeaders, isReadingMethod } from "./helpers";
+import { isError } from "./is-error";
 import type { SharingCall } from "./shared-answer";
 
 export type InnerExecuteDeps = {
@@ -71,7 +72,7 @@ export async function executeInner(deps: InnerExecuteDeps): Promise<InnerResult>
       deps.timing.tFetch = performance.now() - ft0;
       deps.dt.onHttpFetchError?.({
         requestId: deps.requestId,
-        message: fetchError instanceof Error ? fetchError.message : String(fetchError),
+        message: isError(fetchError) ? fetchError.message : String(fetchError),
         ...(isHTTPError(fetchError) && { status: fetchError.status }),
         timestamp: Date.now(),
       });

@@ -1,5 +1,5 @@
+import { isError } from "@noverax/courier/internal";
 import type { Context as HonoContext } from "hono";
-
 import { sleep } from "../backend/resolve-delay";
 import { resolveDelay } from "../network/latency";
 import type { NetworkConfig } from "../types";
@@ -77,7 +77,7 @@ async function send(
     got = await answer();
   } catch (error) {
     const name = group ? `${group}.${method}` : method;
-    const why = error instanceof Error ? error.message : String(error);
+    const why = isError(error) ? error.message : String(error);
     const message = `The mock passes ${name} to its source's server, which could not be reached: ${why}`;
     pushHistory(config, {
       group,

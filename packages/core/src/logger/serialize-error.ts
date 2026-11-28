@@ -1,3 +1,5 @@
+import { isError, isErrorNamed } from "../utils/is-error";
+
 /** A thrown value as a JSON log line carries it. */
 export type SerializedCause = string | number | boolean | SerializedError | Record<string, unknown>;
 
@@ -55,7 +57,7 @@ export function serializeError(
   cause: unknown,
   seen: ReadonlySet<Error> = new Set(),
 ): SerializedCause {
-  if (!(cause instanceof Error)) return otherValue(cause);
+  if (!isError(cause)) return otherValue(cause);
   if (seen.has(cause) || seen.size >= MAX_DEPTH) return `${cause.name}: ${cause.message}`;
   const below = new Set(seen).add(cause);
   const record: SerializedError = { name: cause.name, message: cause.message };
@@ -66,7 +68,7 @@ export function serializeError(
   }
   if (cause.stack !== undefined) record.stack = cause.stack;
   if (cause.cause !== undefined) record.cause = serializeError(cause.cause, below);
-  if (cause instanceof AggregateError) {
+  if (isErrorNamed(cause, "AggregateError")) {
     record.errors = cause.errors.map((error: unknown) => serializeError(error, below));
   }
   return record;

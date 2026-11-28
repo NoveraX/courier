@@ -147,7 +147,7 @@ describe("a call", () => {
     const signal = new AbortController().signal;
 
     const error = await api()
-      .busy.with({ signal, retry: false })()
+      .busy.with({ signal })()
       .catch((caught: unknown) => caught);
 
     expect(isHTTPError(error)).toBe(true);

@@ -3,6 +3,7 @@
  * Handles communication with the Studio parent process.
  */
 
+import { isError } from "@noverax/courier/internal";
 import type { ChildMessage } from "./types";
 
 let queued: Record<string, unknown>[] = [];
@@ -69,7 +70,7 @@ function sendOneByOne(events: readonly Record<string, unknown>[]): void {
     try {
       process.send?.({ type: "events", events: [event] } satisfies ChildMessage);
     } catch (error) {
-      const why = error instanceof Error ? error.message : String(error);
+      const why = isError(error) ? error.message : String(error);
       process.send?.({
         type: "error",
         message: `A ${String(event.type)} event could not be sent to Studio: ${why}`,

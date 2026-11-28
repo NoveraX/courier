@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { isError } from "@noverax/courier/internal";
 import type { RateLimitDecision, RateLimitStore, RateLimitWindow } from "@noverax/courier/server";
 import type { RedisRateLimitConfig } from "./types";
 
@@ -53,7 +54,7 @@ export function createRedisRateLimitStore({
       const interval = limit.window / limit.requests;
       const args = [`${prefix}${key}`, String(interval), String(limit.window)] as const;
       const reply = await redis.evalsha(TAKE_SHA, 1, ...args).catch((error: unknown) => {
-        if (!(error instanceof Error) || !error.message.startsWith("NOSCRIPT")) throw error;
+        if (!isError(error) || !error.message.startsWith("NOSCRIPT")) throw error;
         return redis.eval(TAKE, 1, ...args);
       });
       return decisionOf(reply, limit, interval);

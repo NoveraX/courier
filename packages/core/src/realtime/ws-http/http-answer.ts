@@ -1,3 +1,4 @@
+import { passedStream } from "../../utils/passed-stream";
 import { parseSSEFrames } from "../sse/parse-sse";
 import { isCode, isCount, isString } from "../ws/frame-fields";
 import { HTTP_EVENTS, type HTTPOpening } from "../ws/http-protocol";
@@ -37,13 +38,14 @@ export interface AnswerParts {
  * such an answer when the holder refused the stream or did not answer, is
  * handed on as the answer it stands for, its status, body and wait.
  *
- * The body is read through a pipe the attempt's abort cuts, so an answer
- * given up ends at once, whatever `fetch` made it; the pipe counts its
- * bytes as they come, as the server counts what it keeps. An answer handed
- * over whole is its text, all of its bytes counted at once. However the
- * read ends — with the answer, with the connection's close, or at an event
- * it cannot take — what is left of the answer is let go of, rather than
- * held open on the way and at the server. A frame may run to
+ * The body is read with its own reader, as a stream the attempt's abort
+ * cuts, so an answer given up ends at once, whatever `fetch` made it and
+ * whatever implementation of web streams the global classes are; its bytes
+ * are counted as they come, as the server counts what it keeps. An answer
+ * handed over whole is its text, all of its bytes counted at once. However
+ * the read ends — with the answer, with the connection's close, or at an
+ * event it cannot take — what is left of the answer is let go of, rather
+ * than held open on the way and at the server. A frame may run to
  * `HTTP_MAX_EVENT_LENGTH`, as long as a socket's message.
  *
  * @param answer - The answer's body, or its text where it was handed over whole
@@ -65,19 +67,17 @@ export async function readAnswer(
     if (answer !== "") parts.received(ENCODER.encode(answer).byteLength);
     return readEvents(answer, parts);
   }
-  const pipe = new TransformStream<Uint8Array, Uint8Array>({
-    transform(chunk, controller) {
-      if (chunk.byteLength === 0) return;
-      parts.received(chunk.byteLength);
-      controller.enqueue(chunk);
+  const passed = passedStream(answer, {
+    took: (chunk) => {
+      if (chunk.byteLength > 0) parts.received(chunk.byteLength);
     },
+    signal,
   });
-  answer.pipeTo(pipe.writable, { signal }).catch(() => undefined);
   try {
-    await readEvents(pipe.readable, parts);
+    await readEvents(passed, parts);
   } finally {
-    /* The pipe's last write waits for a read that will not come, so the attempt's abort alone would not let the body go. */
-    pipe.readable.cancel().catch(() => undefined);
+    /* Read to an event it ends at, the rest of the answer is let go of. */
+    passed.cancel().catch(() => undefined);
   }
 }
 

@@ -12,24 +12,25 @@
 
 import type { DownloadProgress } from "../http-client/types";
 import { type CallProgress, heard } from "./call-progress";
+import { passedStream } from "./passed-stream";
 import type { BodyCounter } from "./read-body";
 
 /**
- * The counter of a call's download: for each answer, a stream that reports
- * its body as it passes through, chunk by chunk. The answer is the
- * platform's own still: the body is piped through this as it is read.
+ * The counter of a call's download: each answer's body passed on as a
+ * stream of the global class, which reports it chunk by chunk as its reader
+ * reads it — Courier's, or the reader of a call that reads it itself.
  *
  * The total is the length the answer declares — see `declaredLength` — and
  * when it has none, the end is reported once it arrives. What `given`
- * throws ends the stream, and is kept on the call's progress when that is
+ * throws fails the read, and is kept on the call's progress when that is
  * given.
  *
- * @param given - Called with each chunk that passes
+ * @param given - Called with each chunk that is read
  * @param kept - The call's progress, which keeps what `given` throws
- * @returns What makes, of an answer's headers, the stream its body is piped through
+ * @returns What counts each answer's body
  * @example
  * ```ts
- * const counted = response.body.pipeThrough(downloadCounter(onProgress)(response.headers));
+ * const counted = downloadCounter(onProgress)(response.body, response.headers);
  * ```
  */
 export function downloadCounter(
@@ -37,27 +38,25 @@ export function downloadCounter(
   kept?: CallProgress,
 ): BodyCounter {
   const onProgress = kept ? heard(kept, given) : given;
-  return (headers) => {
+  return (body, headers) => {
     const total = declaredLength(headers);
     let received = 0;
-    return new TransformStream<Uint8Array, Uint8Array>({
-      __proto__: null,
-      transform(chunk, controller) {
+    return passedStream(body, {
+      took(chunk) {
         received += chunk.byteLength;
         onProgress({
           percent: total > 0 ? received / total : 0,
           transferredBytes: received,
           totalBytes: total,
         });
-        controller.enqueue(chunk);
       },
       /* Without a declared length every event said 0%, the last one too, so a
          progress bar never finished; the end is reported once it arrives. */
-      flush() {
+      ended() {
         if (total > 0) return;
         onProgress({ percent: 1, transferredBytes: received, totalBytes: received });
       },
-    } as Transformer<Uint8Array, Uint8Array>);
+    });
   };
 }
 

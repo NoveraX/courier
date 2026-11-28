@@ -17,6 +17,7 @@
  */
 
 import { ConfigurationError } from "../errors/configuration-error";
+import { ownedBytes } from "./owned-bytes";
 
 /** Where a file sits in a record a form carries: its field, and its item in a list there. */
 export type FilePlace = readonly [field: string] | readonly [field: string, item: number];
@@ -61,7 +62,8 @@ export function isFile(value: unknown): value is Blob | ArrayBuffer | ArrayBuffe
 /* A file as the form takes it: a Blob as it is, bytes as a Blob of their own. */
 function blobOf(value: unknown): Blob | undefined {
   if (isBlob(value)) return value;
-  return isBytes(value) ? new Blob([ownBytes(value)]) : undefined;
+  if (!isBytes(value)) return undefined;
+  return new Blob([ArrayBuffer.isView(value) ? ownedBytes(value) : value]);
 }
 
 /* Why a stream is refused anywhere but as the whole body. */
@@ -231,17 +233,6 @@ export function fieldText(
   const json = JSON.stringify({ [key]: value }).slice(JSON.stringify(key).length + 2, -1);
   if (json === "" || json === "null") return undefined;
   return json[0] === '"' ? String(JSON.parse(json)) : json;
-}
-
-/* Bytes as a Blob takes them: a view over shared memory is copied out, any other kept. */
-function ownBytes(value: ArrayBuffer | ArrayBufferView): ArrayBuffer | Uint8Array<ArrayBuffer> {
-  if (value instanceof ArrayBuffer) return value;
-  const view = new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
-  return isOwned(view) ? view : view.slice();
-}
-
-function isOwned(view: Uint8Array): view is Uint8Array<ArrayBuffer> {
-  return view.buffer instanceof ArrayBuffer;
 }
 
 /**

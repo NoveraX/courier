@@ -23,7 +23,8 @@ export interface Answer {
   read<F extends BodyForm>(form: F): Promise<BodyForms[F]>;
   /**
    * The body as it arrives, for a call that reads it itself, in place of
-   * `read`: counted as it is read when the call reports its download.
+   * `read`: counted as it is read when the call reports its download, a
+   * stream of the global class then, read with the body's own reader.
    * `null` for an answer that has none. Throws a `ConfigurationError`
    * `RESPONSE_STREAM_UNAVAILABLE` for one handed over whole, by a fetch
    * that sends with React Native's own.
@@ -42,7 +43,8 @@ export interface AnswerReading {
 }
 
 /**
- * An answer of the platform's, read through Courier's reader.
+ * An answer of the platform's, read through Courier's reader: a read that
+ * fails fails as `failed` makes of it, as the request's own failure does.
  *
  * @param response - The answer, its body unread
  * @param reading - The signal its reads give up with, what counts them, and how a failed one is thrown
@@ -66,7 +68,7 @@ export function platformAnswer(response: Response, reading: AnswerReading = {}):
       /* The polyfill's answer has no `body` at all; a status that has no body, a null one. */
       const body: ReadableStream<Uint8Array> | null | undefined = response.body;
       if (body == null) return null;
-      return counter ? body.pipeThrough(counter(response.headers)) : body;
+      return counter ? counter(body, response.headers) : body;
     },
   };
 }

@@ -28,12 +28,15 @@ describe("whether the platform makes a Response of a stream", () => {
     expect(responseTakesStreams()).toBe(false);
   });
 
-  it.each(["ReadableStream", "TransformStream"])(
-    "is not so where the platform has no %s",
-    (name) => {
-      vi.stubGlobal(name, undefined);
+  it("is not so where the platform has no ReadableStream", () => {
+    vi.stubGlobal("ReadableStream", undefined);
 
-      expect(responseTakesStreams()).toBe(false);
-    },
-  );
+    expect(responseTakesStreams()).toBe(false);
+  });
+
+  it("is so without TransformStream, which no body is passed through", () => {
+    vi.stubGlobal("TransformStream", undefined);
+
+    expect(responseTakesStreams()).toBe(true);
+  });
 });

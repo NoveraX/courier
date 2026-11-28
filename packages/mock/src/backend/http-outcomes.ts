@@ -1,5 +1,5 @@
 import { HTTPError } from "@noverax/courier";
-
+import { isError } from "@noverax/courier/internal";
 import { createFaultError } from "../network/failure";
 import { isMockHttpError } from "../server/errors";
 import type { MockHistoryEntry } from "../types";
@@ -150,6 +150,6 @@ export function thrownByHandler(call: HttpCall, thrown: unknown): unknown {
         data: { error: thrown.message },
       })
     : thrown;
-  if (error instanceof Error) recordOutcome(call, { mocked: true, error });
+  if (isError(error)) recordOutcome(call, { mocked: true, error });
   return error;
 }

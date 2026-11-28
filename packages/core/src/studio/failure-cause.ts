@@ -2,6 +2,7 @@ import { isRequestFailure, NetworkError, TimeoutError } from "../errors";
 import { CourierError } from "../errors/courier-error";
 import { isNetworkFailure } from "../errors/network-failure";
 import { causeOf, platformCause } from "../http-client/transport-failure";
+import { isError } from "../utils/is-error";
 
 /* Deeper than any chain a program builds on purpose; a deeper one is cut, as the log cuts it. */
 const DEEPEST = 16;
@@ -38,7 +39,7 @@ export interface FailureCause {
  */
 export function failureCause(error: unknown): FailureCause | undefined {
   if (error instanceof NetworkError || error instanceof TimeoutError) return unanswered(error);
-  if (!(error instanceof Error) || error instanceof CourierError) return undefined;
+  if (!isError(error) || error instanceof CourierError) return undefined;
   const coded = codedCause(error);
   if (coded instanceof NetworkError || coded instanceof TimeoutError) return unanswered(coded);
   return coded === undefined || coded instanceof CourierError ? undefined : causeOf(coded);
@@ -48,7 +49,7 @@ export function failureCause(error: unknown): FailureCause | undefined {
    that ran out by Courier's `TIMEOUT`. */
 function unanswered(error: NetworkError | TimeoutError): FailureCause {
   if (error instanceof TimeoutError) return { code: "TIMEOUT", message: error.message };
-  const said = error.cause instanceof Error ? platformCause(error.cause) : undefined;
+  const said = isError(error.cause) ? platformCause(error.cause) : undefined;
   return said && said.message.trim() !== "" ? said : { ...said, message: error.message };
 }
 
@@ -65,8 +66,8 @@ function unanswered(error: NetworkError | TimeoutError): FailureCause {
 function codedCause(error: Error): Error | undefined {
   const seen = new Set<Error>();
   let found: Error | undefined;
-  let link: unknown = error.cause instanceof Error ? error.cause : error;
-  while (link instanceof Error && !seen.has(link) && seen.size < DEEPEST) {
+  let link: unknown = isError(error.cause) ? error.cause : error;
+  while (isError(link) && !seen.has(link) && seen.size < DEEPEST) {
     if (link instanceof CourierError) return isRequestFailure(link) ? link : found;
     const says = seen.size === 0 ? systemCode(link) : isNetworkFailure(link);
     seen.add(link);

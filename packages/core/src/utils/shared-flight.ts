@@ -1,5 +1,5 @@
 import { cancellation } from "./cancellation";
-import { ONCE } from "./own";
+import { ONCE } from "./own-options";
 import type { SharingCall } from "./shared-answer";
 
 /** One request in flight, and the calls waiting for its answer, first to wait first. */

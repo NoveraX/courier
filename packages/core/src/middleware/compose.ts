@@ -1,4 +1,5 @@
 import { studioHooksHere } from "../capabilities/studio-hooks";
+import { isError } from "../utils/is-error";
 import { runAfter, runBefore, runWrap } from "./phase-runners";
 import { emitExit, propagateInner } from "./studio-tracking";
 import type { Middleware, MiddlewareContext, MiddlewareResponse, NextFn } from "./types";
@@ -82,7 +83,7 @@ export function composeMiddleware(
             name: mw.name,
             index: i,
             phase: mw.phase,
-            error: error instanceof Error ? error.message : String(error),
+            error: isError(error) ? error.message : String(error),
             timestamp: Date.now(),
           });
           throw error;

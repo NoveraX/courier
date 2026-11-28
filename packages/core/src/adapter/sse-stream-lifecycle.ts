@@ -2,7 +2,7 @@ import { createLogger } from "../logger";
 import type { StreamFailure } from "../realtime/describe-failure";
 import { SSE_CONTROL_EVENTS } from "../realtime/sse/control-events";
 import type { StudioHooks } from "../studio/hooks";
-import { ONCE } from "../utils/own";
+import { ONCE } from "../utils/own-options";
 import type { SSESender } from "./sse-sender";
 import type { SSECloseReason, SSEStreamOptions } from "./sse-types";
 

@@ -1,4 +1,5 @@
 import { defineOwn } from "../define-own";
+import { isError } from "../is-error";
 import { CUT, REDACT_BOUNDS } from "./bounds";
 import { cutSecrets } from "./cut-text";
 import { headersWithoutSecrets } from "./headers";
@@ -45,7 +46,7 @@ function readValue(value: unknown, depth: number, above: ReadonlySet<object>): u
     field === undefined
       ? redactedValue(part, depth + 1, below)
       : redactedEntry(field, part, depth, below);
-  if (value instanceof Error) return redactedError(value, read);
+  if (isError(value)) return redactedError(value, read);
   if (Array.isArray(value)) return readEach(value, (item) => read(item));
   if (isPlainRecord(value)) return redactedRecord(value, read);
   return Object.prototype.toString.call(value);

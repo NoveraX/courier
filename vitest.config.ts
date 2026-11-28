@@ -10,6 +10,8 @@ export default defineConfig({
   test: {
     projects: [
       "packages/*",
+      "packages/core/vitest.vm-context.config.ts",
+      "packages/mock/vitest.vm-context.config.ts",
       "packages/studio/ui",
       "docs",
       { test: { name: "scripts", include: ["scripts/**/*.test.mjs"] } },

@@ -1,4 +1,4 @@
-import { ONCE } from "../../utils/own";
+import { ONCE } from "../../utils/own-options";
 import type { SSEConnectionCtx } from "./sse-connection";
 
 /**

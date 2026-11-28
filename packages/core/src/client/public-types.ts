@@ -7,6 +7,7 @@
 export type { AgentOffer, AgentPolicy } from "../agent/agent-policy";
 export type { AgentAccess, AgentCall, AgentClient, AgentLimit, AgentOptions } from "../agent/types";
 export type { CallerDefaults } from "../caller";
+export type { CacheConfig, Transport } from "../define/endpoint-schema";
 export type { RetryEvent, RetryOptions, RetryTrigger } from "../define/options";
 export type {
   AbortErrorCode,
@@ -63,7 +64,7 @@ export type {
 } from "../session/types";
 export type { SmoothProgressOptions } from "../utils/smooth-progress";
 export type { StreamedUpload } from "../utils/streamed-upload";
-export type { CacheConfig, Transport, ValidationIssue } from "../validation";
+export type { ValidationIssue } from "../validation";
 export type {
   CallResult,
   FlatClient,

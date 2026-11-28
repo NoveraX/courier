@@ -1,4 +1,4 @@
-import { getSourceName } from "../../define/api";
+import { getSourceName } from "../../define/source-name";
 import type { BaseOptions, Context } from "../../http-client/types";
 import { type CallSession, sameRequestContext, sessionFor } from "../../session/call-session";
 import { sessionTargetOf } from "../../session/session-target";

@@ -5,7 +5,7 @@ import type * as RetryPolicies from "../middleware/retry-policies";
 import type { Middleware } from "../middleware/types";
 import { anySignal } from "./any-signal";
 import { failedLoad } from "./failed-load";
-import { ownField } from "./own";
+import { ownField } from "./own-field";
 
 /* The policies' code, loaded with the first call whose endpoint has one. */
 let retryPolicies: Promise<typeof RetryPolicies> | undefined;

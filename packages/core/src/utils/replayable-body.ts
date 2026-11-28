@@ -1,3 +1,5 @@
+import { isReadableStream } from "./is-readable-stream";
+
 /**
  * Whether a call's variables can be sent again as the request they make:
  * JSON values, a `FormData` — its files in memory or on disk —, a `Blob`,
@@ -15,5 +17,5 @@
  * ```
  */
 export function isReplayableBody(variables: unknown): boolean {
-  return typeof ReadableStream === "undefined" || !(variables instanceof ReadableStream);
+  return !isReadableStream(variables);
 }

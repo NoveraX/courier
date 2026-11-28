@@ -1,9 +1,9 @@
+import type { SchemaMetadata } from "../define/endpoint-schema";
 import { HTTPError } from "../errors";
 import type { Context } from "../http-client/types";
 import { composeMiddleware } from "../middleware/index";
 import type { Middleware, MiddlewareContext } from "../middleware/types";
 import type { CallSession } from "../session/call-session";
-import type { SchemaMetadata } from "../validation";
 import { keepAnswerCookies } from "./answer-cookies";
 import { anySignal } from "./any-signal";
 import { applyCacheHeaders } from "./cache-headers";
@@ -12,7 +12,7 @@ import { executeInner, type InnerExecuteDeps } from "./execute-inner";
 import { buildResponse } from "./execute-response";
 import type { StudioContext, TimingState } from "./execute-studio";
 import { validateVariables } from "./execute-validation";
-import { ownField } from "./own";
+import { ownField } from "./own-field";
 
 /** A call ready to run: its endpoint, its middleware and how to answer it. */
 export interface PreparedCall {

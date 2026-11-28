@@ -15,7 +15,8 @@ import { applyCallSession, startCallSession } from "./execute-session";
 import { callInstruments, type StudioContext, type TimingState } from "./execute-studio";
 import type { CallTarget } from "./execute-target";
 import { idempotencyHeader } from "./idempotency-header";
-import { ownField, ownFields } from "./own";
+import { ownFields } from "./own";
+import { ownField } from "./own-field";
 import { settleCallSession } from "./settle-call-session";
 
 /* The endpoint's own options — timeout, middleware, retry — are applied

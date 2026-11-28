@@ -1,5 +1,5 @@
 import type { UploadProgress } from "../http-client/types";
-import { UNQUEUED } from "./own";
+import { UNQUEUED } from "./own-options";
 
 /** Bytes handed to the network at a time. */
 const CHUNK_BYTES = 64 * 1024;

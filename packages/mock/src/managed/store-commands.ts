@@ -2,6 +2,7 @@
  * Handle store-related commands from the Studio parent process.
  */
 
+import { isError } from "@noverax/courier/internal";
 import { seedAllCollections } from "../auto/auto-seed";
 import type { MockServer } from "../server/mock-server-types";
 import { CommandInputError, countIn, idIn, nameIn, objectIn } from "./command-input";
@@ -58,7 +59,7 @@ export function handleStoreCommand(served: ServedMock, cmd: Record<string, unkno
         return { ok: false, error: `Unknown command: ${String(cmd.action)}` };
     }
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    return { ok: false, error: isError(err) ? err.message : String(err) };
   }
 }
 

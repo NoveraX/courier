@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import type { SchemaMetadata } from "../src/define/endpoint-schema";
 import { applyCacheHeaders } from "../src/utils/cache-headers";
-import type { SchemaMetadata } from "../src/validation";
 
 const cached: SchemaMetadata = { type: "query", cache: { revalidate: 60 } };
 

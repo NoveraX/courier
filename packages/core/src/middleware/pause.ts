@@ -1,5 +1,5 @@
 import { cancellation } from "../utils/cancellation";
-import { ONCE } from "../utils/own";
+import { ONCE } from "../utils/own-options";
 
 /**
  * Wait, unless the caller stops waiting first.

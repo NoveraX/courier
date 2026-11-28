@@ -6,6 +6,7 @@
  * (track, update, list, sweep, etc.).
  */
 
+import { isError } from "@noverax/courier/internal";
 import type { PresenceDiff } from "@noverax/courier/realtime";
 import type { Redis } from "ioredis";
 
@@ -26,7 +27,7 @@ export interface PresenceContext {
 
 /** Convert any thrown value to a real `Error` instance */
 export function toError(value: unknown): Error {
-  return value instanceof Error ? value : new Error(String(value));
+  return isError(value) ? value : new Error(String(value));
 }
 
 /** Build the per-instance error emitter — invokes every registered handler */

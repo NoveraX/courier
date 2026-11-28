@@ -47,26 +47,11 @@ function isDispatcher(value: unknown): boolean {
   );
 }
 
-/**
- * The error for a `fetch` or a `webSocket` that is not a function. It sits
- * beside the check a definition makes, apart from the `fetch` Courier
- * sends with in `source-transport.ts`: Next.js keeps in a module every
- * export any page of an app uses, and a page of definitions alone sends
- * nothing.
- *
- * @param option - Which of the two
- * @param value - What was given
- * @param owner - Whose it is: the source's, a group's or a call's
- * @returns The error
- * @example
- * ```ts
- * if (typeof own !== "function") throw notAFunction("webSocket", own, "group");
- * ```
- */
-export function notAFunction(
+/* The error for a `fetch` or a `webSocket` that is not a function, naming whose it is. */
+function notAFunction(
   option: "fetch" | "webSocket",
   value: unknown,
-  owner: "source" | "group" | "call" = "source",
+  owner: TransportOwner,
 ): ConfigurationError {
   return new ConfigurationError(
     "SOURCE_TRANSPORT_INVALID",

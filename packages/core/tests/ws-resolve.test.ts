@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import type { WSSocketContext } from "../src/adapter/ws-context";
 import { parseTopic, resolveSubscribeTopic } from "../src/adapter/ws-resolve";
+import { ENDPOINT_SCHEMA } from "../src/define/endpoint-schema";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
-import { ENDPOINT_SCHEMA } from "../src/validation";
 
 // ---------------------------------------------------------------------------
 // Helpers

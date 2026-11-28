@@ -9,8 +9,8 @@ import type {
   EndpointRecord,
   GroupRecord,
 } from "../define";
-import { getSourceName } from "../define/api";
-import { ownField } from "../utils/own";
+import { getSourceName } from "../define/source-name";
+import { ownField } from "../utils/own-field";
 import { serverCallContext } from "../utils/server-call-marks";
 import { heldOptionsOf } from "./assert-server-options";
 import { provideServerCapabilities } from "./provide-server-capabilities";

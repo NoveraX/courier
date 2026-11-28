@@ -21,7 +21,8 @@ import { resolveMiddlewareChain } from "./execute-options";
 import { namedHeadersOf, resolveEndpoint } from "./execute-resolve";
 import { applyCallSession } from "./execute-session";
 import { forwardedFor } from "./forwarded-for";
-import { ownField, ownFields } from "./own";
+import { ownFields } from "./own";
+import { ownField } from "./own-field";
 
 export interface TransportMiddlewareInput {
   /** Which transport is asking, so the context reports it accurately. */

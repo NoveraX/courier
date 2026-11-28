@@ -1,5 +1,6 @@
 import { studioCapability } from "../../capabilities/registry";
 import type { StreamStatusEvent } from "../../studio/hooks-stream";
+import { isError } from "../../utils/is-error";
 import { byteLength, safeStringify, truncatePreview } from "./message-preview";
 import { streamStatusEvent } from "./stream-status";
 import type { Reconnect } from "./watch-connection";
@@ -161,7 +162,7 @@ export function beginStream(
     },
     emitError(error) {
       if (closed) return;
-      const message = error instanceof Error ? error.message : String(error);
+      const message = isError(error) ? error.message : String(error);
       hooks.onStreamError?.({ requestId, error: message, timestamp: Date.now() });
       closed = true;
       hooks.onStreamClose?.({

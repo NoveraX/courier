@@ -1,4 +1,4 @@
-import { forwardedChain } from "@noverax/courier/internal";
+import { forwardedChain, isError } from "@noverax/courier/internal";
 import type { IncomingRequest, RequestContextProvider } from "@noverax/courier/server";
 
 /** The parts of SolidStart's request event the session reads. */
@@ -90,7 +90,7 @@ function setCookieOn(event: SolidStartServerEvent, header: string): true | strin
     event.response.headers.append("set-cookie", header);
   } catch (error) {
     /* SolidStart 1 writes to Node's response, which refuses once its headers are out. */
-    if (error instanceof Error && Reflect.get(error, "code") === "ERR_HTTP_HEADERS_SENT") {
+    if (isError(error) && Reflect.get(error, "code") === "ERR_HTTP_HEADERS_SENT") {
       return HANDED_BACK;
     }
     throw error;

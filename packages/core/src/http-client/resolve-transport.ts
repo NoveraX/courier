@@ -1,4 +1,4 @@
-import { ownField } from "../utils/own";
+import { ownField } from "../utils/own-field";
 import { assertTransportOptions } from "./assert-transport-options";
 import {
   type PlatformFetch,

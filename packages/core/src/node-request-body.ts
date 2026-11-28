@@ -1,5 +1,5 @@
 import type { IncomingMessage } from "node:http";
-import { UNQUEUED } from "./utils/own";
+import { UNQUEUED } from "./utils/own-options";
 
 /**
  * The body of a Node request as a Web stream that reads only on demand.

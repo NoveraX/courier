@@ -4,6 +4,7 @@ import { isCancellation } from "../utils/abort";
 import { callerLeft } from "../utils/caller-left";
 import type { FailureReport, TimingState } from "../utils/execute-studio";
 import { estimateResponseSize, headersToObject } from "../utils/helpers";
+import { isError } from "../utils/is-error";
 import { ValidationError } from "../validation";
 import { proxyTimingOf } from "./call-report";
 import { failureCause } from "./failure-cause";
@@ -73,7 +74,7 @@ export function reportRequestError(
     error: {
       type: failureKind(error, report.signal, report.context),
       status: answered?.status,
-      message: error instanceof Error ? error.message : String(error),
+      message: isError(error) ? error.message : String(error),
       ...(cause && { cause }),
     },
     ...(status !== undefined && { status }),

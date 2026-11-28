@@ -1,8 +1,7 @@
 import { logger } from "@noverax/courier";
-import { describeFailure, SSE_CONTROL_EVENTS } from "@noverax/courier/internal";
+import { describeFailure, isError, SSE_CONTROL_EVENTS } from "@noverax/courier/internal";
 import type { SSEEvent } from "@noverax/courier/realtime";
 import type { Context as HonoContext } from "hono";
-
 import type { MockRequestContext, ResolvedHandler } from "../types";
 
 const ENCODER = new TextEncoder();
@@ -90,7 +89,7 @@ async function pumpEvents(
   } catch (error) {
     logger.warn("MockSSE", "Stream handler failed", error);
     // The client reads the safe description; the mock's own log names the cause
-    outcome.error = error instanceof Error ? error.message : String(error);
+    outcome.error = isError(error) ? error.message : String(error);
     end = `event: ${SSE_CONTROL_EVENTS.error}\ndata: ${JSON.stringify(describeFailure(error, "Stream failed"))}\n\n`;
   }
   if (signal.aborted) {

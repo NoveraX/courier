@@ -79,8 +79,15 @@ Seven of them are easy to skip by accident and worth understanding:
   `__filename`, `setImmediate`, `clearImmediate`, or `process` past
   `process.env` — even to check for it, which Parcel takes for a use and
   answers with a polyfill: a page's code reads such a global off
-  `globalThis`, or a server's side of a module holds it. A bundler that
-  cannot build a scenario fails it in the bundler's own words.
+  `globalThis`, or a server's side of a module holds it. It fails, too,
+  when the page of definitions alone, built by webpack beside every other
+  scenario's page in one compilation, as Next.js builds an app's pages,
+  keeps of a module of the workspace an export it does not keep built
+  alone, or loads a module it does not load alone: webpack keeps in a
+  module every export any page takes, so a module the definitions load
+  holds only what they run, and what only a call takes goes in a module
+  of its own. A bundler that cannot build a scenario fails it in the
+  bundler's own words.
 - `npm run check:graph` follows every module the page entries reach — the
   core's `@noverax/courier/client`, `/define`, `/middleware`, `/routes`,
   `/fetch`, `/internal-client` and `/realtime`, and `@noverax/courier-react`

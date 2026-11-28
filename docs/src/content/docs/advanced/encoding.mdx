@@ -1,4 +1,4 @@
-export const metadata = { title: "Encoding", description: "Control how request bodies and query parameters are serialized.", mode: "both", updated: "2026-11-06" }
+export const metadata = { title: "Encoding", description: "Control how request bodies and query parameters are serialized.", mode: "both", updated: "2026-11-28" }
 
 ## Default behavior
 
@@ -45,7 +45,7 @@ An object's entries fill the path parameters and become the query string or the 
 | `FormData` | Multipart, under its encoding's content type, boundary included: a `Content-Type` the source, the call or a middleware sets is left off |
 | `Blob` or `File` | Its bytes, with its own `type` as the content type |
 | `ArrayBuffer`, `Uint8Array` or any typed array | Its bytes |
-| `ReadableStream` | Streamed as it is read |
+| `ReadableStream` — the platform's, a body `fetch` made, or a polyfill's, as jest-expo puts in a test | Streamed as it is read |
 | `URLSearchParams` | `application/x-www-form-urlencoded` |
 
 ```ts

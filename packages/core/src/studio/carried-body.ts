@@ -1,4 +1,5 @@
 import { defineOwn } from "../utils/define-own";
+import { isError } from "../utils/is-error";
 
 /** The most of a body, as JSON, that one of Studio's events carries. */
 export const CARRIED_BODY_BYTES: number = 16 * 1024;
@@ -139,7 +140,7 @@ export function carriedBody(value: unknown, limit: number = CARRIED_BODY_BYTES):
     /* A body with a cycle or a bigint has no JSON, and no event could carry
        it: the event says so in its place. */
     return {
-      value: `[a body with no JSON: ${error instanceof Error ? error.message : String(error)}]`,
+      value: `[a body with no JSON: ${isError(error) ? error.message : String(error)}]`,
     };
   }
   if (text === undefined || text.length <= limit) return { value };

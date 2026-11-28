@@ -1,3 +1,5 @@
+import { isError, isErrorNamed } from "../utils/is-error";
+
 /* A code is an identifier — `ECONNREFUSED`, `UND_ERR_CONNECT_TIMEOUT`; anything else in its place is none. */
 const IDENTIFIER = /^[A-Za-z][\w.-]{0,63}$/;
 /* undici's own failures and its HTTP parser's. */
@@ -65,7 +67,7 @@ export const CERTIFICATE_VERDICTS: ReadonlySet<string> = new Set([
  * ```
  */
 export function isNetworkFailure(error: Error): boolean {
-  if (isAggregate(error)) return networkMembers(error).length > 0;
+  if (isErrorNamed(error, "AggregateError")) return networkMembers(error).length > 0;
   const code: unknown = Reflect.get(error, "code");
   if (typeof code !== "string" || !IDENTIFIER.test(code)) return false;
   if (UNDICI.test(code) || NODE.test(code) || CERTIFICATE_VERDICTS.has(code)) return true;
@@ -85,7 +87,7 @@ function networkMembers(error: AggregateError): Error[] {
   if (!Array.isArray(gathered)) return [];
   return gathered.filter(
     (member: unknown): member is Error =>
-      member instanceof Error && !isAggregate(member) && isNetworkFailure(member),
+      isError(member) && !isErrorNamed(member, "AggregateError") && isNetworkFailure(member),
   );
 }
 
@@ -93,9 +95,4 @@ function networkMembers(error: AggregateError): Error[] {
 function namesSocketFile(error: Error): boolean {
   const address: unknown = Reflect.get(error, "address");
   return address !== undefined && !(typeof address === "string" && IP_ADDRESS.test(address));
-}
-
-/* Not every runtime has AggregateError; one that has none throws none. */
-function isAggregate(error: Error): error is AggregateError {
-  return typeof AggregateError === "function" && error instanceof AggregateError;
 }

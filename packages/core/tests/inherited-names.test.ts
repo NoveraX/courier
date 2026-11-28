@@ -17,7 +17,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createCaller } from "../src/caller";
 import { courier, defineApi, formQuery } from "../src/define";
-import { withVariableDefaults } from "../src/define/variable-defaults";
 import { createFetch } from "../src/fetch";
 import { headerVariablesMiddleware } from "../src/middleware";
 import { sendWebResponse } from "../src/node";
@@ -27,6 +26,7 @@ import { withDefaultsShown } from "../src/openapi/variable-defaults";
 import { carriedBody } from "../src/studio/carried-body";
 import { headersWithoutSecrets } from "../src/utils/redact/headers";
 import { compileUrl } from "../src/utils/url";
+import { withVariableDefaults } from "../src/utils/with-variable-defaults";
 import { type EchoServer, startEchoServer } from "./helpers/echo-server";
 
 /* JSON text keeps a key `__proto__` as the field it names, as a specification's values arrive. */

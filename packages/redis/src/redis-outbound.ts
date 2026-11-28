@@ -1,6 +1,6 @@
 import type { RefusalLog } from "@noverax/courier/internal";
+import { isError } from "@noverax/courier/internal";
 import type { Redis } from "ioredis";
-
 import type { OutboundLane, OutboundLimits, OutboundQueue } from "./outbound-queue";
 
 /** The longest delay a timer holds; a wait past it is no bound at all. */
@@ -106,7 +106,7 @@ export function createOutbound(parts: OutboundParts): Outbound {
       (error: unknown) => {
         counts.dropped++;
         answered();
-        parts.report(error instanceof Error ? error : new Error(String(error)));
+        parts.report(isError(error) ? error : new Error(String(error)));
       },
     );
   }

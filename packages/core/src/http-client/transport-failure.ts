@@ -5,6 +5,7 @@ import { TimeoutError } from "../errors/timeout-error";
 import type { FailureCause } from "../studio/failure-cause";
 import { isCancellation } from "../utils/abort";
 import { cancellation } from "../utils/cancellation";
+import { isError, isErrorNamed } from "../utils/is-error";
 
 const TIMEOUT_ERROR = "TimeoutError";
 
@@ -52,12 +53,12 @@ export function fetchFailure(
   /* Before Courier's own: a request it shared, or its upload, was cancelled for the timeout. */
   if (expiry.timedOut) return attemptTimeout(error, expiry.timeout);
   if (error instanceof CourierError) return error;
-  if (error instanceof Error && error.cause instanceof CourierError) return error.cause;
-  if (error instanceof Error && error.name === TIMEOUT_ERROR) {
+  if (isError(error) && error.cause instanceof CourierError) return error.cause;
+  if (isError(error) && error.name === TIMEOUT_ERROR) {
     return attemptTimeout(error, expiry.timeout);
   }
   if (isCancellation(error)) return cancellation(undefined, error);
-  return error instanceof Error ? transportFailure(error) : error;
+  return isError(error) ? transportFailure(error) : error;
 }
 
 /* A request's own timeout, its cause what the platform said: what a cancellation held is its own. */
@@ -115,7 +116,7 @@ export function causeOf(error: Error): FailureCause {
 
 /* undici's `fetch failed` says why in its cause; an error with none says it itself. */
 function rootOf(error: Error): Error {
-  return error.cause instanceof Error ? error.cause : error;
+  return isError(error.cause) ? error.cause : error;
 }
 
 /* A code is a name, as the system gives it; undici's parser errors give none, as `undefined`. */
@@ -129,10 +130,9 @@ function codeOf(error: Error): string | undefined {
    whose own message is empty; its errors say which addresses refused. */
 function describe(cause: Error, code: string | undefined): string {
   if (cause.message) return cause.message;
-  const gathered: unknown =
-    typeof AggregateError === "function" && cause instanceof AggregateError ? cause.errors : [];
+  const gathered: unknown = isErrorNamed(cause, "AggregateError") ? cause.errors : [];
   if (Array.isArray(gathered) && gathered.length > 0) {
-    return gathered.map((e: unknown) => (e instanceof Error ? e.message : String(e))).join("; ");
+    return gathered.map((e: unknown) => (isError(e) ? e.message : String(e))).join("; ");
   }
   return code ?? "Request failed";
 }

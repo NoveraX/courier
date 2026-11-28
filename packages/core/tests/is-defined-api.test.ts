@@ -4,9 +4,8 @@
  * own clients do.
  */
 import { describe, expect, it } from "vitest";
-
-import { isDefinedApi } from "../src/define/api";
 import { defineApi } from "../src/define/index";
+import { isDefinedApi } from "../src/define/source-name";
 
 describe("isDefinedApi", () => {
   it("is true for an API defineApi made", () => {

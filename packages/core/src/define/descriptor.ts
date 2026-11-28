@@ -1,10 +1,10 @@
 import type { HttpMethod } from "../http-client/types";
-import { isReadingMethod } from "../utils/helpers";
+import { isReadingMethod } from "../utils/http-method";
 import { ownFields } from "../utils/own";
-import type { SchemaMetadata, Transport } from "../validation";
-import { ENDPOINT_SCHEMA } from "../validation";
 import type { BuilderState } from "./builder";
 import { resolveOptions } from "./builder";
+import type { SchemaMetadata, Transport } from "./endpoint-schema";
+import { ENDPOINT_SCHEMA } from "./endpoint-schema";
 import type { EndpointKind } from "./marker";
 import type { AnyEndpointOptions } from "./options";
 import type { AnyProbe } from "./probe";

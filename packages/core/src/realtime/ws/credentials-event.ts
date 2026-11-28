@@ -1,4 +1,5 @@
 import { createLogger } from "../../logger";
+import { isError } from "../../utils/is-error";
 import { fingerprintOf } from "../credentials-fingerprint";
 import { ConnectionError } from "../errors";
 import type { MachineEvent } from "./connection-machine-types";
@@ -25,7 +26,7 @@ export function credentialsEvent(found: WSCredentials | undefined): MachineEvent
     return { type: "credentials", fingerprint: fingerprintOf(found) };
   } catch (error) {
     log.error("The socket's credentials hold what JSON cannot carry: it does not connect", error);
-    const reason = error instanceof Error ? error.message : String(error);
+    const reason = isError(error) ? error.message : String(error);
     return {
       type: "socket-failed",
       error: new ConnectionError(`The socket's credentials cannot be sent: ${reason}`),

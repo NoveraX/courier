@@ -1,5 +1,5 @@
 import type { HttpMethod } from "../http-client/types";
-import { ENDPOINT_SCHEMA, type SchemaMetadata } from "../validation";
+import { ENDPOINT_SCHEMA, type SchemaMetadata } from "./endpoint-schema";
 import type { ResolvedEndpointOptions } from "./options";
 import type { AnyProbe } from "./probe";
 

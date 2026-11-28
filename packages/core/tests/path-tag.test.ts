@@ -10,8 +10,9 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
-import { pathWriter, probingPath } from "../src/define/path-tag";
+import { pathWriter } from "../src/define/path-writer";
 import { type HttpWire, probeWire } from "../src/define/probe";
+import { recordWireCall } from "../src/define/wire-call";
 import { HTTPError } from "../src/errors";
 import { RealtimeValidationError } from "../src/realtime/errors";
 import { addressCall } from "../src/transport/direct/address";
@@ -219,10 +220,13 @@ describe("pathWriter", () => {
   });
 });
 
-describe("probingPath", () => {
-  it("writes each value as it is, since probing an endpoint sends nothing", () => {
-    expect(probingPath`a/${".."}/b`).toBe("a/../b");
-    expect(probingPath`a/${undefined}/b`).toBe("a/undefined/b");
+describe("the path a recorded closure writes", () => {
+  it("holds each value as it is, since probing an endpoint sends nothing", () => {
+    const pathOf = (value: unknown) =>
+      recordWireCall((http: HttpWire) => http.get(http.path`a/${value}/b`), undefined).path;
+
+    expect(pathOf("..")).toBe("a/../b");
+    expect(pathOf(undefined)).toBe("a/undefined/b");
   });
 });
 

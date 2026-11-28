@@ -154,25 +154,6 @@ export function escapePathText(text: string): string {
 }
 
 /**
- * The text a parameter's value takes in the path: encoded whole, or — for
- * `{+name}` — part by part between its slashes, which are kept.
- *
- * @param value - The value, as text
- * @param keepsSlashes - Whether the parameter is written `{+name}`
- * @returns The value as the path sends it
- * @example
- * ```ts
- * encodePathValue("a/b c", true); // → "a/b%20c"
- * encodePathValue("a/b c", false); // → "a%2Fb%20c"
- * ```
- */
-export function encodePathValue(value: string, keepsSlashes: boolean): string {
-  return keepsSlashes
-    ? value.split("/").map(encodeURIComponent).join("/")
-    : encodeURIComponent(value);
-}
-
-/**
  * The part of a parameter's value that would make the path name another
  * route than the one its endpoint declares: empty, `.` or `..` — the whole
  * value, or one of its parts between slashes for `{+name}`. Encoding does

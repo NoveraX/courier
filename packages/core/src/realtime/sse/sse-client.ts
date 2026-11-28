@@ -1,5 +1,6 @@
 import { assertAbsoluteUrl } from "../../utils/absolute-url";
-import { ONCE, ownFields } from "../../utils/own";
+import { ownFields } from "../../utils/own";
+import { ONCE } from "../../utils/own-options";
 import { type Backoff, resolveBackoff } from "../backoff";
 import { CLIENT_LIMITS } from "../client-limits";
 import { onResume } from "../resume-signals";

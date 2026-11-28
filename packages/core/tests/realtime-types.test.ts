@@ -1,9 +1,9 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { describe, expect, it } from "vitest";
 import { courier } from "../src/define/courier";
+import type { SchemaMetadata } from "../src/define/endpoint-schema";
+import { ENDPOINT_SCHEMA } from "../src/define/endpoint-schema";
 import { tracked } from "../src/realtime/types";
-import type { SchemaMetadata } from "../src/validation";
-import { ENDPOINT_SCHEMA } from "../src/validation";
 
 const { endpoint, channel, stream } = courier();
 

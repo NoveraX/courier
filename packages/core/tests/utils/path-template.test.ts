@@ -6,9 +6,8 @@
  * read, so a port or an IPv6 address holds no parameter.
  */
 import { describe, expect, it } from "vitest";
-
+import { encodePathValue } from "../../src/utils/encode-path-value";
 import {
-  encodePathValue,
   escapePathText,
   fillPathParams,
   type PathParam,

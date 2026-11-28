@@ -15,7 +15,7 @@
  */
 
 import { LIMITS } from "../limits";
-import { UNQUEUED } from "../utils/own";
+import { UNQUEUED } from "../utils/own-options";
 import { BodyError } from "./body-error";
 import { declaredLength } from "./declared-length";
 import { discardBody } from "./discard-body";

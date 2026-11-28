@@ -1,14 +1,10 @@
 import * as v from "valibot";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { ENDPOINT_SCHEMA } from "../src/define/endpoint-schema";
 import { courier, defineApi, defineGroup } from "../src/define/index";
 import { executeRequest } from "../src/utils/execute";
-import {
-  ENDPOINT_SCHEMA,
-  isValidationError,
-  ValidationError,
-  validateSchema,
-} from "../src/validation";
+import { isValidationError, ValidationError, validateSchema } from "../src/validation";
 
 const { endpoint } = courier();
 

@@ -1,11 +1,15 @@
-import { cookieHeaderAfter, forwardedChain, type SetCookie } from "@noverax/courier/internal";
+import {
+  cookieHeaderAfter,
+  forwardedChain,
+  isError,
+  type SetCookie,
+} from "@noverax/courier/internal";
 import {
   createLogger,
   type IncomingRequest,
   type RelayedCookie,
   type RequestContextProvider,
 } from "@noverax/courier/server";
-
 import { svelteKitClientAddress } from "./client-address";
 
 const log = createLogger("SvelteKit");
@@ -137,7 +141,7 @@ function setCookieIn(event: SvelteKitServerEvent, { cookie }: RelayedCookie): tr
     event.cookies.set(cookie.name, cookie.value, optionsOf(cookie));
     return true;
   } catch (error) {
-    if (error instanceof Error && error.message.includes("after the response has been generated")) {
+    if (isError(error) && error.message.includes("after the response has been generated")) {
       return "the response had already been generated";
     }
     throw error;

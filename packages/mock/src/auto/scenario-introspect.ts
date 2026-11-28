@@ -1,4 +1,5 @@
 import { createLogger } from "@noverax/courier";
+import { isError } from "@noverax/courier/internal";
 import { isThenable } from "../scenario/is-thenable";
 import type { AnyMockScenario } from "../types";
 import type { RouteInfo } from "./route-types";
@@ -51,7 +52,7 @@ export function introspectScenario(
       );
     }
   } catch (err) {
-    error = err instanceof Error ? err.message : String(err);
+    error = isError(err) ? err.message : String(err);
   }
 
   const transitions = recorder.transitions();

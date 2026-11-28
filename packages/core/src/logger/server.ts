@@ -17,6 +17,7 @@
 
 import { styleFor } from "../terminal/style-for";
 import { inBrowserPage } from "../utils/browser-page";
+import { isError, isErrorNamed } from "../utils/is-error";
 import { redact } from "../utils/redact/redact";
 import { UNREADABLE } from "../utils/redact/unreadable";
 import { browserLogger } from "./browser";
@@ -53,16 +54,16 @@ function hiddenRootCause(cause: unknown): Error | undefined {
   const seen = new Set<Error>();
   let current = cause;
   let depth = 0;
-  while (current instanceof Error && current.cause instanceof Error) {
+  while (isError(current) && isError(current.cause)) {
     if (seen.has(current) || depth >= MAX_CHAIN) return undefined;
     seen.add(current);
     current = current.cause;
     depth++;
   }
-  if (!(current instanceof Error)) return undefined;
+  if (!isError(current)) return undefined;
   /* Past the inspected depth an error with a `cause` of its own collapses
      too, so a root deeper than one level past it is always hidden. */
-  if (current instanceof AggregateError) {
+  if (isErrorNamed(current, "AggregateError")) {
     const errorsHidden = depth >= INSPECTED_DEPTH;
     const membersHidden = depth === INSPECTED_DEPTH - 1 && current.errors.some(collapses);
     return errorsHidden || membersHidden ? current : undefined;

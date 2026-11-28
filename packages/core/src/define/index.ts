@@ -8,7 +8,7 @@ export type {
 export type { TransportOptions } from "../http-client/transport-options";
 /* Named by the types an API's definition infers, so a project that emits declarations can name them too. */
 export type { WebBody, WebCredentials } from "../http-client/web-types";
-export { defineApi, deriveSourceName, getSourceName, setSourceName } from "./api";
+export { defineApi, deriveSourceName } from "./api";
 export type {
   AnswerHead,
   AnswerMap,
@@ -79,6 +79,7 @@ export type {
   RouteShape,
   RouteShapeAt,
 } from "./routes";
+export { getSourceName, setSourceName } from "./source-name";
 export { stampSourceKeys } from "./stamp-source-keys";
 export type {
   AnyDefinedApi,

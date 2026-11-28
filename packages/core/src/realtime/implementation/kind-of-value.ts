@@ -1,3 +1,5 @@
+import { isPromiseLike } from "../../utils/is-promise-like";
+
 /**
  * What a value is, in the words an error names it with.
  *
@@ -13,5 +15,5 @@ export function kindOfValue(value: unknown): string {
   if (value === undefined || value === null) return String(value);
   if (Array.isArray(value)) return "an array";
   if (typeof value !== "object") return `a ${typeof value}`;
-  return "then" in value && typeof value.then === "function" ? "a promise" : "an object";
+  return isPromiseLike(value) ? "a promise" : "an object";
 }

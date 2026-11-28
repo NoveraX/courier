@@ -1,5 +1,4 @@
 import { ConfigurationError } from "../errors/configuration-error";
-import { notAFunction } from "./assert-transport-options";
 
 /**
  * What sends a source's requests and opens its streams in place of the
@@ -85,10 +84,13 @@ const checkedFetches = new WeakMap<SourceFetch, PlatformFetch>();
  * calls of a source that names its own send through one function, and
  * identical reads in flight together are joined as anyone's are.
  *
+ * The `fetch` is a function: where the source, a group or a call names one
+ * that is not, it is refused where it is named, by `assertTransportOptions`.
+ *
  * @param send - The source's `fetch`
  * @returns The same `fetch`, typed as the platform's
- * @throws {ConfigurationError} `SOURCE_TRANSPORT_INVALID` when it is not a function, and from
- *   the returned `fetch` when it answers with something other than a `Response`
+ * @throws {ConfigurationError} `SOURCE_TRANSPORT_INVALID` from the returned `fetch` when it
+ *   answers with something other than a `Response`
  * @example
  * ```ts
  * const send = platformFetchOf(options.fetch);
@@ -96,7 +98,6 @@ const checkedFetches = new WeakMap<SourceFetch, PlatformFetch>();
  * ```
  */
 export function platformFetchOf(send: SourceFetch): PlatformFetch {
-  if (typeof send !== "function") throw notAFunction("fetch", send);
   const known = checkedFetches.get(send);
   if (known !== undefined) return known;
   const checked: PlatformFetch = async (input, init) => {

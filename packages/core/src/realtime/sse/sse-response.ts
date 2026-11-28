@@ -1,5 +1,5 @@
 import { createLogger } from "../../logger";
-import { ONCE } from "../../utils/own";
+import { ONCE } from "../../utils/own-options";
 import { retryAfterWait } from "../../utils/retry-after";
 import { CLIENT_LIMITS } from "../client-limits";
 import { ConnectionError } from "../errors";

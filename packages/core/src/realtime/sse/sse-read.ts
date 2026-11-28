@@ -1,7 +1,9 @@
 import type { ConfigurationError } from "../../errors/configuration-error";
 import { createLogger } from "../../logger";
 import { isFieldRecord } from "../../utils/body-kind";
-import { ONCE, ownFields } from "../../utils/own";
+import { isError } from "../../utils/is-error";
+import { ownFields } from "../../utils/own";
+import { ONCE } from "../../utils/own-options";
 import type { StreamFailure } from "../describe-failure";
 import { ConnectionError, fromErrorCode, type RealtimeError } from "../errors";
 import { WS_CODE } from "../ws/ws-codes";
@@ -59,7 +61,7 @@ export async function readConnection<TData>(
 
   try {
     const body = await openStream(ctx, connection);
-    if (body instanceof Error) return body;
+    if (isError(body)) return body;
 
     /* Accepted: a later 401 is a refusal of its own, with its own attempt. */
     ctx.refused = undefined;

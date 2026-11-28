@@ -4,23 +4,16 @@
  * itself, which a page reads too, is `registered-sources`.
  */
 
-import { getSourceName, setSourceName } from "../define/api";
+import { getSourceName, setSourceName } from "../define/source-name";
 import { stampSourceKeys } from "../define/stamp-source-keys";
 import type { Sources } from "../define/types";
 import { ConfigurationError } from "../errors/configuration-error";
 import { clearSources, replaceSources } from "../registered-sources";
+import { isPlainRecord } from "../utils/is-plain-record";
 import { assertServerOptions } from "./assert-server-options";
 import { describe } from "./plain-data";
 import { provideInProcessProxy } from "./provide-in-process-proxy";
 import { provideServerCapabilities } from "./provide-server-capabilities";
-
-/* An object literal or a module namespace, from any realm: a Map, a Promise
-   or a class instance would be read as a registry holding no sources. */
-function isPlainRecord(value: unknown): value is Sources {
-  if (value === null || typeof value !== "object") return false;
-  const proto: unknown = Object.getPrototypeOf(value);
-  return proto === null || Object.getPrototypeOf(proto) === null;
-}
 
 /* The key each API was first taken up under, the entry point that took it up there, and the name
    its author left it before any key was stamped. */
@@ -55,6 +48,8 @@ export function checkSources(sources: Sources, callee: string, usage: string): v
   /* Sources are read much later, at request time. Accepting a wrong value
      here reports the mistake as a missing endpoint somewhere else entirely —
      or, for null, as a bare TypeError thrown from inside the library. */
+  /* An object literal or a module namespace, from any realm: a Map, a Promise
+     or a class instance would be read as a registry holding no sources. */
   if (!isPlainRecord(sources)) {
     throw new ConfigurationError(
       "SOURCES_NOT_A_RECORD",

@@ -13,9 +13,9 @@
  * the endpoint and dispatches on the schema alone.
  */
 
+import { ENDPOINT_SCHEMA } from "../define/endpoint-schema";
 import { GROUP_PATH_SEPARATOR } from "../define/group-tree";
 import type { CourierRoutes, RouteShape } from "../define/routes";
-import { ENDPOINT_SCHEMA } from "../validation";
 import type { ProxyEndpointKind } from "./types";
 
 /** Recognised as an endpoint, and never invoked in proxy mode. */

@@ -1,4 +1,5 @@
 import { CourierError } from "../errors/courier-error";
+import { isError } from "../utils/is-error";
 
 /** The stable names of the ways a request body is refused. */
 export type BodyErrorCode =
@@ -82,7 +83,7 @@ const CAUSE_DEPTH = 4;
  */
 export function bodyErrorOf(error: unknown): BodyError | undefined {
   let cause = error;
-  for (let depth = 0; depth <= CAUSE_DEPTH && cause instanceof Error; depth++) {
+  for (let depth = 0; depth <= CAUSE_DEPTH && isError(cause); depth++) {
     if (cause instanceof BodyError) return cause;
     cause = cause.cause;
   }

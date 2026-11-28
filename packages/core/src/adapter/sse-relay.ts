@@ -12,7 +12,7 @@ import { streamRequest } from "../transport/direct/stream-request";
 import { type StatusTeller, watchConnection } from "../transport/instrument/watch-connection";
 import { fetchWithinOrigin } from "../utils/fetch-within-origin";
 import { layerHeaders } from "../utils/layer-headers";
-import { ownField } from "../utils/own";
+import { ownField } from "../utils/own-field";
 import { serverCallContext, serversCallInit } from "../utils/server-call-marks";
 
 /**

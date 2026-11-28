@@ -21,6 +21,12 @@
  *    a read off `globalThis` is no such name;
  *  - what loads at start stays within its budget for each bundler,
  *    minified and gzipped;
+ *  - the page of definitions alone, built by webpack beside every other
+ *    page in one compilation, as Next.js builds an app's pages, keeps of
+ *    each module of the workspace it loads no export it does not keep
+ *    built alone, and loads no module it does not load alone: webpack
+ *    keeps in a module every export any page takes, so what only the
+ *    pages that call take would come to every page of definitions;
  *  - no browser API newer than the browsers the requirements name —
  *    Safari 15.4, Chrome 97, Firefox 104 — nor one a page served over plain
  *    HTTP lacks, is called where its module does not check for it first.
@@ -48,6 +54,7 @@ import { gzipSync } from "node:zlib";
 import { viteStart } from "./browser-bundles/build-vite.mjs";
 import { webpackStart } from "./browser-bundles/build-webpack.mjs";
 import { breachesOrFailure, builtOrFailed } from "./browser-bundles/built-or-failed.mjs";
+import { keptBeyond, webpackKeptExports } from "./browser-bundles/exports-kept.mjs";
 import { ignoredImports } from "./browser-bundles/ignored-imports.mjs";
 import { newerApiCalls } from "./browser-bundles/newer-api-calls.mjs";
 import { nodeGlobalReads } from "./browser-bundles/node-globals.mjs";
@@ -211,6 +218,45 @@ async function otherBundlersBreaches(esbuild, bundlers, work, scenario) {
   return breaches;
 }
 
+/* What the page of definitions alone keeps, built by webpack beside every other page in one
+   compilation as Next.js builds an app's pages, past what it keeps built alone: an export of a
+   module of the workspace that only another page takes, or a module only such an export brings. */
+async function keptBreaches(webpack, work) {
+  const dir = join(work, "kept");
+  mkdirSync(dir, { recursive: true });
+  const pages = {};
+  for (const scenario of SCENARIOS) {
+    const name = scenario.name.replace(/\W+/g, "-");
+    pages[name] = join(dir, `${name}.js`);
+    writeFileSync(pages[name], scenario.code);
+  }
+  const { definitions } = pages;
+  const alone = await webpackKeptExports(
+    webpack,
+    { definitions },
+    "definitions",
+    join(dir, "alone"),
+    PROVIDED,
+  );
+  const beside = await webpackKeptExports(
+    webpack,
+    pages,
+    "definitions",
+    join(dir, "beside"),
+    PROVIDED,
+  );
+  return keptBeyond(alone, beside)
+    .map((beyond) => ({ ...beyond, file: pathFrom(ROOT, beyond.module) }))
+    .filter(({ file }) => file.startsWith("packages/"))
+    .map(({ file, exports, loadedAlone }) => {
+      if (!loadedAlone)
+        return `definitions loads ${file} under webpack beside the other pages, built in one compilation as Next.js builds an app's pages, and not alone: an export only they take brings it`;
+      const kept = exports === true ? "every export" : exports.join(", ");
+      const it = exports !== true && exports.length === 1 ? "it" : "them";
+      return `definitions keeps ${kept} of ${file} under webpack beside the other pages, built in one compilation as Next.js builds an app's pages, though only they take ${it}: a module the definitions do not load keeps ${it} off their page`;
+    });
+}
+
 function breachesOf(esbuild, work, scenario) {
   const { bytes, gzipped, builtins, inputs } = measure(esbuild, work, scenario);
   const breaches = builtins.map(
@@ -286,6 +332,10 @@ async function main() {
   for (const scenario of SCENARIOS) {
     breaches.push(...(await otherBundlersBreaches(esbuild, bundlers, work, scenario)));
   }
+  const kept = await builtOrFailed("definitions beside the other pages", "webpack", () =>
+    keptBreaches(bundlers.webpack, work),
+  );
+  breaches.push(...("breach" in kept ? [kept.breach] : kept.start));
   rmSync(work, { recursive: true, force: true });
   const unique = [...new Set(breaches)];
   if (unique.length === 0) return;

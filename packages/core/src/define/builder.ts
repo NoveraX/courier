@@ -3,9 +3,9 @@ import { ConfigurationError } from "../errors/configuration-error";
 import type { Middleware } from "../middleware/types";
 import { idempotencyHeader } from "../utils/idempotency-header";
 import { ownFields } from "../utils/own";
-import type { AnswerStage, CacheConfig } from "../validation";
 import type { AgentMark } from "./agent-mark";
 import { assertEndpointSession } from "./assert-endpoint-session";
+import type { AnswerStage, CacheConfig } from "./endpoint-schema";
 import type { EndpointKind } from "./marker";
 import type {
   AnyEndpointOptions,

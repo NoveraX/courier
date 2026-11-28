@@ -1,5 +1,5 @@
 import { ValidationError } from "../validation";
-import { isCourierError } from "./courier-error";
+import { isCourierError } from "./is-courier-error";
 import type { MissingTokenError } from "./missing-token-error";
 import { isRequestFailure, type RequestFailure } from "./request-failure";
 

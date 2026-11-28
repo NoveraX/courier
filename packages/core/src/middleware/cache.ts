@@ -1,6 +1,6 @@
 import { studioHooksHere } from "../capabilities/studio-hooks";
 import { createLogger } from "../logger";
-import { cloneData } from "../utils/clone-data";
+import { copyOf, isStorable } from "./cache-answer";
 import { fetchingMiss, type MissesInFlight, waitForMiss } from "./cache-in-flight";
 import { cacheKey, credentialHeaders } from "./cache-key";
 import { defineMiddleware } from "./define";
@@ -168,45 +168,6 @@ function isCacheable(ctx: MiddlewareContext): boolean {
      endpoint would otherwise collide on one entry. */
   if (typeof FormData !== "undefined" && ctx.variables instanceof FormData) return false;
   return true;
-}
-
-/** A response that can be replayed without belonging to whoever earned it. */
-function isStorable(response: MiddlewareResponse): boolean {
-  if (response.status < 200 || response.status >= 300) return false;
-  /* Set-Cookie makes a response the property of one caller by construction. */
-  if (response.headers?.has("set-cookie")) return false;
-  /* A stream is consumed by its first reader; the second would get nothing. */
-  if (isStream(response.data)) return false;
-  return true;
-}
-
-/**
- * An answer nobody else holds.
- *
- * Each caller gets a copy of the stored answer, so one that edits its result
- * edits no later caller's. Undefined when the data holds something the
- * structured clone algorithm refuses; such an answer is not shared at all.
- */
-function copyOf(response: MiddlewareResponse): MiddlewareResponse | undefined {
-  try {
-    return {
-      status: response.status,
-      headers: new Headers(response.headers),
-      data: cloneData(response.data),
-    };
-  } catch (error) {
-    if (!(error instanceof Error && error.name === "DataCloneError")) throw error;
-    log.debug("Answer not cached: its data holds a value that cannot be copied", error);
-    return undefined;
-  }
-}
-
-function isStream(data: unknown): boolean {
-  return (
-    typeof ReadableStream !== "undefined" &&
-    (data instanceof ReadableStream ||
-      (typeof data === "object" && data !== null && Symbol.asyncIterator in data))
-  );
 }
 
 /* Whether the call was sent with the credentials its partition is named by.

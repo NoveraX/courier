@@ -24,6 +24,7 @@
 
 import { NetworkError } from "../errors/network-error";
 import { copiesOf } from "./fetch-copies";
+import { isError, isErrorNamed } from "./is-error";
 import { replayableStream } from "./replayable-stream";
 import { unrepeatable } from "./unrepeatable";
 import type { UploadSource } from "./upload-source";
@@ -120,8 +121,8 @@ function bodyOf(
    so, and names no code, which tells it apart from a connection that failed on the way. */
 function isRefusedRedirect(error: unknown): boolean {
   return (
-    error instanceof TypeError &&
-    error.cause instanceof Error &&
+    isErrorNamed(error, "TypeError") &&
+    isError(error.cause) &&
     error.cause.message === "unexpected redirect"
   );
 }

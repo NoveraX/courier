@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { isError } from "@noverax/courier/internal";
 import type { Redis } from "ioredis";
 
 /** A Lua script, with the SHA-1 Redis caches it under. */
@@ -44,7 +45,7 @@ export function runScript(
   args: readonly string[],
 ): Promise<unknown> {
   return redis.evalsha(script.sha, keys.length, ...keys, ...args).catch((error: unknown) => {
-    if (!(error instanceof Error) || !error.message.startsWith("NOSCRIPT")) throw error;
+    if (!isError(error) || !error.message.startsWith("NOSCRIPT")) throw error;
     return redis.eval(script.source, keys.length, ...keys, ...args);
   });
 }

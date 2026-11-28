@@ -1,6 +1,6 @@
-import { withVariableDefaults } from "../../define/variable-defaults";
 import { RECORD_PART } from "../../utils/record-upload";
 import { type FilePlace, formEntries } from "../../utils/variables-encoding";
+import { withVariableDefaults } from "../../utils/with-variable-defaults";
 import type { BodyDeadline } from "../read-chunk";
 import type { RecordDefaults } from "../record-defaults";
 import { isOptionsPart, TextFields } from "./form-fields";

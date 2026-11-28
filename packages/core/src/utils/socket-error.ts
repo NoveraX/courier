@@ -1,3 +1,5 @@
+import { isError } from "./is-error";
+
 /**
  * The error a WebSocket `error` event is about.
  *
@@ -14,10 +16,10 @@
  * // RangeError: Max payload size exceeded
  */
 export function socketError(event: unknown): Error {
-  if (event instanceof Error) return event;
+  if (isError(event)) return event;
   if (typeof event !== "object" || event === null) return new Error("WebSocket error");
   const error = "error" in event ? event.error : undefined;
   const message = "message" in event ? event.message : undefined;
-  if (error instanceof Error) return error;
+  if (isError(error)) return error;
   return new Error(typeof message === "string" && message ? message : "WebSocket error");
 }

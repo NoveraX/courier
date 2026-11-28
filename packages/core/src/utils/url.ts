@@ -4,6 +4,7 @@ import type { SearchParamsSerializer } from "../http-client/types";
 import { isFieldRecord } from "./body-kind";
 import { defineOwn } from "./define-own";
 import { isFormData } from "./helpers";
+import { isError } from "./is-error";
 import { pathJoin } from "./path-join";
 import { pathParamText } from "./path-param-text";
 import { fillPathParams, pathParamNames } from "./path-template";
@@ -144,7 +145,7 @@ export const compileUrl = (
   } catch (error) {
     /* What no request can carry — a file, a BigInt — is refused as a query or a body refuses it. */
     if (error instanceof ConfigurationError) throw error;
-    if (error instanceof Error) throw pathRefusal(error.message);
+    if (isError(error)) throw pathRefusal(error.message);
     throw error;
   }
 };

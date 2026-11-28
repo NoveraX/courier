@@ -1,4 +1,4 @@
-import { pathWriter } from "../define/path-tag";
+import { pathWriter } from "../define/path-writer";
 import { pathRefusal } from "../utils/url";
 
 /**

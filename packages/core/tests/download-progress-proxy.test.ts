@@ -99,7 +99,7 @@ describe("a download counted for an answer of unknown length", () => {
     const events: DownloadProgress[] = [];
     const body = new Blob([new Uint8Array(5000)]).stream();
 
-    const counted = body.pipeThrough(downloadCounter((p) => events.push(p))(new Headers()));
+    const counted = downloadCounter((p) => events.push(p))(body, new Headers());
     await new Response(counted).arrayBuffer();
 
     expect(events.at(-1)).toEqual({ percent: 1, transferredBytes: 5000, totalBytes: 5000 });

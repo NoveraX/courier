@@ -1,12 +1,12 @@
 import { ConfigurationError, type ConfigurationErrorCode } from "../errors/configuration-error";
 import type { HttpMethod } from "../http-client/types";
-import { normalizeHttpMethod } from "../utils/helpers";
+import { normalizeHttpMethod } from "../utils/http-method";
 import { ownFields } from "../utils/own";
-import type { AnswerStage, CacheConfig } from "../validation";
 import { agentMark } from "./agent-mark";
 import type { BuilderState } from "./builder";
 import { withValue } from "./builder";
 import { sealAt } from "./descriptor";
+import type { AnswerStage, CacheConfig } from "./endpoint-schema";
 import type { AnyEndpointOptions } from "./options";
 import type { AnyProbe } from "./probe";
 import { type AnyBuilder, refinements } from "./refinements";

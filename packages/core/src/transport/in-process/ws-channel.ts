@@ -4,7 +4,7 @@ import { streamLabel } from "../../realtime/stream-label";
 import type { ChannelHandlers } from "../../realtime/types";
 import { servedTopic } from "../../realtime/ws/served-topic";
 import { generateRequestId } from "../../studio";
-import { ONCE } from "../../utils/own";
+import { ONCE } from "../../utils/own-options";
 import { randomId } from "../../utils/random-id";
 import { runTransportMiddleware } from "../../utils/transport-middleware";
 import { instrumentWSChannel } from "../instrument";

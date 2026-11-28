@@ -1,4 +1,4 @@
-import { UNQUEUED } from "../../utils/own";
+import { UNQUEUED } from "../../utils/own-options";
 import { BodyError } from "../body-error";
 import { MultipartReader } from "./multipart-reader";
 import { type PartHeaders, parsePartHeaders } from "./part-headers";

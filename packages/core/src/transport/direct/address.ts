@@ -1,6 +1,7 @@
 import { endpointPath } from "../../define/address";
-import { pathWriter } from "../../define/path-tag";
-import { type AnyProbe, recordWireCall } from "../../define/probe";
+import { pathWriter } from "../../define/path-writer";
+import type { AnyProbe } from "../../define/probe";
+import { recordWireCall } from "../../define/wire-call";
 import { RealtimeValidationError } from "../../realtime/validation-error";
 import { isRecord } from "../../utils/is-record";
 import { pathParamText } from "../../utils/path-param-text";

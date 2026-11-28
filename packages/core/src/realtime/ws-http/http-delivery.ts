@@ -1,4 +1,4 @@
-import { ONCE } from "../../utils/own";
+import { ONCE } from "../../utils/own-options";
 import { withinSignal } from "../../utils/within-signal";
 import { EventTooLarge } from "../sse/sse-lines";
 import { type AnswerParts, readAnswer } from "./http-answer";

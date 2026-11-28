@@ -1,4 +1,4 @@
-import type { SchemaMetadata } from "../validation";
+import type { SchemaMetadata } from "../define/endpoint-schema";
 
 /**
  * Whether a WS endpoint is a channel, which takes messages from the client,

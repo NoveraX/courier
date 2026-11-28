@@ -40,8 +40,3 @@ export class CourierError<TCode = string> extends Error {
     if (options.context !== undefined) this.context = options.context;
   }
 }
-
-/** Type guard for `CourierError` and any subclass */
-export function isCourierError(error: unknown): error is CourierError {
-  return error instanceof CourierError;
-}

@@ -3,12 +3,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createWSHandler } from "../src/adapter/handle-ws";
 import { parseTopic } from "../src/adapter/ws-resolve";
 import type { WSHandlerConfig } from "../src/adapter/ws-types";
+import { ENDPOINT_SCHEMA } from "../src/define/endpoint-schema";
 import type { Sources } from "../src/define/types";
 import type { WebSocketLike } from "../src/realtime/adapters";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { encodeMessage } from "../src/realtime/ws/ws-protocol";
 import { _resetSourcesForTests, registerSources } from "../src/server/sources";
-import { ENDPOINT_SCHEMA } from "../src/validation";
 import { authFrame } from "./helpers/fake-socket";
 
 afterEach(() => {

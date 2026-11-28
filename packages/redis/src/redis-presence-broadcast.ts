@@ -19,6 +19,7 @@
  * before Redis, or lost it a while, hears the others again.
  */
 
+import { isError } from "@noverax/courier/internal";
 import type { PresenceDiff } from "@noverax/courier/realtime";
 import type { Redis } from "ioredis";
 import { createSubscriptionReconciler } from "./subscription-reconciler";
@@ -91,7 +92,7 @@ export function createDiffBroadcast(input: {
       if (!subscriber) return;
       const envelope: DiffEnvelope = { origin, topic, diff };
       redis.publish(diffChannel(prefix, topic), JSON.stringify(envelope)).catch((err: unknown) => {
-        onError(err instanceof Error ? err : new Error(String(err)));
+        onError(isError(err) ? err : new Error(String(err)));
       });
     },
 

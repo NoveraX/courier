@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-
+import { isError } from "@noverax/courier/internal";
 import type { Fixture } from "./fixture";
 import { fixturesToHar, harToFixtures } from "./fixture";
 import { FixtureFileError } from "./fixture-file-error";
@@ -24,7 +24,7 @@ export function readFixtureFile(file: string): Fixture[] {
   try {
     text = readFileSync(file, "utf8");
   } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") return [];
+    if (isError(error) && "code" in error && error.code === "ENOENT") return [];
     throw error;
   }
   const parsed = parseJson(text, file);

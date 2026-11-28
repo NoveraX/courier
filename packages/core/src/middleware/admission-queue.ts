@@ -1,7 +1,7 @@
 /** Lets callers through at a bounded rate, one at a time, in the order they asked. */
 
 import { cancellation } from "../utils/cancellation";
-import { ONCE } from "../utils/own";
+import { ONCE } from "../utils/own-options";
 
 export interface AdmissionQueue {
   /**

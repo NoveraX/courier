@@ -2,10 +2,10 @@ import type { AgentCall } from "../agent/types";
 import { studioCapability } from "../capabilities/registry";
 import type { StudioCapability } from "../capabilities/studio";
 import { NO_HOOKS } from "../capabilities/studio-hooks";
+import type { SchemaMetadata } from "../define/endpoint-schema";
 import type { Context } from "../http-client/types";
 import type { CallPurpose } from "../middleware/types";
 import type { StudioHooks } from "../studio/hooks";
-import type { SchemaMetadata } from "../validation";
 import type { SharedAnswer } from "./shared-answer";
 
 export type TimingState = {

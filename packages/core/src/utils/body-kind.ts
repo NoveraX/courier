@@ -1,5 +1,7 @@
 import type { WebBody } from "../http-client/web-types";
 import { isFormData } from "./helpers";
+import { isReadableStream } from "./is-readable-stream";
+import { ownedBytes } from "./owned-bytes";
 
 /**
  * A value `fetch` sends as a request body as it stands: bytes, a stream, or
@@ -27,7 +29,7 @@ export function isRawBody(value: unknown): value is RawBody {
     (typeof Blob !== "undefined" && value instanceof Blob) ||
     value instanceof ArrayBuffer ||
     ArrayBuffer.isView(value) ||
-    (typeof ReadableStream !== "undefined" && value instanceof ReadableStream) ||
+    isReadableStream(value) ||
     (typeof URLSearchParams !== "undefined" && value instanceof URLSearchParams)
   );
 }
@@ -74,11 +76,5 @@ export function isFieldRecord(value: unknown): value is Record<string, unknown> 
  * ```
  */
 export function toBodyInit(body: RawBody): WebBody {
-  if (!ArrayBuffer.isView(body)) return body;
-  if (isOwnedView(body)) return body;
-  return new Uint8Array(body.buffer, body.byteOffset, body.byteLength).slice();
-}
-
-function isOwnedView(view: ArrayBufferView): view is ArrayBufferView<ArrayBuffer> {
-  return view.buffer instanceof ArrayBuffer;
+  return ArrayBuffer.isView(body) ? ownedBytes(body) : body;
 }

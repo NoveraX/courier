@@ -1,3 +1,4 @@
+import { isError } from "@noverax/courier/internal";
 import type { StoredEvent, StreamAdapter } from "@noverax/courier/realtime";
 import { createErrorForwarder } from "./error-forwarder";
 import { trackHealth } from "./health";
@@ -122,7 +123,7 @@ export function createRedisStream(config: RedisStreamConfig): StreamAdapter {
         const id = await redis.xadd(...(args as [string, ...string[]]));
         return id as string;
       } catch (err) {
-        emitError(err instanceof Error ? err : new Error(String(err)));
+        emitError(isError(err) ? err : new Error(String(err)));
         throw err;
       }
     },
@@ -136,7 +137,7 @@ export function createRedisStream(config: RedisStreamConfig): StreamAdapter {
 
         return (entries as [string, string[]][]).map(parseEntry);
       } catch (err) {
-        emitError(err instanceof Error ? err : new Error(String(err)));
+        emitError(isError(err) ? err : new Error(String(err)));
         return [];
       }
     },
@@ -145,7 +146,7 @@ export function createRedisStream(config: RedisStreamConfig): StreamAdapter {
       try {
         await redis.xtrim(key(topic), "MAXLEN", trimMaxLen);
       } catch (err) {
-        emitError(err instanceof Error ? err : new Error(String(err)));
+        emitError(isError(err) ? err : new Error(String(err)));
       }
     },
   };

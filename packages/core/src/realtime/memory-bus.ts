@@ -1,3 +1,4 @@
+import { isError } from "../utils/is-error";
 import { randomId } from "../utils/random-id";
 import type {
   AdapterState,
@@ -68,7 +69,7 @@ function memoryReplica(
   let delivered = 0;
 
   function emitError(error: unknown): void {
-    const reported = error instanceof Error ? error : new Error(String(error));
+    const reported = isError(error) ? error : new Error(String(error));
     for (const handler of [...errorHandlers]) handler(reported);
   }
 

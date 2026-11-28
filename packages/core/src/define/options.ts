@@ -1,7 +1,7 @@
 import type { Middleware, MiddlewareContext, RetryFailure } from "../middleware/types";
 import type { EndpointSession } from "../session/types";
-import type { CacheConfig } from "../validation";
 import type { AgentMark } from "./agent-mark";
+import type { CacheConfig } from "./endpoint-schema";
 
 /** How an endpoint reads against a collection, used by mocks and codegen. */
 export type OperationKind =

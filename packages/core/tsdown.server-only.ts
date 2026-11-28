@@ -17,9 +17,10 @@ import type { TsdownPlugin } from "tsdown";
  * on the device, which a page's never does, whether the fetch a call
  * goes with hands its answer over as it comes, as a page's always does,
  * the fetch a stream of server-sent events goes with, which on a page is
- * never one that cannot hand its answer over so, and the fetch each hop of
- * a call kept within its origin goes with, which on a page is none, as a
- * browser follows a redirect itself.
+ * never one that cannot hand its answer over so, the fetch each hop of a
+ * call kept within its origin goes with, which on a page is none, as a
+ * browser follows a redirect itself, and whether the platform makes a
+ * `Response` of a stream, as every browser does.
  * The package's `imports` field sends a bundler that builds for the
  * browser to `lib/browser/`, and everything else — Node, Edge, React
  * Native — to the modules themselves.
@@ -47,6 +48,7 @@ export const SERVER_ONLY_MODULES = [
   "utils/streamed-answer",
   "realtime/sse/sse-fetch",
   "utils/kept-within-origin",
+  "utils/response-takes-streams",
 ] as const;
 
 const SOURCE = resolve(import.meta.dirname, "src");

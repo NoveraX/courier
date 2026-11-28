@@ -35,10 +35,11 @@ export interface BodyReading {
  * a copy of a shared answer is no longer read once its call leaves, as fetch
  * no longer reads a cancelled request's body. Where it does not — React
  * Native's is the whatwg-fetch polyfill, which held the text `[object
- * ReadableStream]` when it was made of an Expo answer's stream — the answer
- * reads itself, and a call that stops waiting is given its reason at once
- * while the copy it left is read out unseen; there a download is counted by
- * the XMLHttpRequest that brought it.
+ * ReadableStream]` when it was made of an Expo answer's stream, and React
+ * Native has no streams at all without Expo — the answer reads itself, and
+ * a call that stops waiting is given its reason at once while the copy it
+ * left is read out unseen; there a download is counted by the
+ * XMLHttpRequest that brought it.
  *
  * @param response - The answer, its body unread
  * @param form - What the body is read as

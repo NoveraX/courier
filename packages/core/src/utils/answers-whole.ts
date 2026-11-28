@@ -1,4 +1,5 @@
 import type { PlatformFetch } from "../http-client/source-transport";
+import { hasWebStreams } from "./web-streams";
 
 /**
  * Whether a fetch hands an answer over only once all of it has arrived:
@@ -31,9 +32,5 @@ export function answersWhole(send: PlatformFetch): boolean {
  * ```
  */
 export function readsAsTheyCome(send: PlatformFetch): boolean {
-  return (
-    !answersWhole(send) &&
-    typeof ReadableStream === "function" &&
-    typeof TransformStream === "function"
-  );
+  return !answersWhole(send) && hasWebStreams();
 }

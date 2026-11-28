@@ -44,19 +44,3 @@ export async function wholeBody(
     ? new Blob(chunks.map((chunk) => ownedBytes(chunk)))
     : joinedBytes(chunks);
 }
-
-/**
- * Whether a request's body is a stream, which what cannot send one reads
- * whole. React Native has no streams without Expo, and `instanceof` an
- * undefined global throws.
- *
- * @param body - The body
- * @returns Whether it is a `ReadableStream`
- * @example
- * ```ts
- * const body = isStream(init.body) ? await wholeBody(init.body, init.signal) : init.body;
- * ```
- */
-export function isStream(body: unknown): body is ReadableStream {
-  return typeof ReadableStream !== "undefined" && body instanceof ReadableStream;
-}

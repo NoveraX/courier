@@ -1,6 +1,7 @@
 import { studioHooksHere } from "../capabilities/studio-hooks";
 import { createLogger } from "../logger";
 import { cloneData } from "../utils/clone-data";
+import { isReadableStream } from "../utils/is-readable-stream";
 import { fetchingMiss, type MissesInFlight, waitForMiss } from "./cache-in-flight";
 import { cacheKey, credentialHeaders } from "./cache-key";
 import { defineMiddleware } from "./define";
@@ -203,9 +204,8 @@ function copyOf(response: MiddlewareResponse): MiddlewareResponse | undefined {
 
 function isStream(data: unknown): boolean {
   return (
-    typeof ReadableStream !== "undefined" &&
-    (data instanceof ReadableStream ||
-      (typeof data === "object" && data !== null && Symbol.asyncIterator in data))
+    isReadableStream(data) ||
+    (typeof data === "object" && data !== null && Symbol.asyncIterator in data)
   );
 }
 

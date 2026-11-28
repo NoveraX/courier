@@ -1,5 +1,6 @@
 import type { WebBody } from "../http-client/web-types";
 import { isFormData } from "./helpers";
+import { isReadableStream } from "./is-readable-stream";
 import { ownedBytes } from "./owned-bytes";
 
 /**
@@ -28,7 +29,7 @@ export function isRawBody(value: unknown): value is RawBody {
     (typeof Blob !== "undefined" && value instanceof Blob) ||
     value instanceof ArrayBuffer ||
     ArrayBuffer.isView(value) ||
-    (typeof ReadableStream !== "undefined" && value instanceof ReadableStream) ||
+    isReadableStream(value) ||
     (typeof URLSearchParams !== "undefined" && value instanceof URLSearchParams)
   );
 }

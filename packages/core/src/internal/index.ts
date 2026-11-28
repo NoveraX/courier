@@ -134,6 +134,7 @@ export {
   toInternalMethod,
 } from "../utils/helpers";
 export { isCredentialHeader } from "../utils/is-credential-header";
+export { isReadableStream } from "../utils/is-readable-stream";
 export { isLoopbackHostname } from "../utils/loopback-host";
 export { middlewareChainOf } from "../utils/middleware-chain-of";
 export { parseUrl } from "../utils/parse-url";

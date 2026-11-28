@@ -1,5 +1,7 @@
 import type { IncomingMessage } from "node:http";
 
+import { isReadableStream } from "@noverax/courier/internal";
+
 /** Where h3 1.x leaves the bytes its `readRawBody` read, for any later reader. */
 const H3_RAW_BODY = Symbol.for("h3RawBody");
 
@@ -53,7 +55,7 @@ function isBodyInit(value: unknown): value is BodyInit {
     value instanceof Blob ||
     value instanceof FormData ||
     value instanceof URLSearchParams ||
-    value instanceof ReadableStream
+    isReadableStream(value)
   );
 }
 

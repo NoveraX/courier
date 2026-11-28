@@ -1,4 +1,5 @@
 import { inBrowserPage } from "./browser-page";
+import { isReadableStream } from "./is-readable-stream";
 import { parseUrl } from "./parse-url";
 
 /** As many redirects as `fetch` follows before it gives up. */
@@ -88,5 +89,5 @@ function redirected(request: RequestInit, status: number): RequestInit | undefin
     for (const name of BODY_HEADERS) headers.delete(name);
     return { __proto__: null, ...request, method: "GET", body: null, headers } as RequestInit;
   }
-  return request.body instanceof ReadableStream ? undefined : request;
+  return isReadableStream(request.body) ? undefined : request;
 }

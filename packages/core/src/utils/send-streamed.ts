@@ -5,11 +5,12 @@ import { type CallProgress, heard } from "./call-progress";
 import { countedStream } from "./counted-stream";
 import { copiesOf, type FetchCopies } from "./fetch-copies";
 import { fetchWithinOrigin } from "./fetch-within-origin";
+import { isReadableStream } from "./is-readable-stream";
 import { responseTakesStreams } from "./response-takes-streams";
 import { sendAsStream } from "./send-as-stream";
 import { isStreamedUpload } from "./streamed-upload";
 import { sendingOf } from "./upload-sending";
-import { isStream, wholeBody } from "./whole-body";
+import { wholeBody } from "./whole-body";
 
 /** How a body sent as a stream is sent. */
 export interface StreamedSend {
@@ -57,7 +58,7 @@ export function sendStreamed(
      upload as it goes. Nothing below is for it, and without Expo it has no streams to test a
      body against. */
   if (!responseTakesStreams()) {
-    return isStream(init.body) ? sentWhole(url, init, init.body, options) : undefined;
+    return isReadableStream(init.body) ? sentWhole(url, init, init.body, options) : undefined;
   }
   const sent = stoppedWithUpload(init);
   if (progress?.onUploadProgress) {
@@ -98,5 +99,5 @@ async function sentWhole(
 /* Whether the fetch that sends it would hold the whole body while it sends it. */
 function copied(body: WebBody, copies: FetchCopies): boolean {
   if (body instanceof FormData || body instanceof Blob) return copies.forms;
-  return body instanceof ReadableStream && copies.streams;
+  return isReadableStream(body) && copies.streams;
 }

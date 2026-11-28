@@ -4,6 +4,7 @@
  */
 
 import type { WebBody } from "../http-client/web-types";
+import { isReadableStream } from "./is-readable-stream";
 import { encodeMultipart } from "./multipart-body";
 import { isStreamedUpload } from "./streamed-upload";
 
@@ -50,7 +51,7 @@ export function toUploadSource(body: WebBody): UploadSource {
   if (isStreamedUpload(body)) {
     return { size: 0, contentType: body.type, framed: true, replayable: false, open: () => body };
   }
-  if (body instanceof ReadableStream) {
+  if (isReadableStream(body)) {
     return { size: 0, contentType: null, framed: false, replayable: false, open: () => body };
   }
   if (body instanceof FormData) {

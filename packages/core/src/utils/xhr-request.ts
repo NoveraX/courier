@@ -4,11 +4,12 @@ import type { WebBody, WebCredentials } from "../http-client/web-types";
 import { createLogger } from "../logger";
 import { type CallProgress, heard } from "./call-progress";
 import { cancellation } from "./cancellation";
+import { isReadableStream } from "./is-readable-stream";
 import { isRecord } from "./is-record";
 import { ONCE } from "./own";
 import { platformError } from "./platform-error";
 import { declaredLength } from "./progress";
-import { isStream, wholeBody } from "./whole-body";
+import { wholeBody } from "./whole-body";
 
 const log = createLogger("XMLHttpRequest");
 
@@ -51,7 +52,9 @@ export async function xhrRequest(
      "[object ReadableStream]" and the call succeeded. The stream is read
      whole first, unless the call is cancelled first, and what it held is
      sent and reported. */
-  const body = isStream(init.body) ? await wholeBody(init.body, init.signal) : (init.body ?? null);
+  const body = isReadableStream(init.body)
+    ? await wholeBody(init.body, init.signal)
+    : (init.body ?? null);
   return send(url, init, body, progress);
 }
 

@@ -210,12 +210,18 @@ describe("a call that hands its answer over as a stream", () => {
   });
 });
 
-describe("a stream of the global class sent as a request's body", () => {
-  it("reaches the server whole", async () => {
+describe("a stream sent as a request's body", () => {
+  it("reaches the server whole when it is of the global class", async () => {
     await expect(api().upload(globalStream("ab", "cd"))).resolves.toEqual({
       bytes: 4,
       text: "abcd",
     });
+  });
+
+  it("reaches the server whole when Node's fetch made it", async () => {
+    const body = new Response("abcd").body as ReadableStream<Uint8Array>;
+
+    await expect(api().upload(body)).resolves.toEqual({ bytes: 4, text: "abcd" });
   });
 });
 

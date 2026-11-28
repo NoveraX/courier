@@ -11,6 +11,7 @@ import { fetchWithinOrigin } from "./fetch-within-origin";
 import { flightKey, isRead } from "./flight-key";
 import { sendableHeaders } from "./header-value";
 import { isFormData, normalizeHttpMethod } from "./helpers";
+import { isReadableStream } from "./is-readable-stream";
 import { keptWithinOrigin } from "./kept-within-origin";
 import { ownFields } from "./own";
 import { answerRead, forgetRenderReads } from "./render-memo";
@@ -102,8 +103,7 @@ export async function coreFetch(
     headers: requestHeaders,
     body: requestBody ?? null,
     /* Fetch refuses a streamed body unless the request says so. React Native has no streams. */
-    ...(typeof ReadableStream !== "undefined" &&
-      requestBody instanceof ReadableStream && { duplex: "half" }),
+    ...(isReadableStream(requestBody) && { duplex: "half" }),
   };
   /* XMLHttpRequest reports an upload's progress, which fetch cannot; reads a file a React
      Native form names by where it is, which expo/fetch refuses; and reports a download where no

@@ -1,6 +1,7 @@
 import { HTTPError } from "../errors";
 import { isFieldRecord, isRawBody, toBodyInit } from "../utils/body-kind";
 import { isFormData, normalizeHttpMethod, sendsVariablesInQuery } from "../utils/helpers";
+import { isReadableStream } from "../utils/is-readable-stream";
 import { toQueryEntries } from "../utils/query-string";
 import {
   ADDRESS_HOLDS_TEXT,
@@ -100,7 +101,7 @@ export const buildRequestBody = (
   if (isRawBody(variables)) {
     /* `fetch` refuses a stream body unless it is told the request is sent
        while the response may already be arriving. */
-    const streamed = typeof ReadableStream !== "undefined" && variables instanceof ReadableStream;
+    const streamed = isReadableStream(variables);
     return { body: toBodyInit(variables), ...(streamed && { duplex: "half" as const }) };
   }
   if (variables !== undefined && !isFieldRecord(variables)) {

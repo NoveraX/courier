@@ -2,6 +2,7 @@ import { studioHooksHere } from "../capabilities/studio-hooks";
 import { HTTPError } from "../errors";
 import type { Context } from "../http-client/types";
 import { answerInit } from "./answer-init";
+import { isReadableStream } from "./is-readable-stream";
 import { filterResponseHeaders } from "./merge-headers";
 import { ownFields } from "./own";
 import { setCookiesOf } from "./set-cookies";
@@ -38,7 +39,7 @@ export const buildResponse = (context: Context | undefined, answer: InternalResp
   /* The answer as the call built it: its own fields alone. */
   const response = ownFields(answer);
   if (response.stream) {
-    if (context?.res instanceof Response && response.data instanceof ReadableStream) {
+    if (context?.res instanceof Response && isReadableStream(response.data)) {
       /* The upstream's own headers went straight to the browser here, so a
          streamed answer disclosed whatever the upstream attached to it. The
          body passes through unchanged, so its content type travels with it. */

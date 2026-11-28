@@ -17,6 +17,7 @@
  */
 
 import { ConfigurationError } from "../errors/configuration-error";
+import { isReadableStream } from "./is-readable-stream";
 import { ownedBytes } from "./owned-bytes";
 
 /** Where a file sits in a record a form carries: its field, and its item in a list there. */
@@ -39,10 +40,6 @@ function isBlob(value: unknown): value is Blob {
 
 function isBytes(value: unknown): value is ArrayBuffer | ArrayBufferView {
   return value instanceof ArrayBuffer || ArrayBuffer.isView(value);
-}
-
-function isStream(value: unknown): boolean {
-  return typeof ReadableStream !== "undefined" && value instanceof ReadableStream;
 }
 
 /**
@@ -120,7 +117,7 @@ export function assertJsonValue(
   /* The objects the value sits in, on the path it was reached by. */
   holders: Set<object> = new Set(),
 ): void {
-  if (isStream(value)) refuse(at, "a stream", NO_STREAM_PART);
+  if (isReadableStream(value)) refuse(at, "a stream", NO_STREAM_PART);
   if (isFile(value)) refuse(at, "binary data", binary);
   if (value instanceof Set) refuse(at, "a Set", "JSON writes it as {}; send a list");
   if (value instanceof Map) refuse(at, "a Map", "JSON writes it as {}; send an object");

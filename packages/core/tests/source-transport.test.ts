@@ -224,6 +224,27 @@ describe("a source's transport that cannot be used", () => {
       code: "SOURCE_TRANSPORT_INVALID",
     });
   });
+
+  it.each([
+    ["nothing", undefined],
+    ["null", null],
+    ["the text it read", '{"id":"p_1"}'],
+  ])("fails a call whose fetch answers with %s, saying so", async (_what, answer) => {
+    const shop = defineApi({
+      expose: true,
+      name: "shop",
+      baseURL: "https://shop.example",
+      fetch: async () => answer as never,
+      endpoints: { product: endpoint.get("products/p_1") },
+    });
+
+    await expect(createCaller(shop).product()).rejects.toMatchObject({
+      name: "ConfigurationError",
+      code: "SOURCE_TRANSPORT_INVALID",
+      message:
+        "[courier] The source's fetch answered https://shop.example/products/p_1 with something that is not a Response.",
+    });
+  });
 });
 
 describe("a source's WebSocket", () => {

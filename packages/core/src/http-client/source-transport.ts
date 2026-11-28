@@ -134,8 +134,10 @@ export function notAFunction(
 }
 
 /* A Response of any fetch's, known by what Courier reads of one: its status, its headers and its
-   text. React Native's, the whatwg-fetch polyfill, has no `body`. */
-function isResponse(value: object): value is Response {
+   text. React Native's, the whatwg-fetch polyfill, has no `body`. An answer that is no object,
+   nothing or the text a wrapper read, is none. */
+function isResponse(value: unknown): value is Response {
+  if (typeof value !== "object" || value === null) return false;
   const { status, headers, text } = value as Partial<Response>;
   return (
     typeof status === "number" && typeof headers?.get === "function" && typeof text === "function"

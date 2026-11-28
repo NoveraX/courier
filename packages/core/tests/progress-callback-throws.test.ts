@@ -10,7 +10,7 @@
  */
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
@@ -26,6 +26,7 @@ let upstream: Upstream | undefined;
 let closeServer: (() => Promise<void>) | undefined;
 
 afterEach(async () => {
+  vi.unstubAllGlobals();
   await upstream?.close();
   await closeServer?.();
   upstream = closeServer = undefined;

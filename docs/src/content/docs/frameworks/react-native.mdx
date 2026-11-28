@@ -131,6 +131,22 @@ export const account = createCaller(
 React Native sends the cookies it keeps for a host with every call to that host, whether the API describes a session or not; a browser sends them to another origin only when the call asks it to.
 </Callout>
 
+## Redirects
+
+React Native follows every redirect itself, wherever it leads and whatever a call's `redirect` says: its XMLHttpRequest does, and so does React Native's own `fetch`, which sends through it. On Android a call goes on to another host with every header it carries but `Authorization`; on iOS with none but the cookies the platform keeps for that host. `expo/fetch` follows one only as `redirect` says.
+
+A call that must take its credentials nowhere but its API's origin says so with `withinOrigin: true`, as a server's call that carries the user's session always does. Courier then follows a redirect only while it stays on that origin, and answers with one to anywhere else as it came: an `HTTPError` with the redirect's status. Without it a call follows redirects as the platform does, the user's session's too: the platform keeps its cookies to the host that set them, as a browser does, but on Android a token Courier repeats as a header goes on with the call.
+
+```ts title="src/users-within-origin.ts"
+import { client } from "./client"
+
+export function listUsers() {
+  return client.users.with({ withinOrigin: true }).list()
+}
+```
+
+Such a call takes `expo/fetch` and never goes through XMLHttpRequest, so its upload reports no progress, nor its download unless it is read as it comes, with `stream: true`. With React Native's own `fetch`, or with a form naming a file on the device, which only XMLHttpRequest sends, it is refused before it is sent, with a `ConfigurationError` `WITHIN_ORIGIN_UNAVAILABLE`. Through a `fetch` of the app's own that sends with React Native's, it is refused once that `fetch` hands over an answer from another origin: the redirect was followed before the answer came, so the call's credentials may have gone there.
+
 ## Streams and channels
 
 `useSubscription` reads server-sent events as they arrive, which takes a `fetch` that hands over a response's body as it comes. React Native's own `fetch` hands it over only once all of it has arrived; Expo replaces it with `expo/fetch`, which streams. Expo SDK 58 does so for every app unless `EXPO_PUBLIC_USE_RN_FETCH` is set. With React Native's own, a stream is refused as it is opened, with a `ConfigurationError` `RESPONSE_STREAM_UNAVAILABLE` that `useSubscription` reports through `error`, rather than reconnected again and again for events that would never come. Through a `fetch` of the app's own that sends with React Native's, it is refused once that `fetch` hands an answer over — a refusal, or a stream the server ended; a stream that stays open it never hands over, so such a `fetch` sends its streams with `expo/fetch`.

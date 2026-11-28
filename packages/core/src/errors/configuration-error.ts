@@ -339,6 +339,14 @@ export type ConfigurationErrorCode =
    */
   | "RESPONSE_STREAM_UNAVAILABLE"
   /**
+   * A call kept within its request's origin, with `withinOrigin`, went where
+   * React Native's networking follows every redirect itself: refused before
+   * it is sent with React Native's own `fetch`, or with a form naming a file
+   * on the device, which only its XMLHttpRequest sends, and once a `fetch` of
+   * the app's own brought its answer from another origin.
+   */
+  | "WITHIN_ORIGIN_UNAVAILABLE"
+  /**
    * A retry policy cannot work as written: an option it does not have, a
    * limit past what it takes, a wait that is not a number of milliseconds,
    * or a `retryOn` that names what no failure is — the 0 that once stood

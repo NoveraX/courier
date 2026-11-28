@@ -10,6 +10,7 @@ import { fetchWithinOrigin } from "./fetch-within-origin";
 import { flightKey, isRead } from "./flight-key";
 import { sendableHeaders } from "./header-value";
 import { isFormData, normalizeHttpMethod } from "./helpers";
+import { keptWithinOrigin } from "./kept-within-origin";
 import { ownFields } from "./own";
 import type { CallProgress } from "./progress";
 import { answerRead, forgetRenderReads } from "./render-memo";
@@ -61,8 +62,6 @@ export async function coreFetch(
     streamed,
     ...rest
   } = own;
-  /* Followed within the request's origin unless the request says how itself. */
-  const within = withinOrigin === true && own.redirect === undefined;
 
   const fullUrl = withSearchParams(url, searchParams);
   const requestHeaders = sendableHeaders(headers);
@@ -81,6 +80,12 @@ export async function coreFetch(
   assertAbsoluteUrl(fullUrl);
   /* Refused before it is sent where its answer cannot be read as it comes. */
   if (streamed) assertStreamingFetch(transport ?? send);
+  /* What sends each hop of a call kept within its request's origin, unless the request says how
+     it follows redirects itself or the platform keeps it there; refused where neither can. */
+  const within =
+    withinOrigin === true && own.redirect === undefined
+      ? keptWithinOrigin(send, requestBody)
+      : undefined;
   const expiry = timeout ? attemptExpiry(timeout, requestBody) : undefined;
   const finalSignal = signal && expiry ? anySignal([signal, expiry]) : (expiry ?? signal);
   /* The call's progress callbacks, and what one of them throws, kept by whichever way the call
@@ -104,11 +109,13 @@ export async function coreFetch(
      Native form names by where it is, which expo/fetch refuses; and reports a download where no
      Response of the platform's can be made of the body to count it, as in React Native. It
      stands in for the platform's fetch alone, as a source's own sends every call, and never
-     for a call that reads its answer as it comes, which it would hand over only whole. */
+     for a call that reads its answer as it comes, which it would hand over only whole, nor for
+     one kept within its origin, whose every redirect it would follow. */
   const throughXhr =
     transport === undefined &&
     send === fetch &&
     streamed !== true &&
+    !within &&
     Object.hasOwn(globalThis, "XMLHttpRequest") &&
     ((requestBody != null && (onUploadProgress !== undefined || holdsDeviceFiles(requestBody))) ||
       (onDownloadProgress !== undefined && !responseTakesStreams()));
@@ -142,11 +149,11 @@ export async function coreFetch(
         ? undefined
         : sendStreamed(fullUrl, sent as typeof sent & { body: WebBody }, {
             progress,
-            withinOrigin: within,
-            fetch: send,
+            withinOrigin: within !== undefined,
+            fetch: within ?? send,
           });
     if (asStream) return asStream;
-    return within ? fetchWithinOrigin(fullUrl, sent, send) : send(fullUrl, sent);
+    return within ? fetchWithinOrigin(fullUrl, sent, within) : send(fullUrl, sent);
   };
   const read = isRead(init.method, reads);
   /* A write the render makes may change what its reads answered. */

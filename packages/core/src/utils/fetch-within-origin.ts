@@ -28,6 +28,9 @@ const BODY_HEADERS = [
  * that would repeat it is returned instead. In a browser's page the page's
  * own `fetch` follows redirects, as the browser's rules for credentials
  * allow: one it was told to leave alone would answer with nothing to read.
+ * Each hop is sent with a fetch that hands a redirect over when told to;
+ * React Native's own follows every one itself, and `keptWithinOrigin` says
+ * what an app's call goes with.
  *
  * @param url - Where to send the request
  * @param init - The request, as it would be given to `fetch`

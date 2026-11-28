@@ -19,7 +19,7 @@ import type { MiddlewareContext, WrapHandler } from "../src/middleware/types";
 import { subscribeSSE } from "../src/realtime/sse";
 import { createWSConnection } from "../src/realtime/ws/ws-connection";
 import { isCancellation } from "../src/utils/abort";
-import { polyfill, ReasonlessAbortController } from "./helpers/react-native";
+import { ExpoFormData, polyfill, ReasonlessAbortController } from "./helpers/react-native";
 
 const { endpoint } = courier();
 const restores: Array<() => void> = [];
@@ -234,17 +234,6 @@ describe("an address that is only a path, in React Native", () => {
     expect(() => createWSConnection({ url: "/api/ws" })).toThrow(ConfigurationError);
   });
 });
-
-/** FormData as Expo patches it: it lists its entries, a device file among them as appended. */
-class ExpoFormData {
-  readonly parts: Array<[string, unknown]> = [];
-  append(name: string, value: unknown): void {
-    this.parts.push([name, value]);
-  }
-  entries(): IterableIterator<[string, unknown]> {
-    return this.parts[Symbol.iterator]();
-  }
-}
 
 /** React Native's XMLHttpRequest, as far as an upload uses it: it answers each request with JSON. */
 class RecordingXhr {

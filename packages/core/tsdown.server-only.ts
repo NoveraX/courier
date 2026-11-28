@@ -16,8 +16,10 @@ import type { TsdownPlugin } from "tsdown";
  * page is a part the server did not deliver, whether a form holds a file
  * on the device, which a page's never does, whether the fetch a call
  * goes with hands its answer over as it comes, as a page's always does,
- * and the fetch a stream of server-sent events goes with, which on a page
- * is never one that cannot hand its answer over so.
+ * the fetch a stream of server-sent events goes with, which on a page is
+ * never one that cannot hand its answer over so, and the fetch each hop of
+ * a call kept within its origin goes with, which on a page is none, as a
+ * browser follows a redirect itself.
  * The package's `imports` field sends a bundler that builds for the
  * browser to `lib/browser/`, and everything else — Node, Edge, React
  * Native — to the modules themselves.
@@ -44,6 +46,7 @@ export const SERVER_ONLY_MODULES = [
   "utils/device-files",
   "utils/streamed-answer",
   "realtime/sse/sse-fetch",
+  "utils/kept-within-origin",
 ] as const;
 
 const SOURCE = resolve(import.meta.dirname, "src");

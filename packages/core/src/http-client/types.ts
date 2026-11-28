@@ -118,8 +118,13 @@ export type FetchOptions = Omit<RequestInit, "method" | "body" | "signal"> & {
   /**
    * Follow redirects only while they stay on the request's origin, so the
    * credentials a call carries never reach a host the API sent it on to. A
-   * call carrying the user's session, or made through the proxy, always
-   * does; a browser follows redirects itself and ignores it.
+   * server's call that carries the user's session, or one made through the
+   * proxy, always does; a browser follows redirects itself and ignores it.
+   * In a React Native app the call takes `expo/fetch`, the one fetch there
+   * that hands a redirect over, and never XMLHttpRequest, so its upload
+   * reports no progress, nor its download unless it is read as it comes.
+   * With React Native's own fetch, or with a form naming a file on the
+   * device, it is refused with `ConfigurationError` `WITHIN_ORIGIN_UNAVAILABLE`.
    */
   withinOrigin?: boolean | undefined;
   /**

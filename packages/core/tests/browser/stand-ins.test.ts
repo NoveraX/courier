@@ -68,6 +68,8 @@ describe("the stand-ins of the modules only a server runs", () => {
       "browser/utils/streamed-answer": "src/browser/utils/streamed-answer.ts",
       "realtime/sse/sse-fetch": "src/realtime/sse/sse-fetch.ts",
       "browser/realtime/sse/sse-fetch": "src/browser/realtime/sse/sse-fetch.ts",
+      "utils/kept-within-origin": "src/utils/kept-within-origin.ts",
+      "browser/utils/kept-within-origin": "src/browser/utils/kept-within-origin.ts",
     });
   });
 });

@@ -16,7 +16,8 @@ export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
   onDownloadProgress?: ((progress: DownloadProgress) => void) | undefined;
   /**
    * Follow redirects only while they stay on the request's origin — see
-   * `fetchWithinOrigin`. An explicit `redirect` takes precedence.
+   * `fetchWithinOrigin`, and `keptWithinOrigin` for what each hop is sent
+   * with. An explicit `redirect` takes precedence.
    */
   withinOrigin?: boolean | undefined;
   /**

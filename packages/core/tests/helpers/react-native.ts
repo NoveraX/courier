@@ -16,8 +16,8 @@
  * and WebSocket are modelled on their sources in `Libraries/Blob`,
  * `Libraries/Network` and `Libraries/WebSocket`, and expo/fetch's answer on
  * `expo/src/winter/fetch/FetchResponse.ts`; what their native side does —
- * the network, the blob store, OkHttp's and SocketRocket's sockets — Node
- * and the `ws` package do here.
+ * the network, which follows redirects as OkHttp does, the blob store,
+ * OkHttp's and SocketRocket's sockets — Node and the `ws` package do here.
  */
 import { request } from "node:http";
 import { createRequire } from "node:module";
@@ -36,22 +36,92 @@ const native = {
   URL: globalThis.URL,
 };
 
+/** A request as the native side's network sends it. */
+interface NativeRequest {
+  readonly method: string;
+  readonly headers: Array<[string, string]>;
+  readonly body: Uint8Array;
+  readonly signal: AbortSignal;
+}
+
 /** An answer as the native side's network has it. */
 interface NativeAnswer {
   readonly status: number;
   readonly statusText: string;
+  /** Where the answer came from, the last redirect's target once one was followed. */
   readonly url: string;
+  readonly redirected: boolean;
   readonly headers: Array<[string, string]>;
   /** The body as it arrives. */
   readonly chunks: AsyncIterable<Uint8Array>;
 }
 
+const REDIRECTS: ReadonlySet<number> = new Set([301, 302, 303, 307, 308]);
+
+/** The headers OkHttp drops with the body when a redirect turns a request into a GET. */
+const BODY_HEADERS: ReadonlySet<string> = new Set([
+  "content-length",
+  "content-type",
+  "transfer-encoding",
+]);
+
 /* The native side's network: Node's own HTTP, which needs none of the web streams an app may
-   lack — Node's fetch does. It follows no redirect. */
-function sendNatively(
+   lack — Node's fetch does. It follows a redirect as OkHttp, React Native's on Android, does,
+   unless told to hand it over or to fail: up to 20 of them, a 307 or a 308 with the request as
+   it was, any other as a GET without a body, and on to another host with every header the
+   request carries but `Authorization`. */
+async function sendNatively(
   url: string,
-  init: { method: string; headers: Array<[string, string]>; body: Uint8Array; signal: AbortSignal },
+  init: NativeRequest,
+  redirect: RequestRedirect = "follow",
 ): Promise<NativeAnswer> {
+  let hop = { ...init, url };
+  for (let hops = 0; ; hops += 1) {
+    const answer = await sentOnce(hop.url, hop);
+    const location = headerOf(answer, "location");
+    if (!REDIRECTS.has(answer.status) || location === undefined || redirect === "manual") {
+      return { ...answer, redirected: hops > 0 };
+    }
+    await drained(answer.chunks);
+    if (redirect === "error") {
+      throw new TypeError("Redirect is not allowed when redirect mode is 'error'");
+    }
+    if (hops === 20) throw new TypeError("Too many follow-up requests: 21");
+    hop = followed(hop, answer.status, new native.URL(location, hop.url).href);
+  }
+}
+
+/* The request OkHttp follows a redirect with. */
+function followed<THop extends NativeRequest & { url: string }>(
+  hop: THop,
+  status: number,
+  next: string,
+): THop {
+  const kept = status === 307 || status === 308 || hop.method === "GET" || hop.method === "HEAD";
+  const elsewhere = new native.URL(next).origin !== new native.URL(hop.url).origin;
+  const headers = hop.headers.filter(([name]) => {
+    const lower = name.toLowerCase();
+    if (lower === "authorization") return !elsewhere;
+    return kept || !BODY_HEADERS.has(lower);
+  });
+  return {
+    ...hop,
+    url: next,
+    method: kept ? hop.method : "GET",
+    headers,
+    body: kept ? hop.body : new Uint8Array(0),
+  };
+}
+
+/* A redirect's body, read to its end and dropped, as the native side drops it. */
+async function drained(chunks: AsyncIterable<Uint8Array>): Promise<void> {
+  for await (const _chunk of chunks) {
+    /* Nothing of it is kept. */
+  }
+}
+
+/* One request, and its answer as it came. */
+function sentOnce(url: string, init: NativeRequest): Promise<Omit<NativeAnswer, "redirected">> {
   return new Promise((resolve, reject) => {
     const outgoing = request(
       url,
@@ -291,7 +361,7 @@ function sendable(body: unknown): Uint8Array {
   );
 }
 
-function headerOf(answer: NativeAnswer, name: string): string | undefined {
+function headerOf(answer: Pick<NativeAnswer, "headers">, name: string): string | undefined {
   return answer.headers.find(([key]) => key.toLowerCase() === name)?.[1];
 }
 
@@ -334,7 +404,7 @@ class ExpoFetchResponse {
     this.status = answer.status;
     this.statusText = answer.statusText;
     this.url = answer.url;
-    this.redirected = false;
+    this.redirected = answer.redirected;
     this.#raw = answer instanceof ExpoFetchResponse ? answer.#raw : answer.headers;
     this.#body =
       body !== undefined || answer instanceof ExpoFetchResponse
@@ -446,7 +516,11 @@ class ExpoFetchResponse {
   }
 }
 
-/** expo/fetch: it reads a stream it is to send whole, and fails a cancelled request with a FetchError. */
+/**
+ * expo/fetch: it reads a stream it is to send whole, follows a redirect only
+ * as `redirect` says — told `"manual"`, it hands the redirect over as it came
+ * — and fails a cancelled request with a FetchError.
+ */
 async function expoFetch(input: string | URL, init: RequestInit = {}): Promise<ExpoFetchResponse> {
   const { signal } = init;
   const body = await expoBody(init.body);
@@ -458,12 +532,16 @@ async function expoFetch(input: string | URL, init: RequestInit = {}): Promise<E
     cancel.abort();
   });
   try {
-    const answer = await sendNatively(String(input), {
-      method: init.method ?? "GET",
-      headers: [...new Headers(init.headers)] as Array<[string, string]>,
-      body,
-      signal: cancel.signal,
-    });
+    const answer = await sendNatively(
+      String(input),
+      {
+        method: init.method ?? "GET",
+        headers: [...new Headers(init.headers)] as Array<[string, string]>,
+        body,
+        signal: cancel.signal,
+      },
+      init.redirect,
+    );
     response = new ExpoFetchResponse(answer);
     return response;
   } catch (error) {
@@ -947,6 +1025,17 @@ export class ReasonlessAbortController extends AbortController {
   constructor() {
     super();
     Object.defineProperty(this.signal, "reason", { get: () => undefined });
+  }
+}
+
+/** FormData as Expo patches it: it lists its entries, a device file among them as appended. */
+export class ExpoFormData {
+  readonly parts: Array<[string, unknown]> = [];
+  append(name: string, value: unknown): void {
+    this.parts.push([name, value]);
+  }
+  entries(): IterableIterator<[string, unknown]> {
+    return this.parts[Symbol.iterator]();
   }
 }
 

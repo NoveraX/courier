@@ -1,4 +1,5 @@
 import { ConfigurationError } from "../errors/configuration-error";
+import { notAFunction } from "./assert-transport-options";
 
 /**
  * What sends a source's requests and opens its streams in place of the
@@ -108,29 +109,6 @@ export function platformFetchOf(send: SourceFetch): PlatformFetch {
   };
   checkedFetches.set(send, checked);
   return checked;
-}
-
-/**
- * The error for a `fetch` or a `webSocket` that is not a function.
- *
- * @param option - Which of the two
- * @param value - What was given
- * @param owner - Whose it is: the source's, a group's or a call's
- * @returns The error
- * @example
- * ```ts
- * if (typeof own !== "function") throw notAFunction("webSocket", own, "group");
- * ```
- */
-export function notAFunction(
-  option: "fetch" | "webSocket",
-  value: unknown,
-  owner: "source" | "group" | "call" = "source",
-): ConfigurationError {
-  return new ConfigurationError(
-    "SOURCE_TRANSPORT_INVALID",
-    `[courier] A ${owner}'s ${option} must be a function; it is ${value === null ? "null" : typeof value}.`,
-  );
 }
 
 /* A Response of any fetch's, known by what Courier reads of one: its status, its headers and its

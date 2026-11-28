@@ -1,6 +1,5 @@
 import { ConfigurationError } from "../errors/configuration-error";
 import { ownFields } from "../utils/own";
-import { notAFunction } from "./source-transport";
 import type { TransportOwner } from "./transport-options";
 
 /**
@@ -45,5 +44,32 @@ function isDispatcher(value: unknown): boolean {
     typeof value === "object" &&
     value !== null &&
     typeof Reflect.get(value, "dispatch") === "function"
+  );
+}
+
+/**
+ * The error for a `fetch` or a `webSocket` that is not a function. It sits
+ * beside the check a definition makes, apart from the `fetch` Courier
+ * sends with in `source-transport.ts`: Next.js keeps in a module every
+ * export any page of an app uses, and a page of definitions alone sends
+ * nothing.
+ *
+ * @param option - Which of the two
+ * @param value - What was given
+ * @param owner - Whose it is: the source's, a group's or a call's
+ * @returns The error
+ * @example
+ * ```ts
+ * if (typeof own !== "function") throw notAFunction("webSocket", own, "group");
+ * ```
+ */
+export function notAFunction(
+  option: "fetch" | "webSocket",
+  value: unknown,
+  owner: "source" | "group" | "call" = "source",
+): ConfigurationError {
+  return new ConfigurationError(
+    "SOURCE_TRANSPORT_INVALID",
+    `[courier] A ${owner}'s ${option} must be a function; it is ${value === null ? "null" : typeof value}.`,
   );
 }

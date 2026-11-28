@@ -1,6 +1,6 @@
 import type { PlatformFetch } from "../../http-client/source-transport";
 import type { WebBody } from "../../http-client/web-types";
-import type { CallProgress } from "../../utils/progress";
+import type { CallProgress } from "../../utils/call-progress";
 
 /** How a body sent as a stream is sent. */
 export interface StreamedSend {

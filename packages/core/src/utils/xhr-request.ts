@@ -2,11 +2,12 @@ import { isBodilessStatus } from "../http-client/response";
 import type { DownloadProgress } from "../http-client/types";
 import type { WebBody, WebCredentials } from "../http-client/web-types";
 import { createLogger } from "../logger";
+import { type CallProgress, heard } from "./call-progress";
 import { cancellation } from "./cancellation";
 import { isRecord } from "./is-record";
 import { ONCE } from "./own";
 import { platformError } from "./platform-error";
-import { type CallProgress, declaredLength, heard } from "./progress";
+import { declaredLength } from "./progress";
 import { isStream, wholeBody } from "./whole-body";
 
 const log = createLogger("XMLHttpRequest");

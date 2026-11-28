@@ -1,10 +1,10 @@
 import type { PlatformFetch } from "../http-client/source-transport";
 import type { WebBody } from "../http-client/web-types";
 import { anySignal } from "./any-signal";
+import { type CallProgress, heard } from "./call-progress";
 import { countedStream } from "./counted-stream";
 import { copiesOf, type FetchCopies } from "./fetch-copies";
 import { fetchWithinOrigin } from "./fetch-within-origin";
-import { type CallProgress, heard } from "./progress";
 import { responseTakesStreams } from "./response-takes-streams";
 import { sendAsStream } from "./send-as-stream";
 import { isStreamedUpload } from "./streamed-upload";

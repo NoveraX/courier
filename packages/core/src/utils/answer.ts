@@ -1,5 +1,5 @@
 import type { DownloadProgress } from "../http-client/types";
-import type { CallProgress } from "./progress";
+import type { CallProgress } from "./call-progress";
 import { type BodyCounter, type BodyForm, type BodyForms, readBody } from "./read-body";
 import { assertStreamedAnswer } from "./streamed-answer";
 import { withoutProgress } from "./without-progress";

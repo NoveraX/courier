@@ -1,7 +1,10 @@
 /**
  * A Courier server in a process of its own, for a test that runs as an app
  * on another platform: what that platform's globals put in place of Node's
- * reaches the app alone, as it would. See `tests/fixtures/app-server.ts`.
+ * reaches the app alone, as it would. Once the process has ended — as a
+ * command that fails there ends it — what the test asks of it is refused
+ * with how it ended and what it wrote to stderr. See
+ * `tests/fixtures/app-server.ts`.
  */
 import { fork } from "node:child_process";
 import { createRequire } from "node:module";
@@ -23,7 +26,7 @@ export interface AppServer {
   broadcast(payload: string): Promise<void>;
   /** Its handler's stats: its connections, and what carries them over HTTP */
   stats(): Promise<WSHandlerStats>;
-  /** Close its connections and end its process */
+  /** Close its connections and end its process, or say how it ended otherwise */
   stop(): Promise<void>;
 }
 
@@ -66,29 +69,47 @@ export async function serveApp(
   });
   const opened: Array<Record<string, string>> = [];
   const ended: number[] = [];
-  const waiting = new Map<number, (answer: unknown) => void>();
+  const waiting = new Map<number, { resolve(answer: unknown): void; reject(error: Error): void }>();
   let next = 0;
+  /* How the process ended, once its channel and its stderr are closed too: by then every answer
+     it sent has come. */
+  const closed = new Promise<{ readonly code: number | null; readonly error: Error }>((resolve) => {
+    child.once("close", (code, signal) => {
+      resolve({ code, error: new Error(`The server exited with ${code ?? signal}: ${said}`) });
+    });
+  });
+  let gone: Error | undefined;
+  void closed.then(({ error }) => {
+    gone = error;
+    for (const asked of waiting.values()) asked.reject(error);
+    waiting.clear();
+  });
   const url = await new Promise<string>((resolve, reject) => {
     child.on(
       "message",
       (message: AppServerEvent | { readonly id: number; readonly answer?: unknown }) => {
-        if ("id" in message) waiting.get(message.id)?.(message.answer);
-        else if (message.event === "listening") resolve(message.url);
+        if ("id" in message) {
+          waiting.get(message.id)?.resolve(message.answer);
+          waiting.delete(message.id);
+        } else if (message.event === "listening") resolve(message.url);
         else if (message.event === "opened") opened.push(message.headers);
         else ended.push(message.code);
       },
     );
-    child.once("exit", (code) => reject(new Error(`The server exited with ${code}: ${said}`)));
+    void closed.then(({ error }) => reject(error));
   });
   const ask = (command: AppServerRequest): Promise<unknown> =>
-    new Promise((resolve) => {
+    new Promise((resolve, reject) => {
+      if (gone) return reject(gone);
       const id = ++next;
-      waiting.set(id, (answer) => {
-        waiting.delete(id);
-        resolve(answer);
-      });
+      waiting.set(id, { resolve, reject });
       const sent: AppServerCommand = { ...command, id };
-      child.send(sent);
+      /* A channel the process's end has closed refuses it, and the command waits for that end. */
+      child.send(sent, (error) => {
+        if (!error || !child.connected) return;
+        waiting.delete(id);
+        reject(error);
+      });
     });
   return {
     url,
@@ -99,9 +120,9 @@ export async function serveApp(
     },
     stats: async () => (await ask({ op: "stats" })) as WSHandlerStats,
     stop: async () => {
-      const exited = new Promise((resolve) => child.once("exit", resolve));
-      await ask({ op: "stop" });
-      await exited;
+      if (!gone) await ask({ op: "stop" });
+      const { code, error } = await closed;
+      if (code !== 0) throw error;
     },
   };
 }

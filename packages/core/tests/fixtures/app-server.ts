@@ -98,8 +98,16 @@ if (process.argv.includes("--refuse-upgrades")) {
   });
 }
 
+/* A command that fails ends the process, its error on stderr, whatever Node is told to do with a
+   rejection no one handles: the parent refuses what it asked with that end. */
 process.on("message", (command: AppServerCommand) => {
-  void answer(command).then((reply) => tell({ id: command.id, answer: reply }));
+  void answer(command).then(
+    (reply) => tell({ id: command.id, answer: reply }),
+    (error: unknown) => {
+      console.error(error);
+      process.exit(1);
+    },
+  );
 });
 
 async function answer(command: AppServerCommand): Promise<unknown> {

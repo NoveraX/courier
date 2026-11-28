@@ -1,4 +1,4 @@
-import { ONCE } from "../utils/own";
+import { ONCE } from "../utils/own-options";
 import { BodyError } from "./body-error";
 
 /* The longest delay a timer takes as given (2^31 - 1 ms). */

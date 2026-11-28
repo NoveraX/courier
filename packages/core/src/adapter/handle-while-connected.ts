@@ -1,4 +1,4 @@
-import { ONCE } from "../utils/own";
+import { ONCE } from "../utils/own-options";
 import { REQUEST_MEMBERS } from "../utils/request-members";
 import { peerAddressOf, rememberPeerAddress } from "./peer-address";
 

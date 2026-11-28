@@ -2,7 +2,8 @@ import type { CallAnswer } from "../capabilities/studio";
 import type { Context } from "../http-client/types";
 import { agentShown } from "../utils/agent-shown";
 import type { RequestStart, StudioContext, TimingState } from "../utils/execute-studio";
-import { estimateResponseSize, headersToObject, normalizeHttpMethod } from "../utils/helpers";
+import { estimateResponseSize, headersToObject } from "../utils/helpers";
+import { normalizeHttpMethod } from "../utils/http-method";
 import { describeVariables } from "./describe-form-data";
 
 /**

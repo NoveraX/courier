@@ -1,5 +1,5 @@
 import type { SessionSendOptions } from "../session/call-session";
-import { ownField } from "../utils/own";
+import { ownField } from "../utils/own-field";
 import { resolveTransport } from "./resolve-transport";
 import type { PlatformFetch } from "./source-transport";
 import { TRANSPORT_KEYS } from "./transport-options";

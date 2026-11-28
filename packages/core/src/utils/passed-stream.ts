@@ -1,5 +1,5 @@
 import { abortReason } from "./abort-reason";
-import { ONCE, UNQUEUED } from "./own";
+import { ONCE, UNQUEUED } from "./own-options";
 
 /** What a stream passed on does as it passes. */
 export interface Passing {

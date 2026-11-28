@@ -1,4 +1,5 @@
-import { encodePathValue, routeChangingPart } from "./path-template";
+import { encodePathValue } from "./encode-path-value";
+import { routeChangingPart } from "./path-template";
 import { simpleTexts } from "./simple-style";
 
 /**

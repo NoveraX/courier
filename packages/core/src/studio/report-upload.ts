@@ -1,5 +1,5 @@
 import type { UploadProgress } from "../http-client/types";
-import { ownField } from "../utils/own";
+import { ownField } from "../utils/own-field";
 import type { StudioHooks } from "./hooks";
 
 /** The endpoint an upload is for, as Studio names its row. */

@@ -21,6 +21,7 @@ import { type CallerDefaults, createCaller as createPageCaller } from "../../src
 import { courier, defineApi, defineGroup } from "../../src/define";
 import type { BuilderState } from "../../src/define/builder";
 import type { CourierBaseConfig } from "../../src/define/builder-types";
+import { ENDPOINT_SCHEMA, type SchemaMetadata } from "../../src/define/endpoint-schema";
 import type {
   AnyEndpointOptions,
   ResolvedEndpointOptions,
@@ -43,7 +44,6 @@ import { _resetSourcesForTests, registerSources } from "../../src/server/sources
 import type { IncomingRequest } from "../../src/session/incoming-request";
 import type { CsrfOptions, ForwardOptions, SessionOptions } from "../../src/session/types";
 import type { CoreFetchInit } from "../../src/utils/core-fetch-init";
-import { ENDPOINT_SCHEMA, type SchemaMetadata } from "../../src/validation";
 import { asBrowserPage } from "../helpers/browser-page";
 
 /* `next`, the key Next.js's types give every request's init, is in the program only beside them. */

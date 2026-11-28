@@ -1,10 +1,10 @@
 import type { AnySource, Sources } from "../define/types";
-import { withVariableDefaults } from "../define/variable-defaults";
 import type { CallOptions, Context } from "../http-client/types";
 import type { CallPurpose } from "../middleware/types";
 import { resolveEndpoint } from "./execute-resolve";
 import { buildErrorResponse } from "./execute-response";
 import { ownFields } from "./own";
+import { withVariableDefaults } from "./with-variable-defaults";
 
 /**
  * What variables may be: named values, a list, a JSON scalar, form data or a

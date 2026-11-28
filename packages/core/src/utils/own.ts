@@ -4,7 +4,10 @@
  * and what it builds of them on the call's way: their own properties
  * alone. What a prototype answers for a key they do not have, a prototype
  * of the user's or `Object.prototype` that code elsewhere in the process
- * changed, is none of theirs.
+ * changed, is none of theirs. One of them alone is read by `ownField`, in
+ * a module of its own, as the options the core hands the platform are in
+ * `own-options.ts`: an API's definition reads its options whole, and a
+ * page of definitions alone loads neither.
  */
 
 /* What every view stands on, and nothing else does: an object of nothing, with no prototype of
@@ -31,35 +34,3 @@ export function ownFields<T extends object>(value: T | null | undefined): Partia
 export function ownFields<T extends object>(value: T | null | undefined): Partial<T> {
   return Object.assign(viewOn(NONE), value) as Partial<T>;
 }
-
-/**
- * One own property of an object: `undefined` where it has none of its own.
- *
- * @param value - The options, or nothing
- * @param key - The option
- * @returns Its value
- * @example
- * ```ts
- * ownField(endpointOptions, "timeout"); // what the endpoint's own options say, or undefined
- * ```
- */
-export function ownField<T extends object, K extends keyof T>(
-  value: T | null | undefined,
-  key: K,
-): T[K] | undefined {
-  return value != null && Object.hasOwn(value, key) ? value[key] : undefined;
-}
-
-/**
- * The options of a listener that runs once, as the platform reads them —
- * its own alone: `Object.prototype.signal`, given in the process, makes no
- * listener of the core's refuse to be added.
- */
-export const ONCE = { __proto__: null, once: true } as AddEventListenerOptions;
-
-/**
- * The strategy of a stream that queues nothing ahead of its reader, as the
- * platform reads it — its own alone: `Object.prototype.size`, given in the
- * process, measures no chunk of the core's.
- */
-export const UNQUEUED = { __proto__: null, highWaterMark: 0 } as QueuingStrategy<unknown>;

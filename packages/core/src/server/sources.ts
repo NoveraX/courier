@@ -4,7 +4,7 @@
  * itself, which a page reads too, is `registered-sources`.
  */
 
-import { getSourceName, setSourceName } from "../define/api";
+import { getSourceName, setSourceName } from "../define/source-name";
 import { stampSourceKeys } from "../define/stamp-source-keys";
 import type { Sources } from "../define/types";
 import { ConfigurationError } from "../errors/configuration-error";

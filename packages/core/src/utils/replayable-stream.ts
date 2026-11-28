@@ -1,4 +1,4 @@
-import { UNQUEUED } from "./own";
+import { UNQUEUED } from "./own-options";
 
 /**
  * A body's stream whose copies are readings of their own, each opened from

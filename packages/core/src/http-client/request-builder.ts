@@ -1,4 +1,5 @@
-import { ownField, ownFields } from "../utils/own";
+import { ownFields } from "../utils/own";
+import { ownField } from "../utils/own-field";
 import { buildBody, buildSearchParams } from "./body-builder";
 import { stripPathParams } from "./path-params";
 import { overlayHeaders } from "./request-headers";

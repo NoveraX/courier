@@ -1,6 +1,6 @@
 import { agentOptionsOf } from "../agent/agent-options";
 import type { AgentMark } from "../define/agent-mark";
-import { getSourceName } from "../define/api";
+import { getSourceName } from "../define/source-name";
 import type { AnySource } from "../define/types";
 import { ConfigurationError } from "../errors/configuration-error";
 import { eachEndpoint } from "../openapi/endpoints";

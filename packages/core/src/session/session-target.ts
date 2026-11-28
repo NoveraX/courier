@@ -1,6 +1,6 @@
 import type { ResolvedEndpointOptions } from "../define/options";
 import type { BaseOptions } from "../http-client/types";
-import { ownField } from "../utils/own";
+import { ownField } from "../utils/own-field";
 import type { ForwardOptions, SessionOptions } from "./types";
 
 /* Verbs that only read, which a double-submit check lets through without its token. */

@@ -1,4 +1,4 @@
-import { ONCE } from "./own";
+import { ONCE } from "./own-options";
 
 /**
  * Wait for a step, given up as soon as `signal` aborts: a hook takes no

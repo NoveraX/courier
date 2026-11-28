@@ -19,10 +19,10 @@
  * guessing names is trying to learn.
  */
 
+import type { SchemaMetadata } from "../define/endpoint-schema";
 import { GROUP_PATH_SEPARATOR, groupChain, groupNames } from "../define/group-tree";
 import { isRecord } from "../utils/is-record";
-import { ownField } from "../utils/own";
-import type { SchemaMetadata } from "../validation";
+import { ownField } from "../utils/own-field";
 
 /** Whether a page may reach an endpoint, and the mark that decided it. */
 export interface ExposureDecision {

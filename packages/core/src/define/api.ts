@@ -5,8 +5,8 @@ import { announceSource } from "./announce-source";
 import { assertCancelPrevious } from "./assert-cancel-previous";
 import { assertNoReservedGroupName, assertNoReservedName } from "./assert-no-reserved-name";
 import type { ExposeMark } from "./marker";
+import { SOURCE_NAME_KEY } from "./source-name-key";
 import type {
-  AnyDefinedApi,
   DefinedApi,
   DefinedFlatApi,
   DefinedMixedApi,
@@ -20,9 +20,6 @@ import type {
   OwnEndpoints,
   OwnGroups,
 } from "./types";
-
-/** Symbol for storing source name on the source object — survives module duplication */
-const SOURCE_NAME_KEY = Symbol.for("courier.source.name");
 
 /**
  * Derive a human-readable name from baseURL hostname.
@@ -41,41 +38,6 @@ export function deriveSourceName(baseURL?: string): string {
   } catch {
     return "api";
   }
-}
-
-/** Read the stored source name from a source object */
-export function getSourceName(source: unknown): string | undefined {
-  if (!source || typeof source !== "object") return undefined;
-  return (source as Record<symbol, unknown>)[SOURCE_NAME_KEY] as string | undefined;
-}
-
-/**
- * Whether a value is an API `defineApi` made — what a registry hands back
- * typed only as a source: every one carries the name it is registered or
- * defined under.
- *
- * @param value - The value to check
- * @returns `true` for a defined API
- * @example
- * ```ts
- * const source = getSources()?.[name];
- * if (isDefinedApi(source)) openStreams(source);
- * ```
- */
-export function isDefinedApi(value: unknown): value is AnyDefinedApi {
-  return getSourceName(value) !== undefined;
-}
-
-/**
- * Forcibly stamp `name` onto `source` as its canonical source name.
- *
- * Use when an explicit identifier (e.g. a `courier.config.ts` `sources` key)
- * must override the value derived inside `defineApi`. The internal symbol
- * stays private — call this helper instead of touching it directly.
- */
-export function setSourceName(source: unknown, name: string): void {
-  if (!source || typeof source !== "object") return;
-  (source as Record<symbol, unknown>)[SOURCE_NAME_KEY] = name;
 }
 
 /**

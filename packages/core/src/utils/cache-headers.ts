@@ -1,4 +1,4 @@
-import type { SchemaMetadata } from "../validation";
+import type { SchemaMetadata } from "../define/endpoint-schema";
 
 /**
  * Request headers that do not say who is asking.

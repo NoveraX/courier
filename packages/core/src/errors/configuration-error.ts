@@ -388,7 +388,3 @@ export class ConfigurationError extends CourierError<ConfigurationErrorCode> {
     this.name = "ConfigurationError";
   }
 }
-
-export function isConfigurationError(error: unknown): error is ConfigurationError {
-  return error instanceof ConfigurationError;
-}

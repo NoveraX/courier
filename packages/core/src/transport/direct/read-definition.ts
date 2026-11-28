@@ -1,4 +1,4 @@
-import { ownField } from "../../utils/own";
+import { ownField } from "../../utils/own-field";
 
 /**
  * Reading a source's definition, which reaches the transports untyped: a

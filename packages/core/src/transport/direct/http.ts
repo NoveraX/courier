@@ -1,11 +1,12 @@
-import { getSourceName } from "../../define/api";
 import { assertCancelPrevious } from "../../define/assert-cancel-previous";
+import { getSourceName } from "../../define/source-name";
 import type { AnyDefinedApi } from "../../define/types";
 import { isRequestFailure, type RequestFailure } from "../../errors";
 import type { RequestContext } from "../../http-client/types";
 import { executeRequest } from "../../utils/execute";
 import { layerHeaders } from "../../utils/layer-headers";
-import { ownField, ownFields } from "../../utils/own";
+import { ownFields } from "../../utils/own";
+import { ownField } from "../../utils/own-field";
 import type { HTTPExecutor } from "../types";
 
 export interface DirectHTTPDefaults {

@@ -1,4 +1,4 @@
-import { getSourceName } from "../define/api";
+import { getSourceName } from "../define/source-name";
 import type { BaseOptions } from "../http-client/types";
 import { eachEndpoint } from "./endpoints";
 import type { ComponentSchemas } from "./json-schema";

@@ -1,4 +1,4 @@
-import { ownField } from "../../utils/own";
+import { ownField } from "../../utils/own-field";
 
 /**
  * The Studio row a stream asks to be shown under, from the options it was

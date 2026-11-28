@@ -1,5 +1,5 @@
 import { abortReason } from "./abort-reason";
-import { ONCE } from "./own";
+import { ONCE } from "./own-options";
 import { ownedBytes } from "./owned-bytes";
 import { readChunks } from "./read-chunks";
 import { responseTakesStreams } from "./response-takes-streams";

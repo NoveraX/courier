@@ -1,6 +1,6 @@
 import { createLogger } from "../logger";
 import { isCancellation } from "./abort";
-import { ONCE } from "./own";
+import { ONCE } from "./own-options";
 
 const log = createLogger("Stream");
 const ABORTED = Symbol("aborted");

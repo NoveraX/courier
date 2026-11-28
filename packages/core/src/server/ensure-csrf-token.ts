@@ -1,4 +1,4 @@
-import { getSourceName } from "../define/api";
+import { getSourceName } from "../define/source-name";
 import type { AnyDefinedApi } from "../define/types";
 import { ConfigurationError } from "../errors/configuration-error";
 import { csrfSource } from "../session/csrf-source";

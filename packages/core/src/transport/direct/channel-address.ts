@@ -3,7 +3,7 @@
  * definition says — by a direct caller, and by a proxy relaying it.
  */
 
-import { getSourceName } from "../../define/api";
+import { getSourceName } from "../../define/source-name";
 import { buildDirectWSUrl, buildWSTopic } from "../../realtime/ws-address";
 import { addressCall } from "./address";
 import { placedEndpoint } from "./placed-endpoint";

@@ -7,7 +7,7 @@ import { streamLabel } from "../realtime/stream-label";
 import type { SSEContext } from "../realtime/types";
 import { abortableEvents } from "../utils/abortable-events";
 import { anySignal } from "../utils/any-signal";
-import { ONCE } from "../utils/own";
+import { ONCE } from "../utils/own-options";
 import { SSE_HEARTBEAT } from "./format-sse";
 import { createSSESender } from "./sse-sender";
 import {

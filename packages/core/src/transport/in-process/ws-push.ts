@@ -7,7 +7,7 @@ import type { SSEEvent, WSContext } from "../../realtime/types";
 import { servedTopic } from "../../realtime/ws/served-topic";
 import { generateRequestId } from "../../studio";
 import { abortableEvents } from "../../utils/abortable-events";
-import { ONCE } from "../../utils/own";
+import { ONCE } from "../../utils/own-options";
 import { randomId } from "../../utils/random-id";
 import { runTransportMiddleware } from "../../utils/transport-middleware";
 import { beginStream, instrumentSSE } from "../instrument";

@@ -1,4 +1,4 @@
-import type { SchemaMetadata } from "../validation";
+import type { SchemaMetadata } from "../define/endpoint-schema";
 import { isExposedToWire } from "./exposure";
 import { warnNotExposed } from "./not-exposed";
 

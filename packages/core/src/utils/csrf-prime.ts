@@ -5,7 +5,7 @@ import { csrfSource } from "../session/csrf-source";
 import { cancellation } from "./cancellation";
 import { callSessionTarget } from "./execute-session";
 import type { CallTarget } from "./execute-target";
-import { ONCE } from "./own";
+import { ONCE } from "./own-options";
 import { setCookiesOf } from "./set-cookies";
 
 const log = createLogger("Session");

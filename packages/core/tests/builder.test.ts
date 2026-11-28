@@ -1,10 +1,10 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod";
 import { courier } from "../src/define/courier";
+import { ENDPOINT_SCHEMA } from "../src/define/endpoint-schema";
 import type { InferKind, InferResponse } from "../src/define/marker";
 import type { ChannelProbe, HttpProbe, HttpWire, StreamProbe } from "../src/define/probe";
 import type { Middleware } from "../src/middleware/types";
-import { ENDPOINT_SCHEMA } from "../src/validation";
 
 const UserSchema = z.object({ id: z.string(), email: z.string() });
 const ById = z.object({ id: z.string() });

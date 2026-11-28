@@ -2,7 +2,7 @@ import type { Sources } from "../define/types";
 import type { Context } from "../http-client/types";
 import { executeCall } from "../utils/execute";
 import { buildErrorResponse } from "../utils/execute-response";
-import { ownField } from "../utils/own";
+import { ownField } from "../utils/own-field";
 import { parseRequestPayload, type RequestPayloadInput } from "../utils/request-payload";
 import { serverCallContext } from "../utils/server-call-marks";
 import { unsentUpload } from "./unsent-upload";

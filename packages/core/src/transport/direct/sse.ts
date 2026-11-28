@@ -1,4 +1,4 @@
-import { getSourceName } from "../../define/api";
+import { getSourceName } from "../../define/source-name";
 import type { AnyDefinedApi } from "../../define/types";
 import { subscribeSSE } from "../../realtime/sse";
 import { readStreamData } from "../../realtime/sse/stream-data";

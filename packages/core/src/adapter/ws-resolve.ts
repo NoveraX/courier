@@ -1,10 +1,10 @@
+import type { SchemaMetadata } from "../define/endpoint-schema";
 import type { TopicKeyReader } from "../define/options";
 import { unqualifyTopic } from "../realtime/ws/topic-key";
 import { WS_CODE } from "../realtime/ws/ws-codes";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { parseWSTopic } from "../realtime/ws-address";
 import { resolveEndpoint } from "../utils/execute-resolve";
-import type { SchemaMetadata } from "../validation";
 import { endpointName } from "./endpoint-name";
 import { isExposedToWire } from "./exposure";
 import { warnRealtimeNotExposed } from "./not-exposed-realtime";

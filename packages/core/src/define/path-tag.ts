@@ -1,4 +1,4 @@
-import { encodePathValue, routeChangingPart } from "../utils/path-template";
+import { encodePathValue } from "../utils/encode-path-value";
 import { standInName } from "./stand-in";
 
 /** What a closure's wire offers to write a path with values in it. */
@@ -31,62 +31,30 @@ export interface PathWriter {
 
 /* A character a parameter's name may go on with: `{name}` ends a stand-in's name before it. */
 const NAME_CHAR = /^[A-Za-z0-9_]/;
-const QUERY_OR_FRAGMENT = /[?#]/;
-/* URL parsing reads `%2e` as a dot, so a segment `%2E.` is `..` to it. */
-const ENCODED_DOT = /%2e/gi;
-
-type Refusal = (message: string) => Error;
 
 /** A path written with values put into it, and where the text of each value begins in it. */
-interface WrittenPath {
+export interface WrittenPath {
   readonly path: string;
   readonly starts: readonly number[];
 }
 
 /**
- * The `path` a wire whose calls send the path offers. A value that is
- * missing or that no URL can hold is refused with the error those calls
- * throw for a path's parameters, and so is one that makes its segment —
- * alone or with the text and the values beside it — empty, `.` or `..`.
+ * A path with each value put into it as `text` writes it, and a stand-in
+ * for a variable as the parameter it stands for — braced where text that
+ * a name could go on with follows it. What both writers of a closure's
+ * `path` share: the recorder's, which probes an endpoint (`wire-call.ts`),
+ * and a call's, which refuses a value its path cannot take (`path-writer.ts`).
  *
- * @param refuse - The error for a value the path cannot take
- * @returns The tag
+ * @param strings - The text around the values
+ * @param values - The values put into the path
+ * @param text - How a value is written
+ * @returns The path, and where the text of each value begins in it
  * @example
  * ```ts
- * const path = pathWriter((message) => new Error(message));
- * path`files/${"a:b"}`; // → "files/a%3Ab"
- * path`reports/${""}.${"."}`; // throws: the segment would be ".."
+ * writePath(["files/", ""], ["a b"], plainText); // → { path: "files/a%20b", starts: [6] }
  * ```
  */
-export function pathWriter(refuse: Refusal): PathWriter["path"] {
-  const text = (value: unknown): string => checkedText(value, refuse);
-  return (strings, ...values) => {
-    const { path, starts } = writePath(strings, values, text);
-    const segment = routeChangingSegment(path, starts);
-    if (segment !== undefined) {
-      throw refuse(
-        `A value put into the path makes its segment "${segment}", which would change the route`,
-      );
-    }
-    return path;
-  };
-}
-
-/**
- * The `path` the recorder that probes an endpoint offers. Probing sends
- * nothing, so each value is written as it is — a call checks it when it
- * sends the path — and a stand-in stays the parameter it stands for.
- *
- * @example
- * ```ts
- * probingPath`files/${".."}`; // → "files/.."
- * ```
- */
-export const probingPath: PathWriter["path"] = (strings, ...values) =>
-  writePath(strings, values, plainText).path;
-
-/* The path with each value in it, and a stand-in as its parameter: braced where a name could go on. */
-function writePath(
+export function writePath(
   strings: readonly string[],
   values: readonly unknown[],
   text: (value: unknown) => string,
@@ -107,39 +75,16 @@ function parameterOf(name: string, after: string): string {
   return NAME_CHAR.test(after) ? `{${name}}` : `:${name}`;
 }
 
-function plainText(value: unknown): string {
+/**
+ * A value as a path holds it: its text, encoded whole.
+ *
+ * @param value - The value put into the path
+ * @returns Its text, encoded
+ * @example
+ * ```ts
+ * plainText("a:b"); // → "a%3Ab"
+ * ```
+ */
+export function plainText(value: unknown): string {
   return encodePathValue(String(value), false);
-}
-
-/* A value a call sends, refused as a parameter's is where it is missing or no URL can hold it. */
-function checkedText(value: unknown, refuse: Refusal): string {
-  if (value === undefined || value === null) {
-    const text = String(value);
-    throw refuse(
-      `Missing a value put into the path: it is ${text}, which would be sent as the text "${text}"`,
-    );
-  }
-  try {
-    return plainText(value);
-  } catch (error) {
-    /* Encoding throws for a lone surrogate, which no URL can hold. */
-    if (error instanceof URIError) {
-      throw refuse(`A value put into the path cannot be encoded: ${error.message}`);
-    }
-    throw error;
-  }
-}
-
-/* The first segment before the query that holds a value's text and names another route. */
-function routeChangingSegment(path: string, starts: readonly number[]): string | undefined {
-  const end = path.search(QUERY_OR_FRAGMENT);
-  const local = end < 0 ? path : path.slice(0, end);
-  for (const at of starts) {
-    if (at > local.length) continue;
-    const from = at === 0 ? 0 : local.lastIndexOf("/", at - 1) + 1;
-    const to = local.indexOf("/", at);
-    const segment = local.slice(from, to < 0 ? local.length : to);
-    if (routeChangingPart(segment.replace(ENCODED_DOT, "."), false) !== undefined) return segment;
-  }
-  return undefined;
 }

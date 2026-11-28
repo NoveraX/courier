@@ -18,7 +18,7 @@
 
 import { LIMITS } from "../limits";
 import { isRecord } from "../utils/is-record";
-import { ownField } from "../utils/own";
+import { ownField } from "../utils/own-field";
 import { reviveWithoutPrototypeKeys } from "../utils/safe-json";
 
 /** Options a proxy client may set. Everything else is refused. */

@@ -1,6 +1,7 @@
 import { HTTPError } from "../errors";
 import { isFieldRecord, isRawBody, toBodyInit } from "../utils/body-kind";
-import { isFormData, normalizeHttpMethod, sendsVariablesInQuery } from "../utils/helpers";
+import { isFormData, sendsVariablesInQuery } from "../utils/helpers";
+import { normalizeHttpMethod } from "../utils/http-method";
 import { isReadableStream } from "../utils/is-readable-stream";
 import { toQueryEntries } from "../utils/query-string";
 import {

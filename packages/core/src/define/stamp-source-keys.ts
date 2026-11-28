@@ -1,6 +1,7 @@
 import { ConfigurationError } from "../errors/configuration-error";
 import { isRecord } from "../utils/is-record";
-import { deriveSourceName, getSourceName, setSourceName } from "./api";
+import { deriveSourceName } from "./api";
+import { getSourceName, setSourceName } from "./source-name";
 
 /**
  * Make each source's key its name, refusing a key that contradicts a name the

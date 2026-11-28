@@ -4,7 +4,8 @@ import type { CallPurpose, MiddlewareContext } from "../middleware/types";
 import { forwardedRequestHeaders } from "./forwarded-request-headers";
 import { headersToObject } from "./helpers";
 import { mergeHeaders } from "./merge-headers";
-import { ownField, ownFields } from "./own";
+import { ownFields } from "./own";
+import { ownField } from "./own-field";
 import { randomId } from "./random-id";
 import { agentOf } from "./server-call-marks";
 

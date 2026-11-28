@@ -1,14 +1,15 @@
-import { HTTP_VERBS } from "../define/probe";
+import type { SchemaMetadata } from "../define/endpoint-schema";
+import { HTTP_VERBS } from "../define/wire-call";
 import { ConfigurationError } from "../errors/configuration-error";
 import { isHTTPError } from "../errors/http-error";
 import type { HttpClient } from "../http-client/index";
 import type { BoundMethodOptions, GroupOptions, HttpMethods } from "../http-client/types";
 import type { MiddlewareResponse } from "../middleware/types";
 import type { StudioHooks } from "../studio";
-import type { SchemaMetadata } from "../validation";
 import type { TimingState } from "./execute-studio";
 import { validateResponse } from "./execute-validation";
-import { isHeaders, isReadingMethod } from "./helpers";
+import { isHeaders } from "./helpers";
+import { isReadingMethod } from "./http-method";
 import { isError } from "./is-error";
 import type { SharingCall } from "./shared-answer";
 

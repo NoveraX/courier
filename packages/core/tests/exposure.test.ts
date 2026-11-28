@@ -10,9 +10,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { executeWireRequest, type WireContext } from "../src/adapter/execute-wire-request";
 import { exposureOf, isExposedToWire } from "../src/adapter/exposure";
+import { ENDPOINT_SCHEMA, type SchemaMetadata } from "../src/define/endpoint-schema";
 import { courier, defineApi, defineGroup } from "../src/define/index";
 import { executeRequest } from "../src/utils/execute";
-import { ENDPOINT_SCHEMA, type SchemaMetadata } from "../src/validation";
 
 const { endpoint, stream, channel } = courier();
 

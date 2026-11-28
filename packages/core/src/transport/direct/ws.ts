@@ -1,4 +1,4 @@
-import { getSourceName } from "../../define/api";
+import { getSourceName } from "../../define/source-name";
 import type { AnyDefinedApi } from "../../define/types";
 import { executeWSChannel } from "../../realtime/ws-channel-client";
 import { executeWSPush } from "../../realtime/ws-subscription";

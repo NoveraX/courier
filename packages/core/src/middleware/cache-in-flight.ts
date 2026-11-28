@@ -1,5 +1,5 @@
 import { cancellation } from "../utils/cancellation";
-import { ONCE } from "../utils/own";
+import { ONCE } from "../utils/own-options";
 import type { MiddlewareResponse } from "./types";
 
 /** The misses being fetched, by cache key: what each will store, or nothing. */

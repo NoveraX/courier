@@ -6,8 +6,9 @@ import { assertServedTopicKey, withTopicKey } from "./channel-topic";
 import { kindFor, sealHandler } from "./descriptor";
 import { makeAddressed } from "./make-addressed";
 import type { AnyEndpointOptions, TopicKeyReader } from "./options";
-import { type AnyProbe, HTTP_VERBS, type HttpWire, probeWire } from "./probe";
+import { type AnyProbe, type HttpWire, probeWire } from "./probe";
 import { type AnyBuilder, refinements } from "./refinements";
+import { HTTP_VERBS } from "./wire-call";
 
 /**
  * An endpoint that has not yet said where it is.

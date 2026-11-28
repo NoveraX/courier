@@ -1,12 +1,10 @@
 export { AbortError, type AbortErrorCode, isAbortError } from "./abort-error";
 export { type CallFailure, isCallFailure } from "./call-failure";
-export {
-  ConfigurationError,
-  type ConfigurationErrorCode,
-  isConfigurationError,
-} from "./configuration-error";
-export { CourierError, type CourierErrorOptions, isCourierError } from "./courier-error";
+export { ConfigurationError, type ConfigurationErrorCode } from "./configuration-error";
+export { CourierError, type CourierErrorOptions } from "./courier-error";
 export { HTTPError, isHTTPError } from "./http-error";
+export { isConfigurationError } from "./is-configuration-error";
+export { isCourierError } from "./is-courier-error";
 export { isMissingTokenError, MissingTokenError } from "./missing-token-error";
 export { isNetworkError, NetworkError } from "./network-error";
 export { isRequestFailure, type RequestFailure } from "./request-failure";

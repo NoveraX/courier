@@ -1,5 +1,5 @@
 import { abortReason } from "./abort-reason";
-import { ONCE } from "./own";
+import { ONCE } from "./own-options";
 
 /**
  * Read a stream to its end with its own reader, handing each chunk on as it

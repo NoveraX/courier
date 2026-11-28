@@ -1,5 +1,5 @@
 import { ConfigurationError, type ConfigurationErrorCode } from "../errors/configuration-error";
-import { ENDPOINT_SCHEMA } from "../validation";
+import { ENDPOINT_SCHEMA } from "./endpoint-schema";
 
 /**
  * The key a group or a source keeps its own settings under, beside its

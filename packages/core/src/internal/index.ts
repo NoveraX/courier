@@ -48,7 +48,6 @@ export { RUNTIME_HOOKS } from "../client/proxy-members";
 export { createClientRoot } from "../client/root";
 export { shapeOfRoutes, shapeOfSource } from "../client/shape";
 export { isSecretVariableName } from "../config/secret-variable-name";
-export { isDefinedApi } from "../define/api";
 export { groupOptionsOf } from "../define/group-options-of";
 export {
   eachGroup,
@@ -58,7 +57,7 @@ export {
   subGroupsOf,
 } from "../define/group-tree";
 export { routesOf } from "../define/routes-of";
-export { withVariableDefaults } from "../define/variable-defaults";
+export { isDefinedApi } from "../define/source-name";
 export { discoverAppOrigin } from "../discover-app-origin";
 export { readLogFormat } from "../logger/log-format";
 export { createRefusalLog } from "../logger/refusal-log";
@@ -117,6 +116,7 @@ export {
 } from "../transport";
 export { anySignal } from "../utils/any-signal";
 export { assertAllowedOrigins } from "../utils/assert-allowed-origins";
+export { encodePathValue } from "../utils/encode-path-value";
 export {
   environmentVariable,
   inProduction,
@@ -127,12 +127,8 @@ export { executeRequest } from "../utils/execute";
 export { absentAs } from "../utils/execute-validation";
 export { forwardedChain, forwardedFor } from "../utils/forwarded-for";
 export { sendableValue } from "../utils/header-value";
-export {
-  isReadingMethod,
-  normalizeHttpMethod,
-  sendsVariablesInQuery,
-  toInternalMethod,
-} from "../utils/helpers";
+export { sendsVariablesInQuery } from "../utils/helpers";
+export { isReadingMethod, normalizeHttpMethod, toInternalMethod } from "../utils/http-method";
 export { isCredentialHeader } from "../utils/is-credential-header";
 export { isError, isErrorNamed } from "../utils/is-error";
 export { isPlainRecord } from "../utils/is-plain-record";
@@ -140,13 +136,7 @@ export { isReadableStream } from "../utils/is-readable-stream";
 export { isLoopbackHostname } from "../utils/loopback-host";
 export { middlewareChainOf } from "../utils/middleware-chain-of";
 export { parseUrl } from "../utils/parse-url";
-export {
-  encodePathValue,
-  escapePathText,
-  fillPathParams,
-  pathParamNames,
-  pathPieces,
-} from "../utils/path-template";
+export { escapePathText, fillPathParams, pathParamNames, pathPieces } from "../utils/path-template";
 export { proxyRefusal } from "../utils/proxy-refusal";
 export { RECORD_UPLOAD_TYPE } from "../utils/record-upload";
 export {
@@ -163,6 +153,7 @@ export { agentCallContext } from "../utils/server-call-marks";
 export { sliceWhole } from "../utils/slice-whole";
 export { withoutEdgeSlashes, withoutTrailingSlashes } from "../utils/trim-slashes";
 export { formOf } from "../utils/variables-encoding";
+export { withVariableDefaults } from "../utils/with-variable-defaults";
 export { knownWebhooks, onKnownWebhooks } from "../webhooks/webhook-registry";
 /* Its types are named in types.ts. */
 export type * from "./types";

@@ -1,9 +1,9 @@
 import { isEndpointEntry } from "../define/endpoint-entry";
+import { ENDPOINT_SCHEMA, type SchemaMetadata } from "../define/endpoint-schema";
 import { groupOptionsOf } from "../define/group-options-of";
 import { eachGroup, GROUP_PATH_SEPARATOR } from "../define/group-tree";
 import type { ResolvedEndpointOptions } from "../define/options";
 import type { AnyProbe } from "../define/probe";
-import { ENDPOINT_SCHEMA, type SchemaMetadata } from "../validation";
 
 /** An endpoint of an API, where its definition puts it. */
 export interface PlacedEndpoint {

@@ -6,7 +6,7 @@ import { type CallProgress, heard } from "./call-progress";
 import { cancellation } from "./cancellation";
 import { isReadableStream } from "./is-readable-stream";
 import { isRecord } from "./is-record";
-import { ONCE } from "./own";
+import { ONCE } from "./own-options";
 import { platformError } from "./platform-error";
 import { declaredLength } from "./progress";
 import { wholeBody } from "./whole-body";

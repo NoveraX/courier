@@ -1,5 +1,5 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
-
+import type { SchemaMetadata } from "../../define/endpoint-schema";
 import type { TopicKeyReader } from "../../define/options";
 import type { Sources } from "../../define/types";
 import { checkResponse } from "../../realtime/check-response";
@@ -8,7 +8,7 @@ import type { SSEEvent } from "../../realtime/types";
 import { resolveEndpoint } from "../../utils/execute-resolve";
 import { isError } from "../../utils/is-error";
 import { REQUEST_MEMBERS } from "../../utils/request-members";
-import { type SchemaMetadata, validateSchema } from "../../validation";
+import { validateSchema } from "../../validation";
 
 /**
  * Sentinel URL used for the synthetic Request passed to middleware.

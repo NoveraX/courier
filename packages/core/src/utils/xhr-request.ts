@@ -1,12 +1,12 @@
 import { isBodilessStatus } from "../http-client/response";
-import type { DownloadProgress, UploadProgress } from "../http-client/types";
+import type { DownloadProgress } from "../http-client/types";
 import type { WebBody, WebCredentials } from "../http-client/web-types";
 import { createLogger } from "../logger";
 import { cancellation } from "./cancellation";
 import { isRecord } from "./is-record";
 import { ONCE } from "./own";
 import { platformError } from "./platform-error";
-import { declaredLength } from "./progress";
+import { type CallProgress, declaredLength, heard } from "./progress";
 import { isStream, wholeBody } from "./whole-body";
 
 const log = createLogger("XMLHttpRequest");
@@ -23,24 +23,17 @@ export interface XhrRequestInit {
   [option: string]: unknown;
 }
 
-/** Who hears a request sent through XMLHttpRequest go out, and its answer come in. */
-export interface XhrProgress {
-  /** Hears the body go out */
-  onUploadProgress?: ((progress: UploadProgress) => void) | undefined;
-  /** Hears the answer come in */
-  onDownloadProgress?: ((progress: DownloadProgress) => void) | undefined;
-}
-
 /**
  * Send a request through XMLHttpRequest, which reports its body going out —
  * fetch cannot — and its answer coming in where the platform's `Response`
  * cannot be made of a stream to count it, as in React Native; and, in React
  * Native, for a form naming a file on the device, which XMLHttpRequest reads
- * from where it is.
+ * from where it is. A callback that throws ends the request, which fails
+ * with what it threw, kept on the call's progress.
  *
  * @param url - Where to send it
  * @param init - The request, as it would be given to fetch
- * @param progress - Who hears the body go out and the answer come in
+ * @param progress - Who hears the body go out and the answer come in, and what one of them threw
  * @returns The answer, a Response of the Blob XMLHttpRequest handed over
  * @example
  * ```ts
@@ -50,7 +43,7 @@ export interface XhrProgress {
 export async function xhrRequest(
   url: string,
   init: XhrRequestInit,
-  progress: XhrProgress = {},
+  progress: CallProgress = {},
 ): Promise<Response> {
   warnAboutIgnoredOptions(init);
   /* XMLHttpRequest cannot send a stream: handed one, it sent the text
@@ -65,8 +58,11 @@ function send(
   url: string,
   init: XhrRequestInit,
   body: XMLHttpRequestBodyInit | null,
-  { onUploadProgress, onDownloadProgress }: XhrProgress,
+  progress: CallProgress,
 ): Promise<Response> {
+  const onUploadProgress = progress.onUploadProgress && heard(progress, progress.onUploadProgress);
+  const onDownloadProgress =
+    progress.onDownloadProgress && heard(progress, progress.onDownloadProgress);
   return new Promise((resolve, reject) => {
     const signal = init.signal;
     if (signal?.aborted) {
@@ -83,24 +79,42 @@ function send(
     const onAbort = () => xhr.abort();
     signal?.addEventListener("abort", onAbort, ONCE);
     const settle = () => signal?.removeEventListener("abort", onAbort);
+    /* A callback's throw ends the request, which fails with it: thrown in a listener, it reached
+       no one, and thrown once the answer had loaded, it left the request unanswered. */
+    let ended = false;
+    const told = (report: () => void): boolean => {
+      if (ended) return false;
+      try {
+        report();
+        return true;
+      } catch (error) {
+        ended = true;
+        settle();
+        reject(error);
+        xhr.abort();
+        return false;
+      }
+    };
 
     /* Listened to only when asked: a listener on the upload makes a browser preflight a request
        to another origin. */
     if (onUploadProgress) {
       xhr.upload.addEventListener("progress", (event) => {
         if (!event.lengthComputable) return;
-        onUploadProgress({
-          percent: event.total > 0 ? event.loaded / event.total : 0,
-          transferredBytes: event.loaded,
-          totalBytes: event.total,
-        });
+        told(() =>
+          onUploadProgress({
+            percent: event.total > 0 ? event.loaded / event.total : 0,
+            transferredBytes: event.loaded,
+            totalBytes: event.total,
+          }),
+        );
       });
     }
-    const downloaded = onDownloadProgress && reportDownload(xhr, onDownloadProgress);
+    const downloaded = onDownloadProgress && reportDownload(xhr, onDownloadProgress, told);
     xhr.addEventListener("load", () => {
       settle();
       const answer = bodyOf(xhr);
-      downloaded?.(answer);
+      if (downloaded && !told(() => downloaded(answer))) return;
       const { status, statusText } = xhr;
       resolve(new Response(answer, { status, statusText, headers: headersOf(xhr) }));
     });
@@ -123,22 +137,27 @@ function send(
  * Report the answer as XMLHttpRequest takes it in — React Native's reports
  * a download once a listener asks — against the length it declares, as a
  * body read through fetch is counted; once it has loaded, the end is
- * reported unless an event already did.
+ * reported unless an event already did. Each report is made through
+ * `told`, which ends the request should the callback throw.
  */
 function reportDownload(
   xhr: XMLHttpRequest,
   onProgress: (progress: DownloadProgress) => void,
+  told: (report: () => void) => boolean,
 ): (answer: Blob | null) => void {
   let total: number | undefined;
   let whole = false;
   xhr.addEventListener("progress", (event) => {
     total ??= declaredLength(headersOf(xhr));
-    whole = total > 0 && event.loaded >= total;
-    onProgress({
-      percent: total > 0 ? event.loaded / total : 0,
-      transferredBytes: event.loaded,
-      totalBytes: total,
-    });
+    const length = total;
+    whole = length > 0 && event.loaded >= length;
+    told(() =>
+      onProgress({
+        percent: length > 0 ? event.loaded / length : 0,
+        transferredBytes: event.loaded,
+        totalBytes: length,
+      }),
+    );
   });
   return (answer) => {
     if (whole) return;

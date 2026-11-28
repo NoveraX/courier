@@ -1,85 +1,30 @@
-import type { PlatformFetch } from "../http-client/source-transport";
 import { fetchFailure } from "../http-client/transport-failure";
-import type { DownloadProgress, UploadProgress } from "../http-client/types";
 import type { WebBody } from "../http-client/web-types";
 import { assertAbsoluteUrl } from "./absolute-url";
 import { type Answer, loadCounter, platformAnswer } from "./answer";
 import { anySignal } from "./any-signal";
 import { attemptExpiry } from "./attempt-expiry";
+import type { CoreFetchInit } from "./core-fetch-init";
 import { holdsDeviceFiles } from "./device-files";
 import { fetchWithinOrigin } from "./fetch-within-origin";
 import { flightKey, isRead } from "./flight-key";
 import { sendableHeaders } from "./header-value";
 import { isFormData, normalizeHttpMethod } from "./helpers";
 import { ownFields } from "./own";
+import type { CallProgress } from "./progress";
 import { answerRead, forgetRenderReads } from "./render-memo";
 import { REQUEST_MEMBERS } from "./request-members";
 import { responseTakesStreams } from "./response-takes-streams";
-import { type RequestQuery, withSearchParams } from "./search-params";
+import { withSearchParams } from "./search-params";
 import { sendStreamed } from "./send-streamed";
-import type { SharingCall } from "./shared-answer";
 import { assertStreamingFetch } from "./streamed-answer";
 import { withoutProgress } from "./without-progress";
-
-export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
-  /** What the request sends; absent, nothing unless `json` is given. */
-  body?: WebBody | null | undefined;
-  signal?: AbortSignal | null | undefined;
-  json?: unknown;
-  searchParams?: RequestQuery | undefined;
-  timeout?: number | undefined;
-  onUploadProgress?: ((progress: UploadProgress) => void) | undefined;
-  onDownloadProgress?: ((progress: DownloadProgress) => void) | undefined;
-  /**
-   * Follow redirects only while they stay on the request's origin — see
-   * `fetchWithinOrigin`. An explicit `redirect` takes precedence.
-   */
-  withinOrigin?: boolean | undefined;
-  /**
-   * Sends the request in place of `fetch`: the route a proxy caller takes
-   * to the proxy of the server it runs in, without leaving the process.
-   */
-  transport?: ((url: string, init: RequestInit) => Promise<Response>) | undefined;
-  /** Sends the request in place of the platform's `fetch` and of XMLHttpRequest: the source's own. */
-  fetch?: PlatformFetch | undefined;
-  /**
-   * Join an identical read already in flight, or answer it with the one the
-   * render being served made, rather than send another — the default;
-   * `false` sends this one alone.
-   */
-  coalesce?: boolean | undefined;
-  /**
-   * The request being served the call is made for, when the answer may set
-   * that visitor's session: a read made for one never joins a read made for
-   * another, however alike they are.
-   */
-  servedFor?: object | undefined;
-  /**
-   * The endpoint is declared a read, whatever verb carries it, or a write:
-   * which of them an identical request in flight may join. Unsaid, a request
-   * sent as `GET`, `HEAD` or `QUERY` reads.
-   */
-  reads?: boolean | undefined;
-  /**
-   * The call the request is made for, as Studio measures it: told when its
-   * read is answered by another call's request. Never part of what makes
-   * two requests identical.
-   */
-  call?: SharingCall | undefined;
-  /**
-   * The call reads its answer as it arrives, through the answer's `stream`:
-   * it shares no request in flight, never goes through XMLHttpRequest, which
-   * hands an answer over only whole, and a download it reports is counted on
-   * that stream.
-   */
-  streamed?: boolean | undefined;
-};
 
 /**
  * Send a request and hand back its answer, read through Courier's reader:
  * the body of a call that stops waiting, or whose time runs out, is cut
- * short as its request would be, and a failed read is thrown as the
- * request's own failure.
+ * short as its request would be, a failed read is thrown as the request's
+ * own failure, and what a progress callback throws, as it was thrown.
  *
  * @param method - The verb
  * @param url - Where the request goes, absolute
@@ -138,6 +83,9 @@ export async function coreFetch(
   if (streamed) assertStreamingFetch(transport ?? send);
   const expiry = timeout ? attemptExpiry(timeout, requestBody) : undefined;
   const finalSignal = signal && expiry ? anySignal([signal, expiry]) : (expiry ?? signal);
+  /* The call's progress callbacks, and what one of them throws, kept by whichever way the call
+     goes: the call fails with it, as it was thrown. */
+  const progress: CallProgress = { onUploadProgress, onDownloadProgress };
 
   /* Each member the request's own: on no prototype, as a browser reads one an init does not
      have of the init's prototype, and named on Node, which reads it of the objects it builds. */
@@ -167,14 +115,16 @@ export async function coreFetch(
   /* Any other download is counted as it is read, by code loaded alongside the request with the
      first call that reports one. */
   const counting =
-    throughXhr || onDownloadProgress === undefined ? undefined : loadCounter(onDownloadProgress);
+    throughXhr || onDownloadProgress === undefined
+      ? undefined
+      : loadCounter(onDownloadProgress, progress);
   const sendOnce = (sendSignal: AbortSignal | undefined): Promise<Response> => {
     const sent = sendSignal === undefined ? init : { ...init, signal: sendSignal, __proto__: null };
     if (transport) return transport(fullUrl, sent);
     if (!throughXhr) return sendPlainly(sent);
     /* Loaded with the first call that needs it: a page that never does never loads it. */
     return import("./xhr-request").then(
-      ({ xhrRequest }) => xhrRequest(fullUrl, sent, { onUploadProgress, onDownloadProgress }),
+      ({ xhrRequest }) => xhrRequest(fullUrl, sent, progress),
       (cause: unknown) => {
         withoutProgress(cause, requestBody);
         return sendPlainly(sent);
@@ -191,7 +141,7 @@ export async function coreFetch(
       requestBody == null
         ? undefined
         : sendStreamed(fullUrl, sent as typeof sent & { body: WebBody }, {
-            onProgress: onUploadProgress,
+            progress,
             withinOrigin: within,
             fetch: send,
           });
@@ -212,9 +162,11 @@ export async function coreFetch(
           servedFor,
         });
   /* A read that fails is classified as the request's failure is: the call's cancellation, its
-     timeout, the network. */
+     timeout, the network — unless a progress callback threw, while the caller still waited. */
   const failed = (error: unknown): unknown =>
-    fetchFailure(error, signal, { timeout, timedOut: expiry?.aborted === true });
+    progress.thrown && !signal?.aborted
+      ? progress.thrown.value
+      : fetchFailure(error, signal, { timeout, timedOut: expiry?.aborted === true });
   let response: Response;
   try {
     response =

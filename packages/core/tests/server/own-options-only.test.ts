@@ -42,7 +42,7 @@ import { createCaller } from "../../src/server/create-caller";
 import { _resetSourcesForTests, registerSources } from "../../src/server/sources";
 import type { IncomingRequest } from "../../src/session/incoming-request";
 import type { CsrfOptions, ForwardOptions, SessionOptions } from "../../src/session/types";
-import type { CoreFetchInit } from "../../src/utils/fetch";
+import type { CoreFetchInit } from "../../src/utils/core-fetch-init";
 import { ENDPOINT_SCHEMA, type SchemaMetadata } from "../../src/validation";
 import { asBrowserPage } from "../helpers/browser-page";
 

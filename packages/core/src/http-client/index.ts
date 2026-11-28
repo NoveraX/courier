@@ -1,7 +1,7 @@
 import { sessionTransport } from "../session/one-user-transport";
 import type { Answer } from "../utils/answer";
 import type { EndpointHold } from "../utils/cancel-previous";
-import type { CoreFetchInit } from "../utils/fetch";
+import type { CoreFetchInit } from "../utils/core-fetch-init";
 import { coreFetch } from "../utils/fetch";
 import { ownFields } from "../utils/own";
 import { withSearchParams } from "../utils/search-params";

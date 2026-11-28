@@ -1,7 +1,7 @@
 import { studioCapability } from "../capabilities/registry";
 import { isRequestFailure, type RequestFailure } from "../errors";
 import type { Answer } from "../utils/answer";
-import type { CoreFetchInit } from "../utils/fetch";
+import type { CoreFetchInit } from "../utils/core-fetch-init";
 import { coreFetch } from "../utils/fetch";
 import { asProxyFailure, readProxyAnswer } from "./proxy-answer";
 

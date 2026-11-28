@@ -1,4 +1,5 @@
 import type { DownloadProgress } from "../http-client/types";
+import type { CallProgress } from "./progress";
 import { type BodyCounter, type BodyForm, type BodyForms, readBody } from "./read-body";
 import { assertStreamedAnswer } from "./streamed-answer";
 import { withoutProgress } from "./without-progress";
@@ -77,6 +78,7 @@ export function platformAnswer(response: Response, reading: AnswerReading = {}):
  * answer uncounted, said once.
  *
  * @param onProgress - Who hears the body come in
+ * @param kept - The call's progress, which keeps what `onProgress` throws
  * @returns The counter, or nothing when it did not load
  * @example
  * ```ts
@@ -86,9 +88,10 @@ export function platformAnswer(response: Response, reading: AnswerReading = {}):
  */
 export function loadCounter(
   onProgress: (progress: DownloadProgress) => void,
+  kept?: CallProgress,
 ): Promise<BodyCounter | undefined> {
   return import("./progress").then(
-    ({ downloadCounter }) => downloadCounter(onProgress),
+    ({ downloadCounter }) => downloadCounter(onProgress, kept),
     withoutProgress,
   );
 }

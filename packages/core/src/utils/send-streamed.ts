@@ -1,10 +1,10 @@
 import type { PlatformFetch } from "../http-client/source-transport";
-import type { UploadProgress } from "../http-client/types";
 import type { WebBody } from "../http-client/web-types";
 import { anySignal } from "./any-signal";
 import { countedStream } from "./counted-stream";
 import { copiesOf, type FetchCopies } from "./fetch-copies";
 import { fetchWithinOrigin } from "./fetch-within-origin";
+import { type CallProgress, heard } from "./progress";
 import { responseTakesStreams } from "./response-takes-streams";
 import { sendAsStream } from "./send-as-stream";
 import { isStreamedUpload } from "./streamed-upload";
@@ -13,8 +13,8 @@ import { isStream, wholeBody } from "./whole-body";
 
 /** How a body sent as a stream is sent. */
 export interface StreamedSend {
-  /** Hears each chunk once fetch has taken it */
-  onProgress?: ((progress: UploadProgress) => void) | undefined;
+  /** The call's progress: its upload's callback hears each chunk once fetch has taken it */
+  progress?: CallProgress | undefined;
   /** Redirects are followed on the request's origin alone */
   withinOrigin?: boolean | undefined;
   /** What sends it in place of the platform's `fetch` */
@@ -49,7 +49,7 @@ export interface StreamedSend {
 export function sendStreamed(
   url: string,
   init: RequestInit & { method: string; body: WebBody },
-  { onProgress, withinOrigin, fetch }: StreamedSend,
+  { progress, withinOrigin, fetch }: StreamedSend,
 ): Promise<Response> | undefined {
   const options = { withinOrigin, fetch };
   /* React Native sends no stream: its fetch, the whatwg-fetch polyfill, hands one to
@@ -60,7 +60,9 @@ export function sendStreamed(
     return isStream(init.body) ? sentWhole(url, init, init.body, options) : undefined;
   }
   const sent = stoppedWithUpload(init);
-  if (onProgress) {
+  if (progress?.onUploadProgress) {
+    /* What the callback throws ends the stream, and the call fails with it. */
+    const onProgress = heard(progress, progress.onUploadProgress);
     return sendAsStream(
       url,
       sent,
@@ -87,7 +89,7 @@ async function sentWhole(
   url: string,
   { duplex: _duplex, ...init }: RequestInit & { duplex?: string },
   stream: ReadableStream<Uint8Array>,
-  { withinOrigin, fetch: send = globalThis.fetch }: Omit<StreamedSend, "onProgress">,
+  { withinOrigin, fetch: send = globalThis.fetch }: Omit<StreamedSend, "progress">,
 ): Promise<Response> {
   const whole = { __proto__: null, ...init, body: await wholeBody(stream, init.signal) };
   return withinOrigin ? fetchWithinOrigin(url, whole, send) : send(url, whole);

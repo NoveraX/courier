@@ -1,11 +1,11 @@
 import type { PlatformFetch } from "../../http-client/source-transport";
-import type { UploadProgress } from "../../http-client/types";
 import type { WebBody } from "../../http-client/web-types";
+import type { CallProgress } from "../../utils/progress";
 
 /** How a body sent as a stream is sent. */
 export interface StreamedSend {
-  /** Hears each chunk once fetch has taken it */
-  onProgress?: ((progress: UploadProgress) => void) | undefined;
+  /** The call's progress: its upload's callback hears each chunk once fetch has taken it */
+  progress?: CallProgress | undefined;
   /** Redirects are followed on the request's origin alone */
   withinOrigin?: boolean | undefined;
   /** What sends it in place of the platform's `fetch` */

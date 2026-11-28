@@ -97,14 +97,16 @@ export type FetchOptions = Omit<RequestInit, "method" | "body" | "signal"> & {
    * Called as the answer's body comes in: as it is read, or as
    * XMLHttpRequest takes it in for a call sent through it, which neither a
    * call of an API with a `fetch` of its own nor one that reads its answer as
-   * it comes ever is
+   * it comes ever is. A callback that throws fails the call with what it
+   * threw, which no retry sends again
    */
   onDownloadProgress?: ((progress: DownloadProgress) => void) | undefined;
   /**
    * Called as the request's body is sent: as XMLHttpRequest sends it in a
    * page or an app, and as fetch takes it on a server. A call through an
    * API's own `fetch` or one that reads its answer as it comes goes with
-   * fetch, and reports its upload on a server alone
+   * fetch, and reports its upload on a server alone. A callback that throws
+   * fails the call with what it threw, which no retry sends again
    */
   onUploadProgress?: ((progress: UploadProgress) => void) | undefined;
   /**

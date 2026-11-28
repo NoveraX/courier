@@ -1,11 +1,13 @@
 /**
  * The Courier server the React Native tests drive in a process of its own
- * (`helpers/app-server.ts`): once that process has ended, as it ends when a
- * command fails there, what the test asks of it is refused with how it
- * ended and what it wrote to stderr, rather than left waiting for an
+ * (`helpers/app-server.ts`): it admits the pages the test lists besides its
+ * own, none when the test lists none; once that process has ended, as it
+ * ends when a command fails there, what the test asks of it is refused with
+ * how it ended and what it wrote to stderr, rather than left waiting for an
  * answer that never comes.
  */
 import { describe, expect, it } from "vitest";
+import { WebSocket } from "ws";
 
 import { serveApp } from "./helpers/app-server";
 
@@ -16,5 +18,14 @@ describe("a server in a process of its own, for an app's tests", () => {
 
     await expect(server.broadcast("late")).rejects.toThrow("The server exited with 0");
     await expect(server.stats()).rejects.toThrow("The server exited with 0");
+  });
+
+  it("admits no other page when the test lists none", async () => {
+    const server = await serveApp({ allowedOrigins: [] });
+    const socket = new WebSocket(server.url, { origin: "https://shop.example" });
+    const code = await new Promise<number>((resolve) => socket.once("close", resolve));
+    await server.stop();
+
+    expect(code).toBe(4403);
   });
 });

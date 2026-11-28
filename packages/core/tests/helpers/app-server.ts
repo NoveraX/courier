@@ -35,7 +35,7 @@ export interface AppServer {
  *
  * @param options - `refuseUpgrades` answers every upgrade 403, as a proxy that lets no WebSocket
  *   through; `heartbeatMs` is how often each connection is pinged, and how long its pong may take;
- *   `allowedOrigins`, the pages the server admits besides its own
+ *   `allowedOrigins`, the pages the server admits besides its own, none for an empty list
  * @returns The server
  * @example
  * ```ts

@@ -70,7 +70,11 @@ function given(name: string): string | undefined {
 }
 
 const heartbeatMs = Number(given("heartbeat") ?? 600_000);
-const allowedOrigins = given("allowed-origins")?.split(",");
+/* The pages it admits besides its own, joined with commas, which no origin holds: a list of none
+   comes as nothing, not as one blank origin. */
+const allowedOrigins = given("allowed-origins")
+  ?.split(",")
+  .filter((origin) => origin !== "");
 
 registerSources({ api } as never);
 const handler = createWSHandler({
